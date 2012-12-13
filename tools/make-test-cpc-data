@@ -1,0 +1,314 @@
+#!/usr/bin/python
+
+import argparse
+import copy
+import errno
+from Cheetah.Template import Template
+import json
+import os
+import os.path
+import StringIO
+import subprocess
+import sys
+import yaml
+
+CONTENT_EXT = ".yaml"
+#CONTENT_EXT = ".json"
+
+KNOWN_HASHES = {
+    10485860: 'c23ea79b857b91a7ff07c6ecf185f1ca',
+    10485960: '184cf91ae405aeabad4c49012f190494',
+    10486060: '07d250277f50c93c1e8dd14a156e7c06',
+}
+
+GET_QUERY = ("rsync -avz --delete --exclude \".bzr/*\" " +
+             "cloud-images.ubuntu.com::uec-images/query/ ci-query")
+
+RELEASES = (
+#    "hardy",
+    "lucid",
+    "oneiric",
+    "precise",
+    "quantal",
+    "raring",
+)
+
+BUILDS = ("server")
+
+NUM_DAILIES = 4
+
+DATA_IN = {
+ "streams": ["release", "daily"],
+ "releases": [
+   {"name": "hardy", "version": "8.04"},
+   {"name": "lucid", "version": "10.04"},
+   {"name": "oneiric", "version": "11.10"},
+   {"name": "precise", "version": "12.04"},
+   {"name": "quantal", "version": "12.10"},
+   {"name": "raring", "version": "13.04"},
+ ],
+ "serials": [
+   "20121208",
+   "20121209.1",
+   "20121210",
+ ],
+ "arches": ["amd64", "i386", "armhf"],
+ "flabels": ["-disk1.img", ".tar.gz", "-root.tar.gz"],
+}
+
+STREAM_TEMPLATE = """
+"""
+
+PGP_SIGNED_MESSAGE_HEADER = "-----BEGIN PGP SIGNED MESSAGE-----"
+PGP_SIGNATURE_HEADER = "-----BEGIN PGP SIGNATURE-----"
+PGP_SIGNATURE_FOOTER = "-----END PGP SIGNATURE-----"
+
+
+def render_string(content, params):
+    if not params:
+        params = {}
+    return Template(content, searchList=[params]).respond()
+
+
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
+    return
+
+
+def read_possibly_signed(path):
+    content = ""
+    with open(path, "r") as fp:
+        content = fp.read()
+
+    if content.startswith(PGP_SIGNED_MESSAGE_HEADER):
+        # http://rfc-ref.org/RFC-TEXTS/2440/chapter7.html
+        subprocess.check_output(["gpg", "--batch", "--verify", path],
+                                stderr=subprocess.STDOUT)
+        ret = {'body': '', 'signature': '', 'garbage': ''}
+        signature = ""
+        lines = content.splitlines()
+        i = 0
+        for i in range(0, len(lines)):
+            if lines[i] == PGP_SIGNED_MESSAGE_HEADER:
+                mode = "header"
+                continue
+            elif mode == "header":
+                if lines[i] != "":
+                    mode = "body"
+                continue
+            elif lines[i] == PGP_SIGNATURE_HEADER:
+                mode = "signature"
+                continue
+            elif lines[i] == PGP_SIGNATURE_FOOTER:
+                mode = "garbage"
+                continue
+
+            # dash-escaped content in body
+            if lines[i].startswith("- ") and mode == "body":
+                ret[mode] += lines[i][2:] + "\n"
+            else:
+                ret[mode] += lines[i] + "\n"
+
+        return(ret['body'], ret['signature'])
+    else:
+        return(content, None)
+
+
+def signfile(path):
+    tmpfile = "%s.tmp" % path
+    os.rename(path, tmpfile)
+    subprocess.check_output(["gpg", "--batch", "--output", path,
+                             "--clearsign", tmpfile])
+    os.unlink(tmpfile)
+
+
+def dumps(content):
+    if CONTENT_EXT == ".yaml":
+        return yaml.safe_dump(content)
+    else:
+        return json.dumps(content)
+
+
+def load_content(path):
+    (content, signature) = read_possibly_signed(path)
+    if CONTENT_EXT == ".yaml":
+        return yaml.safe_load(content)
+    else:
+        return json.loads(content)
+
+
+def load_query(path, cloud="aws", tree=None):
+    streams = [f[0:-len(".latest.txt")]
+               for f in os.listdir("ci-query")
+                   if f.endswith("latest.txt")]
+    if tree is None:
+        tree = {}
+
+    # $stream/aws/$region/${buildname}/${release['name']}/${arch}"]
+    for stream in streams:
+        tree[stream] = {cloud: {}}
+        releases = []
+        id_files = []
+
+        latest_f = "%s/%s.latest.txt" % (path, stream)
+
+        # get the builds and releases
+        with open(latest_f) as fp:
+            for line in fp.readlines():
+                (rel, build, _stream, _serial) = line.split("\t")
+
+                if ((len(BUILDS) and build not in BUILDS) or
+                    (len(RELEASES) and rel not in RELEASES)):
+                    continue
+
+                id_files.append("%s/%s/%s/%s.txt" %
+                    (path, rel, build, stream))
+
+        cdata = tree[stream][cloud]
+        for id_file in id_files:
+            #import ipdb; ipdb.set_trace()
+            lines = reversed(open(id_file).readlines())
+            for line in lines:
+                line = line.rstrip("\n\r") + "\tBOGUS"
+                (rel, build, label, serial, store, arch, region,
+                 iid, _kern, _rmd, vtype, _bogus ) = line.split("\t", 11)
+
+                if region not in cdata:
+                    cdata[region] = {}
+                if build not in cdata[region]:
+                    cdata[region][build] = {}
+                if rel not in cdata[region][build]:
+                    cdata[region][build][rel] = {}
+                if arch not in cdata[region][build][rel]:
+                    cdata[region][build][rel][arch] = []
+
+                item_groups = cdata[region][build][rel][arch]
+
+                item_group = None
+                for ig in item_groups:
+                    if ig['serial'] == serial:
+                        item_group = ig
+                if not item_group:
+                    # check NUM_DAILIES
+                    if (stream == "daily" and
+                        len(item_groups) == NUM_DAILIES):
+                        break
+                    item_group = {'serial': serial, 'items': []}
+                    item_groups.append(item_group)
+
+                cur_item = {'label': label, 'root_store': store,
+                            'vtype': vtype, 'id': iid}
+                item_group['items'].append(cur_item)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="create example content tree")
+
+    parser.add_argument("query_tree", metavar='query_tree',
+                        help=('read in content from /query tree. Hint: ' +
+                              GET_QUERY))
+
+    parser.add_argument("out_d", metavar='out_d',
+                        help=('create content under output_dir'))
+
+    parser.add_argument('--sign', action='store_true', default=False,
+                        help='sign all generated files')
+
+    args = parser.parse_args()
+
+    fmt = "$stream/aws/$region/${buildname}/${release['name']}/${arch}"
+    stream_file_fmt = os.sep.join([args.out_d, fmt]) + CONTENT_EXT
+
+    tree = load_query(args.query_tree, cloud="aws")
+#    templ = STREAM_TEMPLATE.lstrip()
+#    tmpl_utils = {'create_file': create_file}
+#
+#    streams = {}
+#    for stream in DATA_IN["streams"]:
+#        for release in DATA_IN["releases"]:
+#            for arch in DATA_IN["arches"]:
+#                serials = []
+#                data = {
+#                    "release": release,
+#                    "stream": stream,
+#                    "arch": arch,
+#                    "serials": DATA_IN["serials"],
+#                    "flabels": DATA_IN["flabels"],
+#                    "utils": tmpl_utils,
+#                    }
+#
+#                stream_path = render_string(stream_file_fmt, data)
+#                outd = os.path.dirname(stream_path)
+#                mkdir_p(outd)
+#                data['outd'] = outd
+#                sys.stderr.write("%s\n" % stream_path)
+#
+#                content = render_string(templ, params=data)
+#                with open(stream_path, "w") as fp:
+#                    if CONTENT_EXT == ".yaml":
+#                        fp.write(content)
+#                    else:
+#                        fp.write(dumps(yaml.safe_load(content)))
+#
+#                if args.sign:
+#                    signfile(stream_path)
+#
+#                content = load_content(stream_path)
+#
+#                url = stream_path[len(args.out_d) + 1:]
+#                curstream = {'url': url}
+#                curstream.update(content.get('tags', {}))
+#
+#                streams[url] = curstream
+#
+#    collections = {}
+#    for (url, stream) in streams.iteritems():
+#        ctok = ""
+#
+#        for ptok in [""] + url.split("/")[:-1]:
+#            ctok += "%s/" % ptok
+#            if ctok not in collections:
+#                collections[ctok] = {'description': "Ubuntu Image Streams",
+#                       'format': 'stream-collection:1.0',
+#                       'streams': [],
+#                       'tags': {}}
+#
+#                collections[ctok]['tags'] = copy.copy(stream)
+#                del collections[ctok]['tags']['url']
+#
+#            else:
+#                clear = []
+#                for key, val in collections[ctok]['tags'].iteritems():
+#                    if key not in stream or stream[key] != val:
+#                        clear.append(key)
+#                for key in clear:
+#                    del collections[ctok]['tags'][key]
+#
+#            collections[ctok]['streams'].append(stream)
+#
+#    for coll in collections:
+#        coll_file = "%s/%s/streams%s" % (args.out_d, coll, CONTENT_EXT)
+#        streams = []
+#        for stream in collections[coll]['streams']:
+#            cstream = copy.copy(stream)
+#            cstream['url'] = cstream['url'][len(coll) - 1:]
+#            streams.append(cstream)
+#
+#        collections[coll]['streams'] = streams
+#        sys.stderr.write("%s\n" % coll)
+#        with open(coll_file, "w") as fp:
+#            fp.write(dumps(collections[coll]))
+#
+#        if args.sign:
+#            signfile(coll_file)
+
+    return
+
+if __name__ == '__main__':
+    sys.exit(main())
+
+# vi: ts=4 expandtab
