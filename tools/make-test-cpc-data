@@ -7,23 +7,16 @@ from Cheetah.Template import Template
 import json
 import os
 import os.path
-import StringIO
 import subprocess
 import sys
 import yaml
 
 CONTENT_EXT = ".yaml"
-#CONTENT_EXT = ".json"
-
-KNOWN_HASHES = {
-    10485860: 'c23ea79b857b91a7ff07c6ecf185f1ca',
-    10485960: '184cf91ae405aeabad4c49012f190494',
-    10486060: '07d250277f50c93c1e8dd14a156e7c06',
-}
 
 GET_QUERY = ("rsync -avz --delete --exclude \".bzr/*\" " +
              "cloud-images.ubuntu.com::uec-images/query/ ci-query")
 
+# whitelist of releases
 RELEASES = (
 #    "hardy",
     "lucid",
@@ -33,30 +26,73 @@ RELEASES = (
     "raring",
 )
 
+# whitelist of builds
 BUILDS = ("server")
 
 NUM_DAILIES = 4
 
-DATA_IN = {
- "streams": ["release", "daily"],
- "releases": [
-   {"name": "hardy", "version": "8.04"},
-   {"name": "lucid", "version": "10.04"},
-   {"name": "oneiric", "version": "11.10"},
-   {"name": "precise", "version": "12.04"},
-   {"name": "quantal", "version": "12.10"},
-   {"name": "raring", "version": "13.04"},
- ],
- "serials": [
-   "20121208",
-   "20121209.1",
-   "20121210",
- ],
- "arches": ["amd64", "i386", "armhf"],
- "flabels": ["-disk1.img", ".tar.gz", "-root.tar.gz"],
+REL2VER = {
+    "hardy": {'version': "8.04", 'devname': "Hardy Heron"},
+    "lucid": {'version': "10.04", 'devname': "Lucid Lynx"},
+    "oneiric": {'version': "11.10", 'devname': "Oneiric Ocelot"},
+    "precise": {'version': "12.04", 'devname': "Precise Pangolin"},
+    "quantal": {'version': "12.10", 'devname': "Quantal Quetzal"},
+    "raring": {'version': "13.04", 'devname': "Raring Ringtail"},
 }
 
 STREAM_TEMPLATE = """
+description: Image ids for Ubuntu Cloud Ubuntu ${release.version} (${release.devname}) on ${cloud.name}/${region.name}
+format: stream-1.0
+item_groups:
+#for $item_group in $item_groups:
+ - serial: ${item_group.serial}
+   label: ${item_group.label}
+   items:
+   #for $item in $item_group.items
+    #if $item.vtype == "hvm"
+    #set prefix="hvm/"
+    #else if $item.root_store == "instance-store"
+    #set prefix=""
+    #else
+    #set prefix=$item.root_store + "/"
+    #end if
+    #if $stream.name == "released"
+    #set name="ubuntu-" + $release.name + "-daily-" + $arch.name + "-" + $build.name + "-" + $item_group.serial
+    #else
+    #set name="ubuntu-" + $release.name + "-" + $release.version + "-" + $arch.name + "-" + $build.name + "-" + $item_group.serial
+    #end if
+    - name: $name
+      root_store: ${item.root_store}
+      virt_type: ${item.vtype}
+      image_id: ${item.id}
+   #end for
+#end for
+
+tags:
+  region: ${region.name}
+  arch: ${arch.name}
+  release: ${release.name}
+  version: "${release.version}"
+  stream: ${stream.name}
+  cloud: ${cloud.name}
+  region: ${region.name}
+"""
+
+COLLECTION_TEMPLATE = """
+description: Ubuntu Certified Public Cloud image id streams
+format: stream-collection:1.0
+streams:
+#for $stream in $streams:
+ - url: $stream.url
+ #for $tag in $stream.tags:
+   $tag: $stream.tags[$tag]
+ #end for
+#end for
+
+tags:
+ #for tag in $tags:
+ $tag: ${tags[tag]}
+ #end for
 """
 
 PGP_SIGNED_MESSAGE_HEADER = "-----BEGIN PGP SIGNED MESSAGE-----"
@@ -135,7 +171,7 @@ def dumps(content):
 
 def load_content(path):
     (content, signature) = read_possibly_signed(path)
-    if CONTENT_EXT == ".yaml":
+    if path.endswith(".yaml"):
         return yaml.safe_load(content)
     else:
         return json.loads(content)
@@ -148,10 +184,11 @@ def load_query(path, cloud="aws", tree=None):
     if tree is None:
         tree = {}
 
+    # $stream/$cloud/$region/$buildname/$release/$arch
     # $stream/aws/$region/${buildname}/${release['name']}/${arch}"]
     for stream in streams:
-        tree[stream] = {cloud: {}}
-        releases = []
+        if stream not in tree:
+            tree[stream] = {cloud: {}}
         id_files = []
 
         latest_f = "%s/%s.latest.txt" % (path, stream)
@@ -170,12 +207,11 @@ def load_query(path, cloud="aws", tree=None):
 
         cdata = tree[stream][cloud]
         for id_file in id_files:
-            #import ipdb; ipdb.set_trace()
             lines = reversed(open(id_file).readlines())
             for line in lines:
                 line = line.rstrip("\n\r") + "\tBOGUS"
                 (rel, build, label, serial, store, arch, region,
-                 iid, _kern, _rmd, vtype, _bogus ) = line.split("\t", 11)
+                 iid, _kern, _rmd, vtype, _bogus) = line.split("\t", 11)
 
                 if region not in cdata:
                     cdata[region] = {}
@@ -192,6 +228,7 @@ def load_query(path, cloud="aws", tree=None):
                 for ig in item_groups:
                     if ig['serial'] == serial:
                         item_group = ig
+
                 if not item_group:
                     # check NUM_DAILIES
                     if (stream == "daily" and
@@ -200,9 +237,48 @@ def load_query(path, cloud="aws", tree=None):
                     item_group = {'serial': serial, 'items': []}
                     item_groups.append(item_group)
 
-                cur_item = {'label': label, 'root_store': store,
+                # item groups (same serial) all have the same label
+                item_group['label'] = label
+                cur_item = {'root_store': store,
                             'vtype': vtype, 'id': iid}
                 item_group['items'].append(cur_item)
+
+    return tree
+
+
+def process(cur, data, level, layout, callback, passthrough):
+    for item in cur:
+        if isinstance(item, dict):
+            data[layout[level]['name']] = item.copy()
+        else:
+            data[layout[level]['name']] = {'name': item}
+
+        curdatum = data[layout[level]['name']]
+
+        if callable(layout[level].get('populate', None)):
+            layout[level]['populate'](curdatum)
+
+        if (level + 1) == len(layout):
+            path = '/'.join([data[n['name']]['name'] for n in layout])
+            callback(cur[item], data, path, passthrough)
+        else:
+            process(cur[item], data, level + 1, layout, callback,
+                    passthrough)
+
+
+def name2ver(indict):
+    indict.update(REL2VER[indict['name']])
+
+
+def writer(item, data, path, passthrough):
+    params = data.copy()
+    params['item_groups'] = item
+    url = "%s.yaml" % path
+    fname = "%s/%s" % (passthrough['output_d'], url)
+    mkdir_p(os.path.dirname(fname))
+    open(fname, "w").write(render_string(passthrough['template'], params))
+    passthrough['streams'].append(url)
+    sys.stderr.write(fname + "\n")
 
 
 def main():
@@ -220,91 +296,59 @@ def main():
 
     args = parser.parse_args()
 
-    fmt = "$stream/aws/$region/${buildname}/${release['name']}/${arch}"
-    stream_file_fmt = os.sep.join([args.out_d, fmt]) + CONTENT_EXT
-
     tree = load_query(args.query_tree, cloud="aws")
-#    templ = STREAM_TEMPLATE.lstrip()
-#    tmpl_utils = {'create_file': create_file}
-#
-#    streams = {}
-#    for stream in DATA_IN["streams"]:
-#        for release in DATA_IN["releases"]:
-#            for arch in DATA_IN["arches"]:
-#                serials = []
-#                data = {
-#                    "release": release,
-#                    "stream": stream,
-#                    "arch": arch,
-#                    "serials": DATA_IN["serials"],
-#                    "flabels": DATA_IN["flabels"],
-#                    "utils": tmpl_utils,
-#                    }
-#
-#                stream_path = render_string(stream_file_fmt, data)
-#                outd = os.path.dirname(stream_path)
-#                mkdir_p(outd)
-#                data['outd'] = outd
-#                sys.stderr.write("%s\n" % stream_path)
-#
-#                content = render_string(templ, params=data)
-#                with open(stream_path, "w") as fp:
-#                    if CONTENT_EXT == ".yaml":
-#                        fp.write(content)
-#                    else:
-#                        fp.write(dumps(yaml.safe_load(content)))
-#
-#                if args.sign:
-#                    signfile(stream_path)
-#
-#                content = load_content(stream_path)
-#
-#                url = stream_path[len(args.out_d) + 1:]
-#                curstream = {'url': url}
-#                curstream.update(content.get('tags', {}))
-#
-#                streams[url] = curstream
-#
-#    collections = {}
-#    for (url, stream) in streams.iteritems():
-#        ctok = ""
-#
-#        for ptok in [""] + url.split("/")[:-1]:
-#            ctok += "%s/" % ptok
-#            if ctok not in collections:
-#                collections[ctok] = {'description': "Ubuntu Image Streams",
-#                       'format': 'stream-collection:1.0',
-#                       'streams': [],
-#                       'tags': {}}
-#
-#                collections[ctok]['tags'] = copy.copy(stream)
-#                del collections[ctok]['tags']['url']
-#
-#            else:
-#                clear = []
-#                for key, val in collections[ctok]['tags'].iteritems():
-#                    if key not in stream or stream[key] != val:
-#                        clear.append(key)
-#                for key in clear:
-#                    del collections[ctok]['tags'][key]
-#
-#            collections[ctok]['streams'].append(stream)
-#
-#    for coll in collections:
-#        coll_file = "%s/%s/streams%s" % (args.out_d, coll, CONTENT_EXT)
-#        streams = []
-#        for stream in collections[coll]['streams']:
-#            cstream = copy.copy(stream)
-#            cstream['url'] = cstream['url'][len(coll) - 1:]
-#            streams.append(cstream)
-#
-#        collections[coll]['streams'] = streams
-#        sys.stderr.write("%s\n" % coll)
-#        with open(coll_file, "w") as fp:
-#            fp.write(dumps(collections[coll]))
-#
-#        if args.sign:
-#            signfile(coll_file)
+
+    layout = [
+        {"name": "stream"},
+        {"name": "cloud"},
+        {"name": "region"},
+        {"name": "build"},
+        {"name": "release", "populate": name2ver},
+        {"name": "arch"},
+    ]
+
+    passthrough = {'output_d': args.out_d,
+        'template': STREAM_TEMPLATE.lstrip(),
+        'streams': [],
+        }
+    process(tree, {}, 0, layout, writer, passthrough)
+
+    collections = {}
+    for url in passthrough['streams']:
+        sys.stderr.write(url + "\n")
+        stream = load_content("%s/%s" % (args.out_d, url))
+        ctok = ""
+        for ptok in [""] + url.split("/")[:-1]:
+            ctok += "%s/" % ptok
+            if ctok not in collections:
+                collections[ctok] = {'streams': []}
+                collections[ctok]['tags'] = stream['tags'].copy()
+            else:
+                clear = []
+                for key, val in collections[ctok]['tags'].iteritems():
+                    if key not in stream['tags'] or stream['tags'][key] != val:
+                        clear.append(key)
+                for key in clear:
+                    del collections[ctok]['tags'][key]
+
+            collections[ctok]['streams'].append(
+                {'tags': stream['tags'].copy(), 'url': url[len(ctok) - 1:]})
+
+    coll_tmpl = COLLECTION_TEMPLATE.lstrip()
+    for coll in collections:
+        coll_file = "%s%sstreams%s" % (args.out_d, coll, CONTENT_EXT)
+
+        for stream in collections[coll]['streams']:
+            for coll_tag in collections[coll]['tags']:
+                if coll_tag in stream['tags']:
+                    del stream['tags'][coll_tag]
+
+        sys.stderr.write("%s\n" % coll_file)
+        with open(coll_file, "w") as fp:
+            fp.write(render_string(coll_tmpl, collections[coll]))
+
+        if args.sign:
+            signfile(coll_file)
 
     return
 
