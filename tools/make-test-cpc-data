@@ -56,7 +56,7 @@ item_groups:
     #else
     #set prefix=$item.root_store + "/"
     #end if
-    #if $stream.name == "released"
+    #if $item_group.label == "daily":
     #set name="ubuntu-" + $release.name + "-daily-" + $arch.name + "-" + $build.name + "-" + $item_group.serial
     #else
     #set name="ubuntu-" + $release.name + "-" + $release.version + "-" + $arch.name + "-" + $build.name + "-" + $item_group.serial
@@ -76,6 +76,7 @@ tags:
   stream: ${stream.name}
   cloud: ${cloud.name}
   region: ${region.name}
+  endpoint: https://ec2.${region.name}.amazonaws.com
 """
 
 COLLECTION_TEMPLATE = """
