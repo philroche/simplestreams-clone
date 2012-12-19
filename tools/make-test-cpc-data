@@ -78,6 +78,7 @@ tags:
   stream: ${stream.name}
   cloud: ${cloud.name}
   region: ${region.name}
+  build: ${build.name}
   endpoint: https://ec2.${region.name}.amazonaws.com
 """
 
@@ -188,7 +189,7 @@ def process(cur, data, level, layout, callback, passthrough):
 
 
 def name2ver(indict):
-    indict.update(REL2VER[indict['name']])
+    indict.update(toolutil.REL2VER[indict['name']])
 
 
 def writer(item, data, path, passthrough):
