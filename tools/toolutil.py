@@ -13,6 +13,15 @@ PGP_SIGNATURE_HEADER = "-----BEGIN PGP SIGNATURE-----"
 PGP_SIGNATURE_FOOTER = "-----END PGP SIGNATURE-----"
 
 
+REL2VER = {
+    "hardy": {'version': "8.04", 'devname': "Hardy Heron"},
+    "lucid": {'version': "10.04", 'devname': "Lucid Lynx"},
+    "oneiric": {'version': "11.10", 'devname': "Oneiric Ocelot"},
+    "precise": {'version': "12.04", 'devname': "Precise Pangolin"},
+    "quantal": {'version': "12.10", 'devname': "Quantal Quetzal"},
+    "raring": {'version': "13.04", 'devname': "Raring Ringtail"},
+}
+
 def render_string(content, params):
     if not params:
         params = {}
@@ -74,8 +83,8 @@ def signfile(path):
     os.unlink(tmpfile)
 
 
-def dumps(content, format="yaml"):
-    if format == "yaml":
+def dumps(content, fmt="yaml"):
+    if fmt == "yaml":
         return yaml.safe_dump(content)
     else:
         return json.dumps(content)
@@ -88,10 +97,30 @@ def load_content(path):
     else:
         return json.loads(content)
 
+
+def process(cur, data, level, layout, callback, passthrough):
+    for item in cur:
+        if isinstance(item, dict):
+            data[layout[level]['name']] = item.copy()
+        else:
+            data[layout[level]['name']] = {'name': item}
+
+        curdatum = data[layout[level]['name']]
+
+        if callable(layout[level].get('populate', None)):
+            layout[level]['populate'](curdatum)
+
+        if (level + 1) == len(layout):
+            path = '/'.join([data[n['name']]['name'] for n in layout])
+            callback(cur[item], data, path, passthrough)
+        else:
+            process(cur[item], data, level + 1, layout, callback,
+                    passthrough)
+
+
 def process_collections(stream_files, path_prefix, callback):
     collections = {}
     for url in stream_files:
-        sys.stderr.write(url + "\n")
         stream = load_content("%s/%s" % (path_prefix, url))
         ctok = ""
         for ptok in [""] + url.split("/")[:-1]:
@@ -110,7 +139,6 @@ def process_collections(stream_files, path_prefix, callback):
             collections[ctok]['streams'].append(
                 {'tags': stream['tags'].copy(), 'url': url[len(ctok) - 1:]})
 
-    coll_tmpl = COLLECTION_TEMPLATE.lstrip()
     for coll in collections:
         for stream in collections[coll]['streams']:
             for coll_tag in collections[coll]['tags']:

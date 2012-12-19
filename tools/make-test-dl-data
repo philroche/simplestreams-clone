@@ -1,0 +1,362 @@
+#!/usr/bin/python
+
+import argparse
+import copy
+import errno
+from Cheetah.Template import Template
+import json
+import os
+import os.path
+import StringIO
+import subprocess
+import sys
+import yaml
+
+import toolutil
+
+CONTENT_EXT = ".yaml"
+#CONTENT_EXT = ".json"
+
+GET_QUERY = ("rsync -avz --delete --exclude \".bzr/*\" " +
+             "cloud-images.ubuntu.com::uec-images/query/ ci-query")
+
+RELEASES = (
+#    "hardy",
+    "lucid",
+    "oneiric",
+    "precise",
+    "quantal",
+    "raring",
+)
+
+# whitelist of builds
+BUILDS = ("server")
+
+KNOWN_HASHES = {
+    10485860: 'c23ea79b857b91a7ff07c6ecf185f1ca',
+    10485960: '184cf91ae405aeabad4c49012f190494',
+    10486060: '07d250277f50c93c1e8dd14a156e7c06',
+}
+
+DATA_IN = {
+ "streams": ["release", "daily"],
+ "releases": [
+   {"name": "hardy", "version": "8.04"},
+   {"name": "lucid", "version": "10.04"},
+   {"name": "oneiric", "version": "11.10"},
+   {"name": "precise", "version": "12.04"},
+   {"name": "quantal", "version": "12.10"},
+   {"name": "raring", "version": "13.04"},
+ ],
+ "serials": [
+   "20121208",
+   "20121209.1",
+   "20121210",
+ ],
+ "arches": ["amd64", "i386", "armhf"],
+ "flabels": ["-disk1.img", ".tar.gz", "-root.tar.gz"],
+}
+
+STREAM_TEMPLATE = """
+# required
+format: stream-1.0
+# recommended
+description: Ubuntu Cloud Images
+
+item_groups:
+#for $item_group in $item_groups
+ - serial: ${item_group.serial}
+   label: ${item_group.label}
+   items:
+   #for $item in $item_group.items
+   #set file = $utils.create_file($prefix, $item.path)
+    - name: ${item.name}
+## HACK, FIXME: '../../../' is just known depth
+      url: ../../../${item.path}
+      md5sum: ${file.md5sum}
+   #end for
+#end for
+
+tags:
+  arch: ${arch.name}
+  release: ${release.name}
+  version: "${release.version}"
+  stream: ${stream.name}
+  build: ${build.name}
+
+# maybe required
+valid-util: Thu, 29 Nov 2012 22:14:13 +0000
+"""
+
+COLLECTION_TEMPLATE = """
+description: Ubuntu Cloud Image streams
+format: stream-collection:1.0
+streams:
+#for $stream in $streams:
+ - url: $stream.url
+ #for $tag in $stream.tags:
+   $tag: $stream.tags[$tag]
+ #end for
+#end for
+
+tags:
+ #for tag in $tags:
+ $tag: ${tags[tag]}
+ #end for
+"""
+
+PGP_SIGNED_MESSAGE_HEADER = "-----BEGIN PGP SIGNED MESSAGE-----"
+PGP_SIGNATURE_HEADER = "-----BEGIN PGP SIGNATURE-----"
+PGP_SIGNATURE_FOOTER = "-----END PGP SIGNATURE-----"
+
+
+def create_file(prefix, path):
+    fpath = os.path.join(prefix, path)
+    toolutil.mkdir_p(os.path.dirname(fpath))
+    size = 1024
+    if path.endswith("-disk1.img"):
+        size = 1024 * 1024 * 10 + 100
+    elif path.endswith("-root.tar.gz"):
+        size = 1024 * 1024 * 10 + 200
+    elif path.endswith(".tar.gz"):
+        size = 1024 * 1024 * 10 + 300
+    with open(fpath, "w") as fp:
+        fp.truncate(size)
+
+    return({'name': path, 'md5sum': KNOWN_HASHES[size]})
+        
+
+def load_query(path, tree=None):
+    streams = [f[0:-len(".latest.txt")]
+               for f in os.listdir("ci-query")
+                   if f.endswith("latest.txt")]
+    if tree is None:
+        tree = {}
+
+    for stream in streams:
+        if stream not in tree:
+            tree[stream] = {}
+        dl_files = []
+
+        print "path=%s stream=%s" % (path, stream)
+        latest_f = "%s/%s.latest.txt" % (path, stream)
+
+        # get the builds and releases
+        with open(latest_f) as fp:
+            for line in fp.readlines():
+                (rel, build, _stream, _serial) = line.split("\t")
+
+                if ((len(BUILDS) and build not in BUILDS) or
+                    (len(RELEASES) and rel not in RELEASES)):
+                    continue
+
+                dl_files.append("%s/%s/%s/%s-dl.txt" %
+                    (path, rel, build, stream))
+
+        field_path = 5
+        field_name = 6
+        # stream/build/release/arch
+        cdata = tree[stream]
+        for dl_file in dl_files:
+            olines = open(dl_file).readlines()
+
+            # download files in /query only contain '.tar.gz' (uec tarball)
+            # file.  So we have to make up other entries.
+            lines = []
+            for oline in olines:
+                for repl in (".tar.gz", "-root.tar.gz", "-disk1.img"):
+                    fields = oline.rstrip().split("\t")
+                    new_path = fields[field_path].replace(".tar.gz", repl)
+                    fields[field_path] = new_path
+                    fields[field_name] += repl
+                    lines.append("\t".join(fields) + "\n")
+
+            for line in lines:
+                line = line.rstrip("\n\r") + "\tBOGUS"
+
+                (rel, build, label, serial, arch, filepath, name, _bogus) = \
+                    line.split("\t", 8)
+
+                if build not in cdata:
+                    cdata[build] = {}
+                if rel not in cdata[build]:
+                    cdata[build][rel] = {}
+                if arch not in cdata[build][rel]:
+                    cdata[build][rel][arch] = []
+
+                item_groups = cdata[build][rel][arch]
+
+                item_group = None
+                for ig in item_groups:
+                    if ig['serial'] == serial:
+                        item_group = ig
+
+                if not item_group:
+                    item_group = {'serial': serial, 'items': []}
+                    item_groups.append(item_group)
+
+                # item groups (same serial) all have the same label
+                item_group['label'] = label
+                cur_item = {'path': filepath, 'name': name}
+
+                # there were some duplicate rows in /query -dl.txt files.
+                if cur_item not in item_group['items']:
+                    item_group['items'].append(cur_item)
+
+                # highest serial is first entry in list
+                item_groups.sort(reverse=True,
+                                 cmp=lambda x,y: cmp(x["serial"], y["serial"]))
+
+    return tree
+
+
+def name2ver(indict):
+    indict.update(toolutil.REL2VER[indict['name']])
+
+
+def writer(item, data, path, passthrough):
+    params = data.copy()
+    params['item_groups'] = item
+    params.update(passthrough.get('params', {}))
+    url = "%s.yaml" % path
+    fname = "%s/%s" % (passthrough['output_d'], url)
+    toolutil.mkdir_p(os.path.dirname(fname))
+    with open(fname, "w") as fp:
+        fp.write(toolutil.render_string(
+            passthrough['template'], params))
+    passthrough['streams'].append(url)
+    sys.stderr.write(fname + "\n")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="create example content tree")
+
+    parser.add_argument("query_tree", metavar='query_tree',
+                        help=('read in content from /query tree. Hint: ' +
+                              GET_QUERY))
+
+    parser.add_argument("out_d", metavar='out_d',
+                        help=('create content under output_dir'))
+
+    parser.add_argument('--sign', action='store_true', default=False,
+                        help='sign all generated files')
+
+    args = parser.parse_args()
+
+    tree = load_query(args.query_tree)
+
+    # stream/build/release/arch
+    layout = [
+        {"name": "stream"},
+        {"name": "build"},
+        {"name": "release", "populate": name2ver},
+        {"name": "arch"},
+    ]
+
+    passthrough = {'output_d': args.out_d,
+        'template': STREAM_TEMPLATE.lstrip(),
+        'streams': [],
+        'params': { 
+            'utils': { 'create_file': create_file },
+            'prefix': args.out_d,
+        }
+    }
+
+    toolutil.process(tree, {}, 0, layout, writer, passthrough)
+
+    tmpl = COLLECTION_TEMPLATE.lstrip()
+
+    def collwriter(path, path_prefix, collection):
+        coll_file = "%s%sstreams%s" % (path_prefix, path, CONTENT_EXT)
+        with open(coll_file, "w") as cfp:
+            cfp.write(toolutil.render_string(tmpl, collection))
+
+    toolutil.process_collections(passthrough['streams'], args.out_d,
+                                 collwriter)
+    import ipdb; ipdb.set_trace()
+
+    return True
+    for stream in DATA_IN["streams"]:
+        for release in DATA_IN["releases"]:
+            for arch in DATA_IN["arches"]:
+                serials = []
+                data = {
+                    "release": release,
+                    "stream": stream,
+                    "arch": arch,
+                    "serials": DATA_IN["serials"],
+                    "flabels": DATA_IN["flabels"],
+                    "utils": tmpl_utils,
+                    }
+
+                stream_path = toolutil.render_string(stream_file_fmt, data)
+                outd = os.path.dirname(stream_path)
+                toolutil.mkdir_p(outd)
+                data['outd'] = outd
+                sys.stderr.write("%s\n" % stream_path)
+
+                content = toolutil.render_string(templ, params=data)
+                with open(stream_path, "w") as fp:
+                    if CONTENT_EXT == ".yaml":
+                        fp.write(content)
+                    else:
+                        fp.write(toolutil.dumps(yaml.safe_load(content)))
+
+                if args.sign:
+                    toolutil.signfile(stream_path)
+
+                content = toolutil.load_content(stream_path)
+
+                url = stream_path[len(args.out_d) + 1:]
+                curstream = {'url': url}
+                curstream.update(content.get('tags', {}))
+
+                streams[url] = curstream
+
+    collections = {}
+    for (url, stream) in streams.iteritems():
+        ctok = ""
+
+        for ptok in [""] + url.split("/")[:-1]:
+            ctok += "%s/" % ptok
+            if ctok not in collections:
+                collections[ctok] = {'description': "Ubuntu Image Streams",
+                       'format': 'stream-collection:1.0',
+                       'streams': [],
+                       'tags': {}}
+
+                collections[ctok]['tags'] = copy.copy(stream)
+                del collections[ctok]['tags']['url']
+
+            else:
+                clear = []
+                for key, val in collections[ctok]['tags'].iteritems():
+                    if key not in stream or stream[key] != val:
+                        clear.append(key)
+                for key in clear:
+                    del collections[ctok]['tags'][key]
+
+            collections[ctok]['streams'].append(stream)
+
+    for coll in collections:
+        coll_file = "%s/%s/streams%s" % (args.out_d, coll, CONTENT_EXT)
+        streams = []
+        for stream in collections[coll]['streams']:
+            cstream = copy.copy(stream)
+            cstream['url'] = cstream['url'][len(coll) - 1:]
+            streams.append(cstream)
+
+        collections[coll]['streams'] = streams
+        sys.stderr.write("%s\n" % coll)
+        with open(coll_file, "w") as fp:
+            fp.write(toolutil.dumps(collections[coll]))
+
+        if args.sign:
+            toolutil.signfile(coll_file)
+
+    return
+
+if __name__ == '__main__':
+    sys.exit(main())
+
+# vi: ts=4 expandtab
