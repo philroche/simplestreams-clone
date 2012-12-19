@@ -1,4 +1,4 @@
-description: Ubuntu Cloud Image streams
+description: Foovendor Cloud Image streams
 format: stream-collection:1.0
 streams:
  - url: i386.yaml
@@ -7,7 +7,7 @@ streams:
    arch: amd64
 
 tags:
- release: precise
+ release: pinky
  version: 12.04
  build: server
  stream: released
