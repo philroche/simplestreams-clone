@@ -63,7 +63,7 @@ item_groups:
     #else
     #set name="ubuntu-" + $release.name + "-" + $release.version + "-" + $arch.name + "-" + $build.name + "-" + $item_group.serial
     #end if
-    - name: $name
+    - name: $prefix$name
       root_store: ${item.root_store}
       virt_type: ${item.vtype}
       image_id: ${item.id}
@@ -168,26 +168,6 @@ def load_query(path, cloud="aws", tree=None):
     return tree
 
 
-def process(cur, data, level, layout, callback, passthrough):
-    for item in cur:
-        if isinstance(item, dict):
-            data[layout[level]['name']] = item.copy()
-        else:
-            data[layout[level]['name']] = {'name': item}
-
-        curdatum = data[layout[level]['name']]
-
-        if callable(layout[level].get('populate', None)):
-            layout[level]['populate'](curdatum)
-
-        if (level + 1) == len(layout):
-            path = '/'.join([data[n['name']]['name'] for n in layout])
-            callback(cur[item], data, path, passthrough)
-        else:
-            process(cur[item], data, level + 1, layout, callback,
-                    passthrough)
-
-
 def name2ver(indict):
     indict.update(toolutil.REL2VER[indict['name']])
 
@@ -239,7 +219,7 @@ def main():
         'streams': [],
         'sign': args.sign,
         }
-    process(tree, {}, 0, layout, writer, passthrough)
+    toolutil.process(tree, {}, 0, layout, writer, passthrough)
 
     tmpl = COLLECTION_TEMPLATE.lstrip()
 
