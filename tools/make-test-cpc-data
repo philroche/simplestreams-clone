@@ -58,11 +58,16 @@ item_groups:
     #else
     #set prefix=$item.root_store + "/"
     #end if
-    #if $item_group.label == "daily":
-    #set name="ubuntu-" + $release.name + "-daily-" + $arch.name + "-" + $build.name + "-" + $item_group.serial
+    #if $item_group.label == "daily"
+    #set rel_ver_label = $release.name + "-daily"
+    #else if $item_group.label == "release"
+    #set rel_ver_label = $release.name + "-" + $release.version
+    #else if $item_group.label.startswith("beta")
+    #set rel_ver_label = $release.name + "-" + $release.version + "-" + $item_group.label
     #else
-    #set name="ubuntu-" + $release.name + "-" + $release.version + "-" + $arch.name + "-" + $build.name + "-" + $item_group.serial
+    #set rel_ver_label = $release.name + "-" + $item_group.label
     #end if
+    #set name="ubuntu-" + $rel_ver_label + "-" + $arch.name + "-" + $build.name + "-" + $item_group.serial
     - name: $prefix$name
       root_store: ${item.root_store}
       virt_type: ${item.vtype}
