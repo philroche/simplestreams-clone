@@ -1,0 +1,53 @@
+# required
+format: stream-1.0
+iqn: iqn.2012-12.com.example.foovendor:released:pinky:server:amd64
+updated: 2012-12-19 13:15:23-05:00
+
+# recommended
+description: Foovendor Cloud Images
+authoritative_url: http://foovendor.example.com/images/released/pinky/amd64.yaml
+
+item_groups:
+ - serial: 20121026.1
+   label: release
+   items:
+    - name: foovendor-pinky-12.04-amd64-server-20121026.1.tar.gz
+      url: files/release-20121026.1/foovendor-12.04-server-cloudimg-amd64.tar.gz
+      md5sum: eb4503313ab5648874100ef9fed306f8
+    - name: foovendor-pinky-12.04-amd64-server-20121026.1-root.tar.gz
+      url: files/release-20121026.1/foovendor-12.04-server-cloudimg-amd64-root.tar.gz
+      md5sum: 0147a53d669df80e093b4be2488d0e3f
+    - name: foovendor-pinky-12.04-amd64-server-20121026.1-disk1.img
+      url: files/release-20121026.1/foovendor-12.04-server-cloudimg-amd64-disk1.img
+      md5sum: cb120f32289d5b49e8c2ae8790d84e49
+ - serial: 20121001
+   label: release
+   items:
+    - name: foovendor-pinky-12.04-amd64-server-20121001.tar.gz
+      url: files/release-20121001/foovendor-12.04-server-cloudimg-amd64.tar.gz
+      md5sum: f7add3d4994801b4be09438a796320f8
+    - name: foovendor-pinky-12.04-amd64-server-20121001-root.tar.gz
+      url: files/release-20121001/foovendor-12.04-server-cloudimg-amd64-root.tar.gz
+      md5sum: b42db269e12e12c1d9962ad694b8e962
+    - name: foovendor-pinky-12.04-amd64-server-20121001-disk1.img
+      url: files/release-20121001/foovendor-12.04-server-cloudimg-amd64-disk1.img
+      md5sum: 0aa7d7de7a784c8edc066d88d47f85e9
+ - serial: 20120328
+   label: beta2
+   items:
+    - name: foovendor-pinky-12.04-beta2-amd64-server-20120328.tar.gz
+      url: files/beta-2/foovendor-12.04-beta2-server-cloudimg-amd64.tar.gz
+      md5sum: f7add3d4994801b4be09438a796320f8
+    - name: foovendor-pinky-12.04-beta2-amd64-server-20120328-root.tar.gz
+      url: files/beta-2/foovendor-12.04-beta2-server-cloudimg-amd64-root.tar.gz
+      md5sum: b42db269e12e12c1d9962ad694b8e962
+    - name: foovendor-pinky-12.04-beta2-amd64-server-20120328-disk1.img
+      url: files/beta-2/foovendor-12.04-beta2-server-cloudimg-amd64-disk1.img
+      md5sum: 0aa7d7de7a784c8edc066d88d47f85e9
+
+tags:
+  arch: amd64
+  release: pinky
+  version: "12.04"
+  stream: released
+  build: server

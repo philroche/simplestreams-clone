@@ -1,0 +1,30 @@
+== Simple Sync Format ==
+Simple Sync format consists of 2 different file formats.
+ * content stream: A collection of multiple item groups of the same "type".
+ * stream collection: a list of content streams
+   A stream collection is simply a way to provide an index of known content
+   streams, and information about them.
+
+Useful definitions
+ * item group
+   an item group is a list of like items. Ie, all produced by the same build.
+   requirements:
+    * serial: a 'serial' entry that can be sorted by YYYYMMDD[.X]
+
+   Example item groups are:
+    * output of the amd64 cloud image build done on 2012-04-04
+    * amd64 images from the cirros release version 0.3.1
+
+ * item
+   There are 1 or more items in a item group.
+   requirements:
+    * name: must be unique within the item group.
+
+   special fields:
+    * url: If an item has a 'url', then the target must be obtainable and
+      should be downloaded when mirroring.
+    * md5sum: stores checksum
+
+   Example:
+    * "disk1.img" produced from the amd64 cloud image build done on 2012-04-04
+    * -root.tar.gz produced from the same build.
