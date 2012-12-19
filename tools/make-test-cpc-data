@@ -198,7 +198,12 @@ def writer(item, data, path, passthrough):
     url = "%s.yaml" % path
     fname = "%s/%s" % (passthrough['output_d'], url)
     toolutil.mkdir_p(os.path.dirname(fname))
-    open(fname, "w").write(toolutil.render_string(passthrough['template'], params))
+    with open(fname, "w") as fp:
+        fp.write(toolutil.render_string(passthrough['template'], params))
+
+    if passthrough['sign']:
+        toolutil.signfile(fname)
+        
     passthrough['streams'].append(url)
     sys.stderr.write(fname + "\n")
 
@@ -232,6 +237,7 @@ def main():
     passthrough = {'output_d': args.out_d,
         'template': STREAM_TEMPLATE.lstrip(),
         'streams': [],
+        'sign': args.sign,
         }
     process(tree, {}, 0, layout, writer, passthrough)
 
@@ -241,6 +247,9 @@ def main():
         coll_file = "%s%sstreams%s" % (path_prefix, path, CONTENT_EXT)
         with open(coll_file, "w") as cfp:
             cfp.write(toolutil.render_string(tmpl, collection))
+
+        if args.sign:
+            toolutil.signfile(coll_file)
 
     toolutil.process_collections(passthrough['streams'], args.out_d,
                                  collwriter)
