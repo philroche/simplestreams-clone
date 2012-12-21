@@ -7,11 +7,11 @@ updated: 2012-12-19 13:15:23-05:00
 description: Foovendor Cloud Images
 authoritative_url: http://foovendor.example.com/images/released/pinky/amd64.yaml
 
-item_groups:
- - serial: 20121026.1
+item_groups: # ItemGroupList
+ - serial: 20121026.1 # ItemGroup
    label: release
-   items:
-    - name: foovendor-pinky-12.04-amd64-server-20121026.1.tar.gz
+   items: # ItemList
+    - name: foovendor-pinky-12.04-amd64-server-20121026.1.tar.gz # Item
       url: files/release-20121026.1/foovendor-12.04-server-cloudimg-amd64.tar.gz
       md5sum: eb4503313ab5648874100ef9fed306f8
     - name: foovendor-pinky-12.04-amd64-server-20121026.1-root.tar.gz

@@ -10,6 +10,7 @@ Useful definitions
    an item group is a list of like items. Ie, all produced by the same build.
    requirements:
     * serial: a 'serial' entry that can be sorted by YYYYMMDD[.X]
+    * items: a list of items
 
    Example item groups are:
     * output of the amd64 cloud image build done on 2012-04-04
