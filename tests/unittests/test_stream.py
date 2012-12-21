@@ -105,9 +105,4 @@ class TestStreamInit(TestCase):
                 self.assertIn(f, p)
 
 
-class TestStreamCompare(TestCase):
-    def test_my_test(self):
-        """None is returned."""
-        self.assertEqual(None, None)
-
 # vi: ts=4 expandtab
