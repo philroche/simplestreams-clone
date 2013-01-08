@@ -106,7 +106,7 @@ tags:
 
 def load_query(path, cloud="aws", tree=None):
     streams = [f[0:-len(".latest.txt")]
-               for f in os.listdir("ci-query")
+               for f in os.listdir(path)
                    if f.endswith("latest.txt")]
     if tree is None:
         tree = {}
