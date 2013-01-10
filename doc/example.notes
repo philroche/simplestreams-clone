@@ -1,0 +1,18 @@
+There are 3 concepts here.
+ - mirror:
+   The 'MAP' file basically lists all files on this mirror
+   It can, then, be easily retrieved and a local mirror of a remote
+   resource be created simply from it.
+
+ - stream collection:
+   a stream collection lists streams that are contained in this mirror.
+   multiple stream collections can be contained in the mirror.
+   these are located in /collections by convention.
+
+   As these files are intended to be indexes into the MAP that users
+   may know the name of, they should keep the same name when mirroring.
+
+   see README for more info
+
+ - stream:
+   see README

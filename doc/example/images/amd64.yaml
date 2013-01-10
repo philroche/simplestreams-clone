@@ -1,0 +1,47 @@
+# required
+format: stream-1.0
+iqn: iqn.2012-12.com.example.foovendor:released:pinky:server:amd64:image-stream
+updated: 2013-01-10 10:04:29-05:00
+
+# item_type: one of 'file' or 'data'. File indicates a mirror should traverse
+item_type: file
+
+# recommended
+description: Foovendor released Cloud Images for amd64
+authoritative_mirror: http://foovendor.example.com/images
+
+item_groups:
+ - serial: 20121026.1
+   label: release
+   items:
+    - name: image-tar
+      sha512: 05722daec3b9893b09dd2117eac402447d72c0d8045aaf2bef5a3401d6b026ecfad1db05534c0ac05c890a71e0e721fb832605830ae154dc2174effb9c738dd8
+    - name: root-tar
+      sha512: 1d906a3b4862c7aa64f033e7ae3af1cab2491a8b387fa795f15f8393af0f917721d4de3c6af91138d8e1bc6b58fe8331be3ed7df8ab683932a89bfd3a1009b0b
+    - name: disk1.img
+      sha512: 25e23b60dee2dfbe1fba710c6f49747c38398889d1cbecc2130728677b769e3326a989d1b5a2d8f92d981039675f5307c7404ccbae112b2208f61ddc0c6aa12d
+ - serial: 20121001
+   label: release
+   items:
+    - name: image-tar
+      sha512: 05722daec3b9893b09dd2117eac402447d72c0d8045aaf2bef5a3401d6b026ecfad1db05534c0ac05c890a71e0e721fb832605830ae154dc2174effb9c738dd8
+    - name: root-tar
+      sha512: 1d906a3b4862c7aa64f033e7ae3af1cab2491a8b387fa795f15f8393af0f917721d4de3c6af91138d8e1bc6b58fe8331be3ed7df8ab683932a89bfd3a1009b0b
+    - name: disk1.img
+      sha512: 25e23b60dee2dfbe1fba710c6f49747c38398889d1cbecc2130728677b769e3326a989d1b5a2d8f92d981039675f5307c7404ccbae112b2208f61ddc0c6aa12d
+ - serial: 20120929
+   label: beta2
+   items:
+    - name: image-tar
+      sha512: 05722daec3b9893b09dd2117eac402447d72c0d8045aaf2bef5a3401d6b026ecfad1db05534c0ac05c890a71e0e721fb832605830ae154dc2174effb9c738dd8
+    - name: root-tar
+      sha512: 1d906a3b4862c7aa64f033e7ae3af1cab2491a8b387fa795f15f8393af0f917721d4de3c6af91138d8e1bc6b58fe8331be3ed7df8ab683932a89bfd3a1009b0b
+    - name: disk1.img
+      sha512: 25e23b60dee2dfbe1fba710c6f49747c38398889d1cbecc2130728677b769e3326a989d1b5a2d8f92d981039675f5307c7404ccbae112b2208f61ddc0c6aa12d
+
+tags:
+  arch: amd64
+  release: pinky
+  version: "12.04"
+  stream: released
+  build: server
