@@ -5,14 +5,19 @@ There are 3 concepts here.
    resource be created simply from it.
 
  - stream collection:
-   a stream collection lists streams that are contained in this mirror.
+   see README for more generic idea of what a stream collection is.
+
+   a stream collection lists streams.
    multiple stream collections can be contained in the mirror.
    these are located in /collections by convention.
 
    As these files are intended to be indexes into the MAP that users
-   may know the name of, they should keep the same name when mirroring.
+   may know the name of, they should keep the same name/path when mirroring.
+   Ie, http://cloud-ia
 
-   see README for more info
+   stream collections are either unsigned or signed.  if signed, they are
+   signed by the mirror admin, which is not necessarily the same as the
+   signer of stream files they reference.
 
  - stream:
    see README
