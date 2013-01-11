@@ -45,6 +45,7 @@ REL2VER = {
 STREAM_TEMPLATE = """
 description: Image ids for Ubuntu Cloud Ubuntu ${release.version} (${release.devname}) on ${cloud.name}/${region.name}
 format: stream-1.0
+iqn: iqn.2004-05.com.ubuntu:cloud-images:${stream.name}:${release.name}:${build.name}:${arch.name}:cpc-stream
 item_groups:
 #for $item_group in $item_groups:
  - serial: ${item_group.serial}
@@ -90,9 +91,12 @@ tags:
 COLLECTION_TEMPLATE = """
 description: Ubuntu Certified Public Cloud image id streams
 format: stream-collection:1.0
+iqn: $iqn
+mirror: ..
+
 streams:
 #for $stream in $streams:
- - url: $stream.url
+ - iqn: $stream.iqn
  #for $tag in $stream.tags:
    $tag: $stream.tags[$tag]
  #end for
@@ -229,7 +233,18 @@ def main():
     tmpl = COLLECTION_TEMPLATE.lstrip()
 
     def collwriter(path, path_prefix, collection):
-        coll_file = "%s%sstreams%s" % (path_prefix, path, CONTENT_EXT)
+        #import ipdb; ipdb.set_trace()
+        if path != "/":
+            return
+            
+        iqn = "iqn.2005-04.com.ubuntu:cloud-images:cpc-streams"
+        coll_file = "%s/collections/%s%s" % (path_prefix, iqn, CONTENT_EXT)
+        collection['iqn'] = iqn
+        #coll_file = "%s/collections/%s%s" % (path_prefix, collection['iqn'],
+        #                                     CONTENT_EXT)
+        #print "coll_file=%s" % coll_file
+        #print collection
+        toolutil.mkdir_p(os.path.dirname(coll_file))
         with open(coll_file, "w") as cfp:
             cfp.write(toolutil.render_string(tmpl, collection))
 

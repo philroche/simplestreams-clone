@@ -22,6 +22,8 @@ REL2VER = {
     "raring": {'version': "13.04", 'devname': "Raring Ringtail"},
 }
 
+SKIP_COPY_UP = ( 'format' )
+
 def render_string(content, params):
     if not params:
         params = {}
@@ -136,8 +138,14 @@ def process_collections(stream_files, path_prefix, callback):
                 for key in clear:
                     del collections[ctok]['tags'][key]
 
-            collections[ctok]['streams'].append(
-                {'tags': stream['tags'].copy(), 'url': url[len(ctok) - 1:]})
+            addstream = {}
+            addstream['tags'] = stream['tags'].copy()
+            for topitem in stream:
+                val = stream[topitem]
+                if isinstance(val, str) and topitem not in SKIP_COPY_UP:
+                    addstream[topitem] = val
+                    
+            collections[ctok]['streams'].append(addstream)
 
     for coll in collections:
         for stream in collections[coll]['streams']:
@@ -147,5 +155,3 @@ def process_collections(stream_files, path_prefix, callback):
 
         callback(path=coll, path_prefix=path_prefix,
                  collection=collections[coll])
-
-
