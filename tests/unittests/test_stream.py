@@ -10,17 +10,17 @@ MINIMAL_DATA = {
 
 TRIVIAL_ITEM_GROUPS = [
     {"serial": 3,
-        "items": [{"name": "entry 3.1", "url": "f/3-one.txt"},
-                  {"name": "entry 3.2", "url": "f/3-two.txt"},
-                  {"name": "entry 3.3", "url": "f/3-three.txt"}]},
+        "items": [{"name": "entry 3.1"},
+                  {"name": "entry 3.2"},
+                  {"name": "entry 3.3"}]},
     {"serial": 2,
-        "items": [{"name": "entry 2.1", "url": "f/2-one.txt"},
-                  {"name": "entry 2.2", "url": "f/2-two.txt"},
-                  {"name": "entry 2.3", "url": "f/2-three.txt"}]},
+        "items": [{"name": "entry 2.1"},
+                  {"name": "entry 2.2"},
+                  {"name": "entry 2.3"}]},
     {"serial": 1,
-        "items": [{"name": "entry 1.1", "url": "f/1-one.txt"},
-                  {"name": "entry 1.2", "url": "f/1-two.txt"},
-                  {"name": "entry 1.3", "url": "f/1-three.txt"}]},
+        "items": [{"name": "entry 1.1"},
+                  {"name": "entry 1.2"},
+                  {"name": "entry 1.3"}]},
 ]
 
 STREAM_TAGS = {
