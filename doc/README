@@ -51,3 +51,12 @@ Notes:
  * in the event of a 404 or ENOENT on a PATH, the client will consult the 
    'mirrors' entry in the MIRROR.info file, and try to resolve the file
    from *that* mirror.
+
+== Mirror ==
+ * A mirror is required to have a MIRROR.info file at its top level.
+   That file is required to define an 'iqn', that indicates what it is
+   a mirror of, and should contain a 'authoritative_url' indicating
+   the upstream mirror for that.
+   iqn is used so a client can easily maintain a list of mirrors not
+   by 'authoritative_url' but by iqn.
+   iqn cannot contain /.
