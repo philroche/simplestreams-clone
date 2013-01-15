@@ -251,7 +251,6 @@ def main():
     toolutil.process(tree, {}, 0, layout, writer, passthrough)
 
     tmpl = COLLECTION_TEMPLATE.lstrip()
-    import ipdb; ipdb.set_trace()
 
     def collwriter(path, path_prefix, collection):
         #import ipdb; ipdb.set_trace()
