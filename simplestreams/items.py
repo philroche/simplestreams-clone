@@ -75,7 +75,7 @@ class Item(dict):
     @property
     def tags(self):
         return {k: self[k] for k in self if
-                    k not in ('name', 'url', 'md5sum')}
+                    k not in ('name', 'path', 'md5sum', 'sha512', 'sha256')}
 
 
 class RestrictedSimpleParentedList(list):
