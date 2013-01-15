@@ -22,7 +22,7 @@ Useful definitions
     * name: must be unique within the item group.
 
    special fields:
-    * url: If an item has a 'url', then the target must be obtainable and
+    * path: If an item has a 'path', then the target must be obtainable and
       should be downloaded when mirroring.
     * md5sum: stores checksum
 
