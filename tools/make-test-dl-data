@@ -62,8 +62,6 @@ STREAM_TEMPLATE = """
 format: stream-1.0
 # recommended
 description: Ubuntu Cloud Images
-iqn: $iqn
-item_format: file
 
 item_groups:
 #for $item_group in $item_groups
@@ -74,6 +72,7 @@ item_groups:
    #set file = $utils.create_file($prefix, $item.path)
     - name: ${item.name}
       md5sum: ${file.md5sum}
+      path: $item.path
    #end for
 #end for
 
@@ -88,11 +87,10 @@ tags:
 COLLECTION_TEMPLATE = """
 description: Ubuntu Cloud Image streams
 format: stream-collection:1.0
-iqn: $iqn
 
 streams:
 #for $stream in $streams:
- - iqn: $stream.iqn
+ - path: $stream.path
  #for $tag in $stream.tags:
    $tag: $stream.tags[$tag]
  #end for
@@ -137,7 +135,6 @@ def load_query(path, tree=None):
             tree[stream] = {}
         dl_files = []
 
-        iqn_base = "iqn.2005-04.com.ubuntu:cloud-images:%s" % stream
         latest_f = "%s/%s.latest.txt" % (path, stream)
 
         # get the builds and releases
@@ -176,8 +173,6 @@ def load_query(path, tree=None):
                 (rel, build, label, serial, arch, filepath, name, _bogus) = \
                     line.split("\t", 8)
 
-                iqn_path = ":".join((rel, build, arch))
-
                 if build not in cdata:
                     cdata[build] = {}
                 if rel not in cdata[build]:
@@ -199,8 +194,6 @@ def load_query(path, tree=None):
                 # item groups (same serial) all have the same label
                 item_group['label'] = label
                 cur_item = {'path': filepath, 'name': name}
-                iqn_item = ':'.join((serial, name))
-                cur_item['iqn'] = ':'.join((iqn_base, iqn_path, iqn_item))
 
                 # there were some duplicate rows in /query -dl.txt files.
                 if cur_item not in item_group['items']:
@@ -218,10 +211,6 @@ def name2ver(indict):
 
 
 def writer(item, data, path, passthrough):
-    iqn = ("iqn.2005-04.com.ubuntu:cloud-images:%s:%s:%s:%s:stream" %
-           (data['stream']['name'], data['release']['name'], 
-            data['build']['name'], data['arch']['name']))
-    data['iqn'] = iqn
     params = data.copy()
     params['item_groups'] = item
     params.update(passthrough.get('params', {}))
@@ -231,12 +220,6 @@ def writer(item, data, path, passthrough):
     with open(fname, "w") as fp:
         fp.write(toolutil.render_string(
             passthrough['template'], params))
-
-    for item_group in params['item_groups']:
-        for item in item_group['items']:
-            passthrough['maps']['files'][item['iqn']] = item['path']
-
-    passthrough['maps']['files'][iqn] = url
 
     if passthrough['sign']:
         toolutil.signfile(fname)
@@ -298,15 +281,7 @@ def main():
     def collwriter(path, path_prefix, collection):
         toks = ("stream", "release", "buildname", "arch", "cloud", "region")
 
-        iqn = "iqn.2005-04.com.ubuntu:cloud-images"
-        for tok in toks:
-            if tok in collection['tags']:
-                iqn += ":%s" % collection['tags'][tok]
-        iqn += ":image-streams"
-        collection['iqn'] = iqn
-
-        path = "collections/%s%s" % (iqn, CONTENT_EXT)
-        coll_file = os.path.join(path_prefix, path)
+        coll_file = "%s%sstreams%s" % (path_prefix, path, CONTENT_EXT)
 
         toolutil.mkdir_p(os.path.dirname(coll_file))
         with open(coll_file, "w") as cfp:
