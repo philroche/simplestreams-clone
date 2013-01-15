@@ -45,7 +45,9 @@ REL2VER = {
 STREAM_TEMPLATE = """
 description: Image ids for Ubuntu Cloud Ubuntu ${release.version} (${release.devname}) on ${cloud.name}/${region.name}
 format: stream-1.0
-iqn: iqn.2004-05.com.ubuntu:cloud-images:${stream.name}:${release.name}:${build.name}:${arch.name}:cpc-stream
+iqn: $iqn
+item_type: data
+
 item_groups:
 #for $item_group in $item_groups:
  - serial: ${item_group.serial}
@@ -92,7 +94,6 @@ COLLECTION_TEMPLATE = """
 description: Ubuntu Certified Public Cloud image id streams
 format: stream-collection:1.0
 iqn: $iqn
-mirror: ..
 
 streams:
 #for $stream in $streams:
@@ -182,10 +183,17 @@ def name2ver(indict):
 
 
 def writer(item, data, path, passthrough):
+    iqn = ("iqn.2005-04.com.ubuntu:cloud-images:%s:%s:%s:%s:%s:%s:stream" %
+           (data['stream']['name'], data['release']['name'],
+            data['build']['name'], data['arch']['name'], data['cloud']['name'],
+            data['region']['name']))
+    data['iqn'] = iqn
     params = data.copy()
     params['item_groups'] = item
-    url = "%s.yaml" % path
-    fname = "%s/%s" % (passthrough['output_d'], url)
+    rpath = "%s.yaml" % path
+    passthrough['maps']['files'][iqn] = rpath
+    fname = "%s/%s" % (passthrough['output_d'], rpath)
+
     toolutil.mkdir_p(os.path.dirname(fname))
     with open(fname, "w") as fp:
         fp.write(toolutil.render_string(passthrough['template'], params))
@@ -193,7 +201,7 @@ def writer(item, data, path, passthrough):
     if passthrough['sign']:
         toolutil.signfile(fname)
         
-    passthrough['streams'].append(url)
+    passthrough['streams'].append(rpath)
     sys.stderr.write(fname + "\n")
 
 
@@ -228,18 +236,42 @@ def main():
         'streams': [],
         'sign': args.sign,
         }
+
+    try:
+        maps = toolutil.load_content("%s/MAP" % args.out_d)
+    except IOError as e:
+        if e.errno != errno.ENOENT:
+            raise
+        maps = {}
+    if 'files' not in maps:
+        maps['files'] = {}
+
+    passthrough['maps'] = maps
+
     toolutil.process(tree, {}, 0, layout, writer, passthrough)
 
     tmpl = COLLECTION_TEMPLATE.lstrip()
+    import ipdb; ipdb.set_trace()
 
     def collwriter(path, path_prefix, collection):
         #import ipdb; ipdb.set_trace()
-        if path != "/":
-            return
-            
-        iqn = "iqn.2005-04.com.ubuntu:cloud-images:cpc-streams"
-        coll_file = "%s/collections/%s%s" % (path_prefix, iqn, CONTENT_EXT)
+        #if path != "/":
+        #    return
+
+        toks = ("stream", "release", "buildname", "arch", "cloud", "region")
+
+        iqn = "iqn.2005-04.com.ubuntu:cloud-images"
+        for tok in toks:
+            if tok in collection['tags']:
+                iqn += ":%s" % collection['tags'][tok]
+        iqn += ":cpc-streams"
         collection['iqn'] = iqn
+
+        path = "collections/%s%s" % (iqn, CONTENT_EXT)
+        coll_file = os.path.join(path_prefix, path)
+
+        passthrough['maps']['files'][iqn] = path
+
         #coll_file = "%s/collections/%s%s" % (path_prefix, collection['iqn'],
         #                                     CONTENT_EXT)
         #print "coll_file=%s" % coll_file
@@ -253,6 +285,9 @@ def main():
 
     toolutil.process_collections(passthrough['streams'], args.out_d,
                                  collwriter)
+
+    with open(os.path.join(args.out_d, "MAP"), "w") as mfp:
+        mfp.write(toolutil.dumps(passthrough['maps']))
 
     return
 
