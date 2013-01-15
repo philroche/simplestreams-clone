@@ -263,17 +263,6 @@ def main():
         'sign': args.sign,
     }
 
-    try:
-        maps = toolutil.load_content("%s/MAP" % args.out_d)
-    except IOError as e:
-        if e.errno != errno.ENOENT:
-            raise
-        maps = {}
-    if 'files' not in maps:
-        maps['files'] = {}
-
-    passthrough['maps'] = maps
-
     toolutil.process(tree, {}, 0, layout, writer, passthrough)
 
     tmpl = COLLECTION_TEMPLATE.lstrip()
@@ -293,8 +282,12 @@ def main():
     toolutil.process_collections(passthrough['streams'], args.out_d,
                                  collwriter)
 
-    with open(os.path.join(args.out_d, "MAP"), "w") as mfp:
-        mfp.write(toolutil.dumps(passthrough['maps']))
+    with open(os.path.join(args.out_d, "MIRROR.info"), "w") as mfp:
+        mfp.write(toolutil.dumps({
+            'iqn': 'iqn.2005-04.com.ubuntu:cloud-images:download',
+            'authoritative_mirror': 'http://cloud-images.ubuntu.com',
+            'mirrors': []
+            }))
 
     return
 
