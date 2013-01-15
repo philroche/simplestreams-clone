@@ -5,12 +5,9 @@ from Cheetah.Template import Template
 import json
 import os
 import os.path
+from simplestreams import read_possibly_signed
 import subprocess
 import yaml
-
-PGP_SIGNED_MESSAGE_HEADER = "-----BEGIN PGP SIGNED MESSAGE-----"
-PGP_SIGNATURE_HEADER = "-----BEGIN PGP SIGNATURE-----"
-PGP_SIGNATURE_FOOTER = "-----END PGP SIGNATURE-----"
 
 
 REL2VER = {
@@ -37,44 +34,6 @@ def mkdir_p(path):
         if exc.errno != errno.EEXIST:
             raise
     return
-
-
-def read_possibly_signed(path):
-    content = ""
-    with open(path, "r") as cfp:
-        content = cfp.read()
-
-    if content.startswith(PGP_SIGNED_MESSAGE_HEADER):
-        # http://rfc-ref.org/RFC-TEXTS/2440/chapter7.html
-        subprocess.check_output(["gpg", "--batch", "--verify", path],
-                                stderr=subprocess.STDOUT)
-        ret = {'body': '', 'signature': '', 'garbage': ''}
-        lines = content.splitlines()
-        i = 0
-        for i in range(0, len(lines)):
-            if lines[i] == PGP_SIGNED_MESSAGE_HEADER:
-                mode = "header"
-                continue
-            elif mode == "header":
-                if lines[i] != "":
-                    mode = "body"
-                continue
-            elif lines[i] == PGP_SIGNATURE_HEADER:
-                mode = "signature"
-                continue
-            elif lines[i] == PGP_SIGNATURE_FOOTER:
-                mode = "garbage"
-                continue
-
-            # dash-escaped content in body
-            if lines[i].startswith("- ") and mode == "body":
-                ret[mode] += lines[i][2:] + "\n"
-            else:
-                ret[mode] += lines[i] + "\n"
-
-        return(ret['body'], ret['signature'])
-    else:
-        return(content, None)
 
 
 def signfile(path):

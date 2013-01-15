@@ -1,3 +1,8 @@
+PGP_SIGNED_MESSAGE_HEADER = "-----BEGIN PGP SIGNED MESSAGE-----"
+PGP_SIGNATURE_HEADER = "-----BEGIN PGP SIGNATURE-----"
+PGP_SIGNATURE_FOOTER = "-----END PGP SIGNATURE-----"
+
+
 class RestrictedSimpleParentedList(list):
     """A simple list with parent attr, and restriction on types inserted"""
     parent = None
@@ -71,5 +76,45 @@ def resolve_work(src, target, max=None, keep=None, sort_reverse=True):
         remove.append(after_rem[:-(final_count - max)])
 
     return(add, remove)
+
+
+def read_possibly_signed(path):
+    content = ""
+    with open(path, "r") as cfp:
+        content = cfp.read()
+
+    if content.startswith(PGP_SIGNED_MESSAGE_HEADER):
+        # http://rfc-ref.org/RFC-TEXTS/2440/chapter7.html
+        subprocess.check_output(["gpg", "--batch", "--verify", path],
+                                stderr=subprocess.STDOUT)
+        ret = {'body': '', 'signature': '', 'garbage': ''}
+        lines = content.splitlines()
+        i = 0
+        for i in range(0, len(lines)):
+            if lines[i] == PGP_SIGNED_MESSAGE_HEADER:
+                mode = "header"
+                continue
+            elif mode == "header":
+                if lines[i] != "":
+                    mode = "body"
+                continue
+            elif lines[i] == PGP_SIGNATURE_HEADER:
+                mode = "signature"
+                continue
+            elif lines[i] == PGP_SIGNATURE_FOOTER:
+                mode = "garbage"
+                continue
+
+            # dash-escaped content in body
+            if lines[i].startswith("- ") and mode == "body":
+                ret[mode] += lines[i][2:] + "\n"
+            else:
+                ret[mode] += lines[i] + "\n"
+
+        return(ret['body'], ret['signature'])
+    else:
+        return(content, None)
+
+
 
 # vi: ts=4 expandtab
