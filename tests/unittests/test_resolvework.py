@@ -9,7 +9,9 @@ class TestStreamResolveWork(TestCase):
         self.assertEqual(r_remove, remove)
 
     def test_keep_greater_than_max_is_exception(self):
-        self.assertRaises(TypeError, resolve_work([1,2], [3,4], keep=3, max=2))
+        keep = 2
+        mmax = 3
+        self.assertRaises(TypeError, self.tryit, [1,2], [3,4], mmax, keep)
 
     def test_full_replace(self):
         src = [10, 9, 8]
