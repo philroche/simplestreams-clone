@@ -58,9 +58,9 @@ class TestItemGroup(TestCase):
             'serial': 20120328,
             'label': 'beta2',
             'items': [
-              {'name': 'item1', 'tag1': 'value1',
+              {'path': 'f/item1', 'name': 'item1', 'tag1': 'value1',
                'md5sum': 'MD5SUM', 'tagname': 'tagvalue'},
-              {'name': 'item2', 'tag2': 'value2',
+              {'path': 'f/item2', 'name': 'item2', 'tag2': 'value2',
                'md5sum': 'MD5SUM'},
             ]
         }
