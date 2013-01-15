@@ -144,6 +144,8 @@ def process_collections(stream_files, path_prefix, callback):
                 val = stream[topitem]
                 if isinstance(val, str) and topitem not in SKIP_COPY_UP:
                     addstream[topitem] = val
+
+            addstream['path'] = url
                     
             collections[ctok]['streams'].append(addstream)
 
