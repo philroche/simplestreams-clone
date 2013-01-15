@@ -1,0 +1,70 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+# required
+format: stream-1.0
+
+# recommended
+description: Foovendor Cloud Images
+
+item_groups:
+ - serial: 20121026.1
+   label: release
+   items:
+    - name: foovendor-pinky-12.04-amd64-server-20121026.1.tar.gz
+      path: files/release-20121026.1/foovendor-12.04-server-cloudimg-amd64.tar.gz
+      md5sum: eb4503313ab5648874100ef9fed306f8
+    - name: foovendor-pinky-12.04-amd64-server-20121026.1-root.tar.gz
+      path: files/release-20121026.1/foovendor-12.04-server-cloudimg-amd64-root.tar.gz
+      md5sum: 0147a53d669df80e093b4be2488d0e3f
+    - name: foovendor-pinky-12.04-amd64-server-20121026.1-disk1.img
+      path: files/release-20121026.1/foovendor-12.04-server-cloudimg-amd64-disk1.img
+      md5sum: cb120f32289d5b49e8c2ae8790d84e49
+ - serial: 20121001
+   label: release
+   items:
+    - name: foovendor-pinky-12.04-amd64-server-20121001.tar.gz
+      path: files/release-20121001/foovendor-12.04-server-cloudimg-amd64.tar.gz
+      md5sum: f7add3d4994801b4be09438a796320f8
+    - name: foovendor-pinky-12.04-amd64-server-20121001-root.tar.gz
+      path: files/release-20121001/foovendor-12.04-server-cloudimg-amd64-root.tar.gz
+      md5sum: b42db269e12e12c1d9962ad694b8e962
+    - name: foovendor-pinky-12.04-amd64-server-20121001-disk1.img
+      path: files/release-20121001/foovendor-12.04-server-cloudimg-amd64-disk1.img
+      md5sum: 0aa7d7de7a784c8edc066d88d47f85e9
+ - serial: 20120328
+   label: beta2
+   items:
+    - name: foovendor-pinky-12.04-beta2-amd64-server-20120328.tar.gz
+      path: files/beta-2/foovendor-12.04-beta2-server-cloudimg-amd64.tar.gz
+      md5sum: f7add3d4994801b4be09438a796320f8
+    - name: foovendor-pinky-12.04-beta2-amd64-server-20120328-root.tar.gz
+      path: files/beta-2/foovendor-12.04-beta2-server-cloudimg-amd64-root.tar.gz
+      md5sum: b42db269e12e12c1d9962ad694b8e962
+    - name: foovendor-pinky-12.04-beta2-amd64-server-20120328-disk1.img
+      path: files/beta-2/foovendor-12.04-beta2-server-cloudimg-amd64-disk1.img
+      md5sum: 0aa7d7de7a784c8edc066d88d47f85e9
+
+tags:
+  arch: amd64
+  release: pinky
+  version: "12.04"
+  stream: released
+  build: server
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.12 (GNU/Linux)
+
+iQIcBAEBCAAGBQJQ9YNWAAoJEB5EEKQCS8bwpo4P/iNVVk8r/PysfliNbE4J+l6v
+gAxz0vAmkq6m8AL00edWcK+AYY9R3qZmxQhMzSiQ70iTri7pr0IRFlmvkiu8ynFb
+GWOzkIN3qhVGgK0aqz7AzOlB9ScJaEIhxcoYYS1ela27CMWrEJbdJvbpExbxZ86b
+2vvae0LNPIsBFlod8I7sEoZ/qzdc3gfshqHrapGfEf3/tnXVrobfr9zv8B71WevT
+gerIS8XWgoLCEc6xkqUJEEjTYhnEyvsB7ExnJ2akFLkeN8iOFZb/cZQcwoeN3rM6
+UA0uS3T+otTnLF108WGuBtWXhyS+qZxj+gDHR2VT/HIiRCZrqej0D4JNumcC+Zyg
+85UWe5Zd9z8I8GLm9wGLtmPf7MS/Sgd96Zm0sLaJzc7Oq8H5mHhFIb4bmWhKimvJ
+sdLOsPl2qepKw+zuAIHz/uz7DwwbFjaLxOZya0awXzPOZl4d6tFZortr7mzKRuHs
+wf7U4aWEn+NLCo3Fh7oyh1/frVDJMg78rXy8u6qxCsWjJiHcVkq7Kd8n0Oa+ZziE
+czQ8rxovZwzdWWCifYf2EC0wNl3AmS5+WCWGZ2RYosdGuQfLyqkYSB0Ol7RxxBpU
+oEeMgh21/5ZyakBkWD3Da9hSAn7f9Xe09FZjiMHwO7FHXO6qlsmVSdp4+S4UKCbH
+Woj7XFKzweDFLWoP6j8k
+=t7+T
+-----END PGP SIGNATURE-----

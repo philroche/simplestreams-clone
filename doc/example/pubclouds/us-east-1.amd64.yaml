@@ -2,12 +2,8 @@ format: stream-1.0
 iqn: iqn.2012-12.com.example.foovendor:released:pinky:server:amd64:ec2:us-east-1:stream
 updated: 2013-01-10 12.04:29-05:00
 
-# item_type: one of 'file' or 'data'. File indicates a mirror should traverse
-item_type: data
-
 # recommended
 description: Foovendor released Cloud Images for amd64 in ec2 us-east-1
-authoritative_mirror: http://foovendor.example.com/images
 
 item_groups:
  - serial: 20121026.1
