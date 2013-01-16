@@ -61,6 +61,7 @@ STREAM_TEMPLATE = """
 # required
 format: stream-1.0
 # recommended
+iqn: $iqn
 description: Ubuntu Cloud Images
 
 item_groups:
@@ -210,7 +211,12 @@ def name2ver(indict):
     indict.update(toolutil.REL2VER[indict['name']])
 
 
-def writer(item, data, path, passthrough):
+def streamwriter(item, data, path, passthrough):
+    iqn = ("iqn.2005-04.com.ubuntu:cloud-images:%s:%s:%s:%s:stream" %
+           (data['stream']['name'], data['release']['name'], 
+            data['build']['name'], data['arch']['name']))
+    data['iqn'] = iqn
+
     params = data.copy()
     params['item_groups'] = item
     params.update(passthrough.get('params', {}))
@@ -263,7 +269,7 @@ def main():
         'sign': args.sign,
     }
 
-    toolutil.process(tree, {}, 0, layout, writer, passthrough)
+    toolutil.process(tree, {}, 0, layout, streamwriter, passthrough)
 
     tmpl = COLLECTION_TEMPLATE.lstrip()
 
