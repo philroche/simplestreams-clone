@@ -3,6 +3,7 @@ Hash: SHA256
 
 # required
 format: stream-1.0
+iqn: iqn.2012-12.com.example.foovendor:released:pinky:server:i386
 
 # recommended
 description: Foovendor Cloud Images
@@ -13,37 +14,37 @@ item_groups:
    items:
     - name: foovendor-pinky-12.04-i386-server-20121026.1.tar.gz
       path: files/release-20121026.1/foovendor-12.04-server-cloudimg-i386.tar.gz
-      md5sum: 807b90fda43a0d1c8f7891134adf6ea1
+      md5: 807b90fda43a0d1c8f7891134adf6ea1
     - name: foovendor-pinky-12.04-i386-server-20121026.1-root.tar.gz
       path: files/release-20121026.1/foovendor-12.04-server-cloudimg-i386-root.tar.gz
-      md5sum: 334f045d5cfdeaa4e9b3831c1c3fcefe
+      md5: 334f045d5cfdeaa4e9b3831c1c3fcefe
     - name: foovendor-pinky-12.04-i386-server-20121026.1-disk1.img
       path: files/release-20121026.1/foovendor-12.04-server-cloudimg-i386-disk1.img
-      md5sum: 58fc60d5035cdb617fb409e8e170d2f1
+      md5: 58fc60d5035cdb617fb409e8e170d2f1
  - serial: 20121001
    label: release
    items:
     - name: foovendor-pinky-12.04-i386-server-20121001.tar.gz
       path: files/release-20121001/foovendor-12.04-server-cloudimg-i386.tar.gz
-      md5sum: 807b90fda43a0d1c8f7891134adf6ea1
+      md5: 807b90fda43a0d1c8f7891134adf6ea1
     - name: foovendor-pinky-12.04-i386-server-20121001-root.tar.gz
       path: files/release-20121001/foovendor-12.04-server-cloudimg-i386-root.tar.gz
-      md5sum: 334f045d5cfdeaa4e9b3831c1c3fcefe
+      md5: 334f045d5cfdeaa4e9b3831c1c3fcefe
     - name: foovendor-pinky-12.04-i386-server-20121001-disk1.img
       path: files/release-20121001/foovendor-12.04-server-cloudimg-i386-disk1.img
-      md5sum: 58fc60d5035cdb617fb409e8e170d2f1
+      md5: 58fc60d5035cdb617fb409e8e170d2f1
  - serial: 20120328
    label: beta2
    items:
     - name: foovendor-pinky-12.04-beta2-i386-server-20120328.tar.gz
       path: files/beta-2/foovendor-12.04-beta2-server-cloudimg-i386.tar.gz
-      md5sum: c435e6e7cf3d6062a547f49621be750b
+      md5: 1c6ff83b21db5cbe75b5093d9394fbc0
     - name: foovendor-pinky-12.04-beta2-i386-server-20120328-root.tar.gz
       path: files/beta-2/foovendor-12.04-beta2-server-cloudimg-i386-root.tar.gz
-      md5sum: 1c6ff83b21db5cbe75b5093d9394fbc0
+      md5: c435e6e7cf3d6062a547f49621be750b
     - name: foovendor-pinky-12.04-beta2-i386-server-20120328-disk1.img
       path: files/beta-2/foovendor-12.04-beta2-server-cloudimg-i386-disk1.img
-      md5sum: 7d746da2663e217bd01cac8ef9058a8e
+      md5: 7d746da2663e217bd01cac8ef9058a8e
 
 tags:
   arch: i386
@@ -54,17 +55,17 @@ tags:
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.12 (GNU/Linux)
 
-iQIcBAEBCAAGBQJQ9YMjAAoJEB5EEKQCS8bwNEMP/06rzHas1u+BhRR7osgbyUwe
-UJ0oSDGvv6rn/N0GjWj4L0tvl42HdF630OCecUEYkjvdtWVTs8yT1gzc0OwFGVpa
-Gc9dz+ALf09K+Pql8ntB3wsEmotXSikzQfT0LKyjgfWY9OO97CpKeCdOeh8zHCWu
-TxnXW+ylB4V8Qf1C/02dLP+eaLkK1mXAL0zQMPJJL9XjFuuY4iT8eOpni8oFJcl/
-W1MJ/DfNoP/gC9rkOa9kgY51ZuEVq2yjJm1RjheBYaGmxZPcq3WNs7zU/fzQ0BW4
-7mMu4GzIn1kpBO+A2F5Lto9eXzJlSGKthth1+BEPM2D0/r/qRoHd998ofTZZIjhx
-HHqKAL+KmstbNtp3T/JeXzd6Tm3nppuD897X9aGk1EDo76hdomJcUEykq1hbD7wW
-bjHjZR6BBsqO/mK9AYDdnKxYwmPcJ29U7jrU7sGii6CYpN3kjpIzNfIpIR/BUAnj
-zJWeX9Q24Sqfa5UHrjcRE8/0wAVmVYfIub0qdJkZWGktJF6nWDvfXOlU6ycngs9I
-Wc7QGy7PtayZiNOLmLH8Ovy86xxFWhVGD5ie4ZTi6B184nR1inS9LSbZCLFUnNAr
-v6bJBvgiXZDFPK9vZ00cC2lzFE+ZJoR7MnV2LQ5kk+481LxZBWaeRJ3mfX2+T1jM
-x6YKmKTyVBrKMqNEj42e
-=ivCC
+iQIcBAEBCAAGBQJQ9i/5AAoJEB5EEKQCS8bwJE4QAK3eeLC6LW5vn9UG87oZBMiu
+0YAz6FYFRGNfEUR/5s/PpPAKxJrY+gkBQEQOdC2RPug6OK4HV0kIfxcaIewSz2rt
+sf6T+GbTQOoDpJwBNypTbSYBXVkc1lu6XIA6Wf6gWtd//W0JD624OrHVnY/LiARq
+hk1mIfua/BnsEhdwE9aImJchC66wPCQLK8XmJ62UxnsdXYSeoAaQi2G76vDV2uAB
+Nxk3HzzyvNrpvOj4CBnzfLqpAaL5qLQjNFAaLIUqaGuft92Ca43b70WnXewvZgjP
+LhcGiqyy/xB8Yp6kFcVqQOZGBX2QFulxm6kQ75LBgzZGItA7PE/pt1i4XvWc86Ku
+jyfn0AjpEi3RvL8hVDgWnefezNCgmn2iWNpcIan9EIF4Ip62yZ7figmKzrMubu8T
+/8kJkJ8mhjAzI7DuHrdhxCMCLVbRJTgkO8oYeUuboGZCI8gw7w74NmnBsw4xv9fI
+iaxqINfO6brCV7HXCo15v14aQzO0p7DWLb7bxscIqyLmVijK5/zvu+OMGmH8RdCj
+6Q6DX9I6FzB3fpDRKAmZZcMORHDEci013wm/fPHI4b3HO/1IQ4gdBsxNdAtuUKkB
+7CFJKIe+P1MJUe/WWt/DR7JMCZ+ix1HvPzeXVMKecbEV8RUwTQs6+Gmis8otSL9x
+jcqsnHSE9eLvFdJS6zA7
+=zfrm
 -----END PGP SIGNATURE-----
