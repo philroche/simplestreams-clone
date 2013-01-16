@@ -180,6 +180,12 @@ def name2ver(indict):
 
 
 def streamwriter(item, data, path, passthrough):
+    iqn = ("iqn.2005-04.com.ubuntu:public-clouds:%s:%s:%s:%s:%s:%s:stream" %
+           (data['stream']['name'], data['release']['name'],
+            data['build']['name'], data['arch']['name'], data['cloud']['name'],
+            data['region']['name']))
+    data['iqn'] = iqn
+
     params = data.copy()
     params['item_groups'] = item
     rpath = "%s.yaml" % path
