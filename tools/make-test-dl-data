@@ -71,7 +71,7 @@ item_groups:
    #for $item in $item_group.items
    #set file = $utils.create_file($prefix, $item.path)
     - name: ${item.name}
-      md5sum: ${file.md5sum}
+      md5: ${file.md5sum}
       path: $item.path
    #end for
 #end for
