@@ -306,7 +306,7 @@ def streamwriter(item, data, path, passthrough):
     params = data.copy()
     params['item_groups'] = item
     params.update(passthrough.get('params', {}))
-    url = "%s.yaml" % path
+    url = "%s/%s.yaml" % (data['build']['name'], path)
     fname = "%s/%s" % (passthrough['output_d'], url)
     toolutil.mkdir_p(os.path.dirname(fname))
     with open(fname, "w") as fp:
