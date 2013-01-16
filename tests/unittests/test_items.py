@@ -59,9 +59,9 @@ class TestItemGroup(TestCase):
             'label': 'beta2',
             'items': [
               {'path': 'f/item1', 'name': 'item1', 'tag1': 'value1',
-               'md5sum': 'MD5SUM', 'tagname': 'tagvalue'},
+               'md5': 'MD5SUM', 'tagname': 'tagvalue'},
               {'path': 'f/item2', 'name': 'item2', 'tag2': 'value2',
-               'md5sum': 'MD5SUM'},
+               'md5': 'MD5SUM'},
             ]
         }
         item3 = {'name': 'item3', 'x': '1'}
