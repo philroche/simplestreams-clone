@@ -76,9 +76,18 @@ class Item(dict):
         return simplestreams.alltags(self, self.parent)
 
     @property
+    def path(self):
+        return self.get('path', None)
+
+    @property
     def tags(self):
         return {k: self[k] for k in self if
-                k not in ('name', 'path', 'md5sum', 'sha512', 'sha256')}
+                k not in (('name', 'path') + simplestreams.CHECKSUMS)}
+
+    @property
+    def checksums(self):
+        return {k: self[k] for k in self if
+                k in simplestreams.CHECKSUMS}
 
 
 class ItemList(simplestreams.RestrictedSimpleParentedList):

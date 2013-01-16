@@ -5,7 +5,7 @@ from Cheetah.Template import Template
 import json
 import os
 import os.path
-from simplestreams import read_possibly_signed
+from simplestreams.util import read_possibly_signed
 import subprocess
 import yaml
 

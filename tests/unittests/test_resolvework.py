@@ -1,5 +1,5 @@
 from unittest import TestCase
-from simplestreams import resolve_work
+from simplestreams.util import resolve_work
 
 class TestStreamResolveWork(TestCase):
 
