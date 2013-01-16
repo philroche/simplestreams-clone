@@ -11,6 +11,7 @@ import StringIO
 import subprocess
 import sys
 import yaml
+import urllib2
 
 import toolutil
 
@@ -72,7 +73,10 @@ item_groups:
    #for $item in $item_group.items
    #set file = $utils.create_file($prefix, $item.path)
     - name: ${item.name}
-      md5: ${file.md5sum}
+      md5: ${file.md5}
+      #if $file.sha256
+      sha256: ${file.sha256}
+      #end if
       path: $item.path
    #end for
 #end for
@@ -108,9 +112,78 @@ PGP_SIGNATURE_HEADER = "-----BEGIN PGP SIGNATURE-----"
 PGP_SIGNATURE_FOOTER = "-----END PGP SIGNATURE-----"
 
 
+CREATE_FILE_REAL_HASHES = False
+CREATE_FILE_CREATE = True
+
+CREATE_FILE_DATA = {}
+
+def is_expected(repl, fields):
+    rel = fields[0]
+    serial = fields[3]
+    if repl == "-root.tar.gz":
+        if rel in ("lucid", "oneiric"):
+            # lucid, oneiric do not have -root.tar.gz
+            return False
+        if rel == "precise" and cmp(serial, "20120202") <= 0:
+            # precise got -root.tar.gz after alpha2
+            return False
+
+    if repl == "-disk1.img":
+        if rel == "lucid":
+            return False
+        if rel == "oneiric" and cmp(serial, "20110802.2") <= 0:
+            # oneiric got -disk1.img after alpha3
+            return False
+
+    return True
+                        
+
+def readurl(url):
+    sys.stderr.write("reading %s\n" % url)
+    return urllib2.urlopen(url).read()
+
+def get_cloud_images_file_hash(path, algo="md5"):
+    dirname = os.path.dirname(path)
+    bname = os.path.basename(path)
+    if dirname in CREATE_FILE_DATA:
+        return CREATE_FILE_DATA[dirname][bname]
+
+    CREATE_FILE_DATA[dirname] = {}
+    base_url = "http://cloud-images.ubuntu.com/%s" % dirname
+
+    # http://cloud-images.ubuntu.com/server/releases/precise/beta-2/MD5SUMS
+    # was giving 403 due to bad redirect, so tried both links.  However
+    # seems to work fine now
+    # burls = ("http://cloud-images.ubuntu.com",
+    #         "http://cloud-images-archive.ubuntu.com")
+    burls = ("http://cloud-images.ubuntu.com")
+    for cksum in ("md5", "sha256"):
+        content = None
+        for burl in burls:
+            try:
+                content = readurl(base_url + "/%sSUMS" % cksum.upper())
+                break
+            except urllib2.HTTPError as error:
+                pass
+
+        if not content:
+            raise error
+
+        for line in content.splitlines():
+            (hexsum, fname) = line.split()
+            if fname.startswith("*"):
+                fname = fname[1:]
+            if fname not in CREATE_FILE_DATA[dirname]:
+                CREATE_FILE_DATA[dirname][fname] = {}
+            CREATE_FILE_DATA[dirname][fname][cksum] = hexsum
+
+    return CREATE_FILE_DATA[dirname][bname]
+
 def create_file(prefix, path):
     fpath = os.path.join(prefix, path)
     toolutil.mkdir_p(os.path.dirname(fpath))
+
+    data = {'name': path}
     size = 1024
     if path.endswith("-disk1.img"):
         size = 1024 * 1024 * 10 + 100
@@ -118,10 +191,18 @@ def create_file(prefix, path):
         size = 1024 * 1024 * 10 + 200
     elif path.endswith(".tar.gz"):
         size = 1024 * 1024 * 10 + 300
-    with open(fpath, "w") as fp:
-        fp.truncate(size)
 
-    return({'name': path, 'md5sum': KNOWN_HASHES[size]})
+    if CREATE_FILE_CREATE:
+        with open(fpath, "w") as fp:
+            fp.truncate(size)
+
+    if CREATE_FILE_REAL_HASHES:
+        data.update(get_cloud_images_file_hash(path))
+    else:
+        data['md5'] = KNOWN_HASHES[size]
+        data['sha256'] = None
+
+    return data
         
 
 def load_query(path, tree=None):
@@ -152,6 +233,7 @@ def load_query(path, tree=None):
 
         field_path = 5
         field_name = 6
+        field_release = 0
         # stream/build/release/arch
         cdata = tree[stream]
         for dl_file in dl_files:
@@ -163,7 +245,11 @@ def load_query(path, tree=None):
             for oline in olines:
                 for repl in (".tar.gz", "-root.tar.gz", "-disk1.img"):
                     fields = oline.rstrip().split("\t")
+                    if not is_expected(repl, fields):
+                        continue
+
                     new_path = fields[field_path].replace(".tar.gz", repl)
+
                     fields[field_path] = new_path
                     fields[field_name] += repl
                     lines.append("\t".join(fields) + "\n")
@@ -269,6 +355,12 @@ def main():
         'sign': args.sign,
     }
 
+    global CREATE_FILE_DATA
+    if CREATE_FILE_REAL_HASHES:
+        hashcache = os.path.join(args.query_tree, "HASH_CACHE")
+        if os.path.isfile(hashcache):
+            CREATE_FILE_DATA = yaml.safe_load(open(hashcache, "r"))
+
     toolutil.process(tree, {}, 0, layout, streamwriter, passthrough)
 
     tmpl = COLLECTION_TEMPLATE.lstrip()
@@ -294,6 +386,11 @@ def main():
             'authoritative_mirror': 'http://cloud-images.ubuntu.com',
             'mirrors': []
             }))
+
+    # save hashes data
+    if CREATE_FILE_REAL_HASHES:
+        with open(hashcache, "w") as hfp:
+            hfp.write(yaml.safe_dump(CREATE_FILE_DATA))
 
     return
 
