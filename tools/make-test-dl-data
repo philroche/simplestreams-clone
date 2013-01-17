@@ -297,14 +297,14 @@ def name2ver(indict):
     indict.update(toolutil.REL2VER[indict['name']])
 
 
-def streamwriter(item, data, path, passthrough):
+def streamwriter(item_groups, data, path, passthrough):
     iqn = ("iqn.2005-04.com.ubuntu:cloud-images:%s:%s:%s:%s:stream" %
            (data['stream']['name'], data['release']['name'], 
             data['build']['name'], data['arch']['name']))
     data['iqn'] = iqn
 
     params = data.copy()
-    params['item_groups'] = item
+    params['item_groups'] = item_groups
     params.update(passthrough.get('params', {}))
     url = "%s/%s.yaml" % (data['build']['name'], path)
     fname = "%s/%s" % (passthrough['output_d'], url)
@@ -312,6 +312,14 @@ def streamwriter(item, data, path, passthrough):
     with open(fname, "w") as fp:
         fp.write(toolutil.render_string(
             passthrough['template'], params))
+
+
+    for igroup in item_groups:
+        for item in igroup['items']:
+            ipath = item.get("path")
+            if ipath:
+                if ipath not in passthrough['data_files']:
+                    passthrough['data_files'].append(ipath)
 
     if passthrough['sign']:
         toolutil.signfile(fname)
@@ -348,6 +356,7 @@ def main():
     passthrough = {'output_d': args.out_d,
         'template': STREAM_TEMPLATE.lstrip(),
         'streams': [],
+        'data_files': [],
         'params': { 
             'utils': { 'create_file': create_file },
             'prefix': args.out_d,
