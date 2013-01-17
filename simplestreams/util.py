@@ -1,8 +1,9 @@
+import contextlib
 import errno
 import os
 import subprocess
 import stream
-import StringIO
+import urllib2
 import yaml
 
 
@@ -93,34 +94,51 @@ def read_possibly_signed(path, reader=open):
 def load_content(content):
     return yaml.safe_load(content)
 
+def url_reader(url):
+    try:
+        return contextlib.closing(urllib2.urlopen(url))
+    except urllib2.HTTPError as e:
+        if e.code == 404:
+            myerr = IOError(e.message)
+            myerr.errno = errno.ENOENT
+            raise myerr
+        raise e
+    except urllib2.URLError as e:
+        if isinstance(e.reason, OSError):
+            myerr = IOError(e.reason.message)
+            myerr.errno = errno.ENOENT
+            raise myerr
+        raise e
 
-def sync_stream_file(path, src_store, target_mirror, **kwargs):
-    (src_content, signature) = read_possibly_signed(path, src_store.reader)
-    src = stream.Stream(load_content(src_content))
+
+def sync_stream_file(path, src_mirror, target_mirror, **kwargs):
+    (src_content, signature) = read_possibly_signed(path, src_mirror.reader)
+    src_stream = stream.Stream(load_content(src_content))
 
     try:
         (content, signature) = read_possibly_signed(path, target_mirror.reader)
         target = stream.Stream(load_content(content))
-        if target.iqn != src.iqn:
+        if target.iqn != src_stream.iqn:
             raise TypeError("source content iqn (%s) != "
                             "mirrored content iqn (%s) at %s" %
-                            (src.iqn, target.iqn, path))
+                            (src_stream.iqn, target.iqn, path))
     except IOError as e:
         if e.errno != errno.ENOENT:
             raise
-        target = stream.Stream({'iqn': src.iqn, 'format': src.format})
+        target = stream.Stream({'iqn': src_stream.iqn,
+                                'format': src_stream.format})
 
-    sync_stream(src, src_store, target, target_mirror, **kwargs)
+    sync_stream(src_stream, src_mirror, target, target_mirror, **kwargs)
     target_mirror.insert_object_content(path, src_content)
 
     return target
 
 
-def sync_stream(src, src_store, target, target_store, **kwargs):
+def sync_stream(src, src_mirror, target, target_store, **kwargs):
     (to_add, to_remove) = resolve_work(src.item_groups, target.item_groups,
                                        **kwargs)
     for item_group in to_add:
-        target_store.insert_group(item_group, src_store.reader)
+        target_store.insert_group(item_group, src_mirror.reader)
         target.item_groups.append(item_group)
 
     for item_group in to_remove:

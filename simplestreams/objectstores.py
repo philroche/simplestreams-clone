@@ -2,15 +2,20 @@ import errno
 import hashlib
 import os
 import os.path
-from simplestreams.util import mkdir_p
+from simplestreams.util import mkdir_p, load_content, url_reader
 import StringIO
 
 
+READ_BUFFER_SIZE = 1024 * 1024
+
+
 class ObjectStore(object):
+    read_size = READ_BUFFER_SIZE
+
     def __init__(self, prefix):
         pass
 
-    def insert(self, path, reader, checksum={}):
+    def insert(self, path, reader, checksum={}, mutable=True):
         #store content from reader.read() into path, expecting result checksum
         pass
 
@@ -24,6 +29,10 @@ class ObjectStore(object):
     def reader(self, path):
         # essentially return an 'open(path, r)'
         pass
+
+    def exists_with_checksum(self, path, checksum={}):
+        return has_valid_checksum(path=path, reader=self.reader,
+                                  checksum=checksum, read_size=self.read_size)
 
 
 class checksummer(object):
@@ -60,14 +69,37 @@ class checksummer(object):
         return (self.expected is None or self.expected == self.hexdigest())
 
 
-class FileStore(ObjectStore):
-    read_size = 4096
+def has_valid_checksum(path, reader, checksum={}, read_size=READ_BUFFER_SIZE):
+    cksum = checksummer(checksum)
+    try:
+        with reader(path) as rfp:
+            if not checksum:
+                # we've already done the open, and no checksum data
+                return True
+            while True:
+                buf = rfp.read(read_size)
+                cksum.update(buf)
+                if len(buf) != read_size:
+                    break
+            return cksum.check()
+    except Exception:
+        return False
 
+
+class FileStore(ObjectStore):
     def __init__(self, prefix):
         self.prefix = prefix
 
-    def insert(self, path, reader, checksum={}):
+    def insert(self, path, reader, checksum={}, mutable=True):
         wpath = os.path.join(self.prefix, path)
+        if os.path.isfile(wpath):
+            if not mutable:
+                # if the file exists, and not mutable, return
+                return
+            if has_valid_checksum(path=path, reader=self.reader,
+                                  checksum=checksum, read_size=self.read_size):
+                return
+
         cksum = checksummer(checksum)
         try:
             mkdir_p(os.path.dirname(wpath))
@@ -115,17 +147,57 @@ class StringReader(StringIO.StringIO):
     def __exit__(self, type, value, trace):
         self.close()
 
-
-class MirrorStore(object):
+class MirrorStoreReader(object):
     def __init__(self, objectstore):
-        print "HELLO WORD"
+        self.objectstore = objectstore
+        try:
+            content = self.reader("MIRROR.info").read()
+            info = load_content(content)
+
+        except Exception as e:
+            raise IOError("Failed to read MIRROR.info from %s: %s" %
+                          (objectstore, str(e)))
+
+        self.iqn = info.get('iqn')
+        if not self.iqn:
+            raise TypeError("MIRROR.info did not contain iqn")
+
+        self.mirrors = info.get('mirrors', [])
+        self.authoritative = info.get('authoritative_mirror')
+
+    def reader(self, path):
+        try:
+            reader = self.objectstore.reader(path)
+            return reader
+        except IOError as e:
+            if e.errno != errno.ENOENT:
+                raise e
+
+        author = self.authoritative
+        mirrors = [m for m in self.mirrors if m and m != author]
+        if author:
+            mirrors.append(author)
+
+        for mirror in mirrors:
+            try:
+                return url_reader(mirror + path)
+            except IOError as e:
+                continue
+
+        raise IOError("Unable to open path '%s'" % path)
+
+
+
+class MirrorStoreWriter(object):
+    def __init__(self, objectstore):
         self.objectstore = objectstore
 
     def reader(self, path):
         return self.objectstore.reader(path)
 
-    def insert_object(self, path, reader, checksum=None, item=None):
-        self.objectstore.insert(path, reader, checksum)
+    def insert_object(self, path, reader, checksum=None, mutable=True):
+        self.objectstore.insert(path=path, reader=reader,
+                                checksum=checksum, mutable=mutable)
 
     def insert_object_content(self, path, content, checksum={}):
         self.objectstore.insert_content(path, content, checksum)
@@ -156,7 +228,7 @@ class MirrorStore(object):
         for item in group.items:
             if item.path:
                 self.insert_object(item.path, reader,
-                                   checksum=item.checksums)
+                                   checksum=item.checksums, mutable=False)
             self.insert_item(item)
         self.insert_group_post(group)
 
