@@ -44,7 +44,7 @@ for infile in files:
         sstream = stream.Stream(data)
         print "%s (%s)" % (path, fmt)
         tstream = util.sync_stream(src_stream=sstream,
-                                   smirror=smirror, target_stream=None,
+                                   src_mirror=smirror, target_stream=None,
                                    target_mirror=tmirror, path=path)
 
     elif fmt == "stream-collection:1.0":
