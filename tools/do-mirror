@@ -1,0 +1,57 @@
+#!/usr/bin/python
+#
+# Example of syncing/mirroring:
+#
+# rm -Rf exdata/images
+# make exdata/images
+# rm -Rf my-data # optional, it should reasonably resume
+# streams=$(cd exdata/images && find * -name "i386.yaml" -o -name "amd64.yaml")
+# ./go.py exdata/images my-data $streams
+
+from simplestreams import util
+from simplestreams import objectstores
+from simplestreams import stream
+from simplestreams import collection
+import sys
+
+src_d = sys.argv[1]
+tar_d = sys.argv[2]
+sstore = objectstores.FileStore(src_d)
+tstore = objectstores.FileStore(tar_d)
+
+smirror = objectstores.MirrorStoreReader(sstore)
+tmirror = objectstores.MirrorStoreWriter(tstore)
+
+if len(sys.argv) < 4:
+    files = ["server/released/server/raring/amd64.yaml"]
+else:
+    files = sys.argv[3:]
+
+for infile in files:
+    # take off src_d (ie, allow input a full path including src_d)
+    if infile.startswith("%s/" % src_d):
+        path = infile[len(src_d) + 1:]
+    elif infile.startswith("%s" % src_d):
+        path = infile[len(src_d):]
+    else:
+        path = infile
+
+    (src_content, signature) = util.read_possibly_signed(path, smirror.reader)
+    data = util.load_content(src_content)
+    fmt = data.get("format")
+
+    if fmt == "stream-1.0":
+        sstream = stream.Stream(data)
+        print "%s (%s)" % (path, fmt)
+        tstream = util.sync_stream(src_stream=sstream,
+                                   smirror=smirror, target_stream=None,
+                                   target_mirror=tmirror, path=path)
+
+    elif fmt == "stream-collection:1.0":
+        scoll = collection.Collection(data)
+        print "%s (%s) [%s]" % (path, fmt, scoll.iqn)
+        util.sync_collection(src_collection=scoll, src_mirror=smirror,
+                             target_mirror=tmirror, path=path)
+    else:
+        print "Unknown format '%s' in '%s'" % (fmt, infile)
+        sys.exit(1)

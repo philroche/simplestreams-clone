@@ -111,39 +111,78 @@ def url_reader(url):
         raise e
 
 
-def sync_stream_file(path, src_mirror, target_mirror, **kwargs):
-    (src_content, signature) = read_possibly_signed(path, src_mirror.reader)
-    src_stream = stream.Stream(load_content(src_content))
+def sync_stream_file(path, src_mirror, target_mirror):
+    return sync_stream(src_stream=None, src_mirror=src_mirror,
+                       target_stream=None, target_mirror=target_mirror,
+                       path=path)
 
-    try:
-        (content, signature) = read_possibly_signed(path, target_mirror.reader)
-        target = stream.Stream(load_content(content))
-        if target.iqn != src_stream.iqn:
-            raise TypeError("source content iqn (%s) != "
-                            "mirrored content iqn (%s) at %s" %
-                            (src_stream.iqn, target.iqn, path))
-    except IOError as e:
-        if e.errno != errno.ENOENT:
-            raise
-        target = stream.Stream({'iqn': src_stream.iqn,
-                                'format': src_stream.format})
+def sync_stream(src_stream, src_mirror, target_stream, target_mirror,
+                path=None, **kwargs):
 
-    sync_stream(src_stream, src_mirror, target, target_mirror, **kwargs)
-    target_mirror.insert_object_content(path, src_content)
+    src_content = None
 
-    return target
+    if src_stream is None and path:
+        (src_content, signature) = read_possibly_signed(path, src_mirror.reader)
+        src_stream = stream.Stream(load_content(src_content))
 
+    if target_stream is None and path:
+        # if target_stream was not provided
+        try:
+            (content, signature) = read_possibly_signed(path, target_mirror.reader)
+            target_stream = stream.Stream(load_content(content))
+            if target_stream.iqn != src_stream.iqn:
+                raise TypeError("source content iqn (%s) != "
+                                "mirrored content iqn (%s) at %s" %
+                                (src_stream.iqn, target_stream.iqn, path))
+        except IOError as e:
+            if e.errno != errno.ENOENT:
+                raise
+            target_stream = stream.Stream({'iqn': src_stream.iqn,
+                                          'format': src_stream.format})
 
-def sync_stream(src, src_mirror, target, target_store, **kwargs):
-    (to_add, to_remove) = resolve_work(src.item_groups, target.item_groups,
-                                       **kwargs)
+    elif target_stream is None:
+        raise TypeError("target_stream is none, but no path provided")
+
+    (to_add, to_remove) = resolve_work(src_stream.item_groups,
+                                       target_stream.item_groups, **kwargs)
+
     for item_group in to_add:
-        target_store.insert_group(item_group, src_mirror.reader)
-        target.item_groups.append(item_group)
+        target_mirror.insert_group(item_group, src_mirror.reader)
+        target_stream.item_groups.append(item_group)
 
     for item_group in to_remove:
-        target_store.remove_group(item_group)
-        target.item_groups.remove(item_group)
+        target_mirror.remove_group(item_group)
+        target_stream.item_groups.remove(item_group)
+
+    if path is not None:
+        # if path was provided, insert it into the target
+        # if we've already read the src_content above, do not read again
+        if src_content is None:
+            target_mirror.insert_object(path, src_mirror.reader)
+        else:
+            target_mirror.insert_object_content(path, src_content)
+
+    return target_stream
+
+
+def sync_collection(src_collection, src_mirror, target_mirror, path=None):
+
+    src_content = None
+    if src_collection is None and path:
+        (src_content, signature) = read_possibly_signed(path,
+                                                        src_mirror.reader)
+        src_collection = collection.Collection(load_content(src_content))
+
+    for item in src_collection.streams:
+        sync_stream_file(item.get('path'), src_mirror, target_mirror)
+
+    if path is not None:
+        # if path was provided, insert it into the target
+        # if we've already read the src_content above, do not read again
+        if src_content is None:
+            target_mirror.insert_object(path, src_mirror.reader)
+        else:
+            target_mirror.insert_object_content(path, src_content)
 
 
 def mkdir_p(path):
