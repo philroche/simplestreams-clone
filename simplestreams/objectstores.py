@@ -6,6 +6,7 @@ import hashlib
 import os
 import os.path
 from simplestreams.util import mkdir_p, load_content, url_reader
+import tempfile
 import StringIO
 from contextlib import closing
 
@@ -164,9 +165,18 @@ class S3ObjectStore(ObjectStore):
             
     def insert(self, path, reader, checksum={}, mutable=True):
         #store content from reader.read() into path, expecting result checksum
-        with closing(self.bucket.new_key(self.path_prefix + path)) as key:
+        try:
+            tfile = tempfile.TemporaryFile()
             with reader(path) as rfp:
-                key.set_contents_from_file(rfp)
+                while True:
+                    buf = rfp.read(self.read_size)
+                    tfile.write(buf)
+                    if len(buf) != self.read_size:
+                        break
+            with closing(self.bucket.new_key(self.path_prefix + path)) as key:
+                key.set_contents_from_file(tfile)
+        finally:
+            tfile.close()
 
     def insert_content(self, path, content, checksum={}):
         with closing(self.bucket.new_key(self.path_prefix + path)) as key:
@@ -180,7 +190,8 @@ class S3ObjectStore(ObjectStore):
         # essentially return an 'open(path, r)'
         key = self.bucket.get_key(self.path_prefix + path)
         if not key:
-            raise IOError("not found: %s" % path)
+            raise myerr
+        raise e
 
         return closing(key)
 
