@@ -10,11 +10,36 @@ $ cat > policy.txt <<EOF
 { "Statement":[
   {
    "Effect":"Allow",
-   "Resource":"arn:aws:s3:::${bucket}/*",
+   "Resource":"arn:aws:s3:::${bucket}",
    "Action": [ "s3:*" ]
   }
   ] }
+{ "Statement":[
+  {
+    "Effect": "Allow",
+    "Action": [
+      "s3:AbortMultipartUpload",
+      "s3:DeleteObject",
+      "s3:ListMultipartUploadParts",
+      "s3:PutObject",
+      "s3:GetObjectAcl",
+      "s3:GetObjectVersionAcl",
+      "s3:PutObjectAcl",
+      "s3:PutObjectAclVersion"
+    ],
+    "Resource": "arn:aws:s3:::${bucket}/*"
+  },
+  {
+   "Effect":"Allow",
+   "Resource":"arn:aws:s3:::${bucket}",
+   "Action": [ "s3:*" ]
+  }
+]
+}
 EOF
+
+## more info on limiting to a prefix in that bucket at 
+## https://forums.aws.amazon.com/message.jspa?messageID=345904
 
 $ iam-groupcreate -g "$gname"
 $ iam-groupuploadpolicy -g "$gname" -p o2data -f policy.txt
