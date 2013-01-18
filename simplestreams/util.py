@@ -60,7 +60,7 @@ def read_possibly_signed(path, reader=open):
                               stdout=subprocess.PIPE, stdin=subprocess.PIPE)
         (out, _err) = sp.communicate(content)
         if sp.returncode != 0:
-            raise CalledProcessError(retcode, cmd, output=out)
+            raise subprocess.CalledProcessError(sp.returncode, cmd, output=out)
 
         ret = {'body': '', 'signature': '', 'garbage': ''}
         lines = content.splitlines()
