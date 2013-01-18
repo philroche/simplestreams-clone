@@ -1,9 +1,13 @@
+import boto.exception
+import boto.s3
+import boto.s3.connection
 import errno
 import hashlib
 import os
 import os.path
 from simplestreams.util import mkdir_p, load_content, url_reader
 import StringIO
+from contextlib import closing
 
 
 READ_BUFFER_SIZE = 1024 * 1024
@@ -13,7 +17,7 @@ class ObjectStore(object):
     read_size = READ_BUFFER_SIZE
 
     def __init__(self, prefix):
-        pass
+        self.prefix = prefix
 
     def insert(self, path, reader, checksum={}, mutable=True):
         #store content from reader.read() into path, expecting result checksum
@@ -87,9 +91,6 @@ def has_valid_checksum(path, reader, checksum={}, read_size=READ_BUFFER_SIZE):
 
 
 class FileStore(ObjectStore):
-    def __init__(self, prefix):
-        self.prefix = prefix
-
     def insert(self, path, reader, checksum={}, mutable=True):
         wpath = os.path.join(self.prefix, path)
         if os.path.isfile(wpath):
@@ -132,6 +133,66 @@ class FileStore(ObjectStore):
     def reader(self, path):
         return open(os.path.join(self.prefix, path), "r")
 
+
+class S3ObjectStore(ObjectStore):
+
+    _bucket = None
+    _connection = None
+
+    def __init__(self, prefix):
+        # expect 's3://bucket/path_prefix'
+        self.prefix = prefix
+        if prefix.startswith("s3://"):
+            path = prefix[5:]
+        else:
+            path = prefix
+
+        (self.bucketname, self.path_prefix) = path.split("/", 1)
+
+    @property
+    def _conn(self):
+        if not self._connection:
+            self._connection = boto.s3.connection.S3Connection()
+
+        return self._connection
+
+    @property
+    def bucket(self):
+        if not self._bucket:
+            self._bucket = self._conn.get_bucket(self.bucketname)
+        return self._bucket
+            
+    def insert(self, path, reader, checksum={}, mutable=True):
+        #store content from reader.read() into path, expecting result checksum
+        with closing(self.bucket.new_key(self.path_prefix + path)) as key:
+            with reader(path) as rfp:
+                key.set_contents_from_file(rfp)
+
+    def insert_content(self, path, content, checksum={}):
+        with closing(self.bucket.new_key(self.path_prefix + path)) as key:
+            key.set_contents_from_string(content)
+
+    def remove(self, path):
+        #remove path from store
+        self.bucket.delete_key(self.path_prefix + path)
+
+    def reader(self, path):
+        # essentially return an 'open(path, r)'
+        key = self.bucket.get_key(self.path_prefix + path)
+        if not key:
+            raise IOError("not found: %s" % path)
+
+        return closing(key)
+
+    def exists_with_checksum(self, path, checksum={}):
+        key = self.bucket.get_key(self.path_prefix + path)
+        if key is None:
+            return False
+
+        if 'md5' in checksum:
+            return checksum['md5'] == key.etag.replace('"',"")
+
+        return False
 
 class StringReader(StringIO.StringIO):
     def __init__(self, content):
