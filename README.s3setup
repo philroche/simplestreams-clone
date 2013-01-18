@@ -1,0 +1,30 @@
+$ export AWS_CREDENTIAL_FILE=$HOME/aws-creds
+
+$ gname="o2data"
+$ uname="o2data-01"
+$ bucket="smoser-data"
+
+# create the bucket with some tool
+
+$ cat > policy.txt <<EOF
+{ "Statement":[
+  {
+   "Effect":"Allow",
+   "Resource":"arn:aws:s3:::${bucket}/*",
+   "Action": [ "s3:*" ]
+  }
+  ] }
+EOF
+
+$ iam-groupcreate -g "$gname"
+$ iam-groupuploadpolicy -g "$gname" -p o2data -f policy.txt
+$ iam-usercreate -u $uname -g $gname
+$ ( umask 066 ; iam-useraddkey -u $uname > new-creds.txt )
+$ ( umask 066 ; sed '1s/^/AWSAccessKeyId=/; 2s/^/AWSSecretKey=/' new-creds.txt > new-creds.aws )
+$ ( umask 066 ; read akey ; read skey; printf "[Credentials]\n%s\n%s\n" \
+  "aws_access_key_id = $akey" "aws_secret_access_key = $skey" > new-creds.boto ) < new-creds.txt
+
+
+## Later, to delete:
+# iam-groupdelpolicy -g $gname -p o2data
+# iam-userdel -u $uname
