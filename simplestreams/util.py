@@ -33,15 +33,15 @@ def resolve_work(src, target, max=None, keep=None, sort_reverse=True):
         while len(remove) and keep > (after_add - len(remove)):
             remove.pop(0)
 
-    final_count = (len(add) + len(target) - len(remove))
-    if max is not None and final_count >= max:
-        for i in range(0, final_count - max):
-            add.pop()
+    mtarget = sorted([f for f in target if f not in remove], reverse=reverse)
 
-    final_count = (len(add) + len(target) - len(remove))
-    if max is not None and final_count > max:
-        after_rem = sorted(list(set(target) - set(remove)), reverse=reverse)
-        remove.append(after_rem[:-(final_count - max)])
+    while max is not None and (len(add) + len(mtarget) > max):
+        if len(mtarget):
+            remove.append(mtarget.pop())
+            continue
+        if len(add):
+            add.pop()
+            continue
 
     return(add, remove)
 
