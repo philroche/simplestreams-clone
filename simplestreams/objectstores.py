@@ -20,12 +20,12 @@ class ObjectStore(object):
     def __init__(self, prefix):
         self.prefix = prefix
 
-    def insert(self, path, reader, checksum={}, mutable=True):
+    def insert(self, path, reader, checksums={}, mutable=True):
         #store content from reader.read() into path, expecting result checksum
         pass
 
-    def insert_content(self, path, content, checksum={}):
-        self.insert(path, StringReader(content).open, checksum)
+    def insert_content(self, path, content, checksums={}):
+        self.insert(path, StringReader(content).open, checksums)
 
     def remove(self, path):
         #remove path from store
@@ -35,9 +35,9 @@ class ObjectStore(object):
         # essentially return an 'open(path, r)'
         pass
 
-    def exists_with_checksum(self, path, checksum={}):
+    def exists_with_checksum(self, path, checksums={}):
         return has_valid_checksum(path=path, reader=self.reader,
-                                  checksum=checksum, read_size=self.read_size)
+                                  checksums=checksums, read_size=self.read_size)
 
 
 class checksummer(object):
@@ -74,11 +74,11 @@ class checksummer(object):
         return (self.expected is None or self.expected == self.hexdigest())
 
 
-def has_valid_checksum(path, reader, checksum={}, read_size=READ_BUFFER_SIZE):
-    cksum = checksummer(checksum)
+def has_valid_checksums(path, reader, checksums={}, read_size=READ_BUFFER_SIZE):
+    cksum = checksummer(checksums)
     try:
         with reader(path) as rfp:
-            if not checksum:
+            if not checksums:
                 # we've already done the open, and no checksum data
                 return True
             while True:
@@ -92,17 +92,17 @@ def has_valid_checksum(path, reader, checksum={}, read_size=READ_BUFFER_SIZE):
 
 
 class FileStore(ObjectStore):
-    def insert(self, path, reader, checksum={}, mutable=True):
+    def insert(self, path, reader, checksums={}, mutable=True):
         wpath = os.path.join(self.prefix, path)
         if os.path.isfile(wpath):
             if not mutable:
                 # if the file exists, and not mutable, return
                 return
             if has_valid_checksum(path=path, reader=self.reader,
-                                  checksum=checksum, read_size=self.read_size):
+                                  checksums=checksums, read_size=self.read_size):
                 return
 
-        cksum = checksummer(checksum)
+        cksum = checksummer(checksums)
         try:
             mkdir_p(os.path.dirname(wpath))
             with open(wpath, "w") as wfp:
@@ -124,7 +124,7 @@ class FileStore(ObjectStore):
                 pass
             raise e
 
-    def remove(self, path, reader, checksum={}):
+    def remove(self, path, reader, checksums={}):
         try:
             os.unlink(os.path.join(self.prefix, path))
         except OSError as e:
@@ -163,7 +163,7 @@ class S3ObjectStore(ObjectStore):
             self._bucket = self._conn.get_bucket(self.bucketname)
         return self._bucket
             
-    def insert(self, path, reader, checksum={}, mutable=True):
+    def insert(self, path, reader, checksums={}, mutable=True):
         #store content from reader.read() into path, expecting result checksum
         try:
             tfile = tempfile.TemporaryFile()
@@ -178,7 +178,7 @@ class S3ObjectStore(ObjectStore):
         finally:
             tfile.close()
 
-    def insert_content(self, path, content, checksum={}):
+    def insert_content(self, path, content, checksums={}):
         with closing(self.bucket.new_key(self.path_prefix + path)) as key:
             key.set_contents_from_string(content)
 
@@ -195,13 +195,13 @@ class S3ObjectStore(ObjectStore):
 
         return closing(key)
 
-    def exists_with_checksum(self, path, checksum={}):
+    def exists_with_checksum(self, path, checksums={}):
         key = self.bucket.get_key(self.path_prefix + path)
         if key is None:
             return False
 
-        if 'md5' in checksum:
-            return checksum['md5'] == key.etag.replace('"',"")
+        if 'md5' in checksums:
+            return checksums['md5'] == key.etag.replace('"',"")
 
         return False
 
@@ -267,12 +267,12 @@ class MirrorStoreWriter(object):
     def reader(self, path):
         return self.objectstore.reader(path)
 
-    def insert_object(self, path, reader, checksum=None, mutable=True):
+    def insert_object(self, path, reader, checksums=None, mutable=True):
         self.objectstore.insert(path=path, reader=reader,
-                                checksum=checksum, mutable=mutable)
+                                checksums=checksums, mutable=mutable)
 
-    def insert_object_content(self, path, content, checksum={}):
-        self.objectstore.insert_content(path, content, checksum)
+    def insert_object_content(self, path, content, checksums={}):
+        self.objectstore.insert_content(path, content, checksums)
 
     def insert_item(self, item):
         pass
@@ -300,7 +300,7 @@ class MirrorStoreWriter(object):
         for item in group.items:
             if item.path:
                 self.insert_object(item.path, reader,
-                                   checksum=item.checksums, mutable=False)
+                                   checksums=item.checksums, mutable=False)
             self.insert_item(item)
         self.insert_group_post(group)
 
