@@ -111,13 +111,13 @@ def url_reader(url):
         raise e
 
 
-def sync_stream_file(path, src_mirror, target_mirror):
+def sync_stream_file(path, src_mirror, target_mirror, resolve_args={}):
     return sync_stream(src_stream=None, src_mirror=src_mirror,
                        target_stream=None, target_mirror=target_mirror,
-                       path=path)
+                       path=path, resolve_args=resolve_args)
 
 def sync_stream(src_stream, src_mirror, target_stream, target_mirror,
-                path=None, **kwargs):
+                path=None, resolve_args={}):
 
     src_content = None
 
@@ -144,7 +144,8 @@ def sync_stream(src_stream, src_mirror, target_stream, target_mirror,
         raise TypeError("target_stream is none, but no path provided")
 
     (to_add, to_remove) = resolve_work(src_stream.item_groups,
-                                       target_stream.item_groups, **kwargs)
+                                       target_stream.item_groups,
+                                       **resolve_args)
 
     for item_group in to_add:
         target_mirror.insert_group(item_group, src_mirror.reader)
@@ -165,7 +166,8 @@ def sync_stream(src_stream, src_mirror, target_stream, target_mirror,
     return target_stream
 
 
-def sync_collection(src_collection, src_mirror, target_mirror, path=None):
+def sync_collection(src_collection, src_mirror, target_mirror, path=None,
+                    resolve_args={}):
 
     src_content = None
     if src_collection is None and path:
@@ -174,7 +176,8 @@ def sync_collection(src_collection, src_mirror, target_mirror, path=None):
         src_collection = collection.Collection(load_content(src_content))
 
     for item in src_collection.streams:
-        sync_stream_file(item.get('path'), src_mirror, target_mirror)
+        sync_stream_file(item.get('path'), src_mirror, target_mirror,
+                         resolve_args=resolve_args)
 
     if path is not None:
         # if path was provided, insert it into the target
