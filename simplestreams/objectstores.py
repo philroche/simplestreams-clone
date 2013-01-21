@@ -22,18 +22,18 @@ class ObjectStore(object):
 
     def insert(self, path, reader, checksums={}, mutable=True):
         #store content from reader.read() into path, expecting result checksum
-        pass
+        raise NotImplementedError()
 
     def insert_content(self, path, content, checksums={}):
         self.insert(path, StringReader(content).open, checksums)
 
     def remove(self, path):
         #remove path from store
-        pass
+        raise NotImplementedError()
 
     def reader(self, path):
         # essentially return an 'open(path, r)'
-        pass
+        raise NotImplementedError()
 
     def exists_with_checksum(self, path, checksums={}):
         return has_valid_checksum(path=path, reader=self.reader,
