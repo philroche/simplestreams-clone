@@ -5,7 +5,10 @@ import errno
 import hashlib
 import os
 import os.path
-from simplestreams.util import mkdir_p, load_content, url_reader
+from simplestreams.util import (load_content, mkdir_p, read_possibly_signed,
+                                url_reader)
+from simplestreams import stream
+
 import tempfile
 import StringIO
 from contextlib import closing
@@ -37,7 +40,40 @@ class ObjectStore(object):
 
     def exists_with_checksum(self, path, checksums={}):
         return has_valid_checksum(path=path, reader=self.reader,
-                                  checksums=checksums, read_size=self.read_size)
+                                  checksums=checksums,
+                                  read_size=self.read_size)
+
+
+class SimpleStreamMirrorReader(object):
+    def load_stream(self, path, reference=None):
+        raise NotImplementedError()
+
+    def reader(self, path):
+        raise NotImplementedError()
+
+
+class SimpleStreamMirrorWriter(object):
+    def load_stream(self, path, reference=None):
+        # return a Stream representation loaded from stream file
+        # at path.  If not present, return an empty Stream based
+        # on reference (set iqn and mirrors)
+        raise NotImplementedError()
+
+    def store_stream_file(self, path, content):
+        # store the stream file content
+        raise NotImplementedError()
+
+    def store_collection_file(self, path, content):
+        # store the collection file content
+        raise NotImplementedError()
+
+    def insert_group(self, group, reader):
+        # insert the item group, storing items in it
+        raise NotImplementedError()
+
+    def remove_group(self, group):
+        # remove item group and items in it
+        raise NotImplementedError()
 
 
 class checksummer(object):
@@ -74,7 +110,7 @@ class checksummer(object):
         return (self.expected is None or self.expected == self.hexdigest())
 
 
-def has_valid_checksums(path, reader, checksums={}, read_size=READ_BUFFER_SIZE):
+def has_valid_checksum(path, reader, checksums={}, read_size=READ_BUFFER_SIZE):
     cksum = checksummer(checksums)
     try:
         with reader(path) as rfp:
@@ -99,7 +135,8 @@ class FileStore(ObjectStore):
                 # if the file exists, and not mutable, return
                 return
             if has_valid_checksum(path=path, reader=self.reader,
-                                  checksums=checksums, read_size=self.read_size):
+                                  checksums=checksums,
+                                  read_size=self.read_size):
                 return
 
         cksum = checksummer(checksums)
@@ -162,7 +199,7 @@ class S3ObjectStore(ObjectStore):
         if not self._bucket:
             self._bucket = self._conn.get_bucket(self.bucketname)
         return self._bucket
-            
+
     def insert(self, path, reader, checksums={}, mutable=True):
         #store content from reader.read() into path, expecting result checksum
         try:
@@ -190,6 +227,8 @@ class S3ObjectStore(ObjectStore):
         # essentially return an 'open(path, r)'
         key = self.bucket.get_key(self.path_prefix + path)
         if not key:
+            myerr = IOError("Unable to open %s" % path)
+            myerr.errno = errno.ENOENT
             raise myerr
         raise e
 
@@ -201,9 +240,10 @@ class S3ObjectStore(ObjectStore):
             return False
 
         if 'md5' in checksums:
-            return checksums['md5'] == key.etag.replace('"',"")
+            return checksums['md5'] == key.etag.replace('"', "")
 
         return False
+
 
 class StringReader(StringIO.StringIO):
     def __init__(self, content):
@@ -219,7 +259,8 @@ class StringReader(StringIO.StringIO):
     def __exit__(self, type, value, trace):
         self.close()
 
-class MirrorStoreReader(object):
+
+class MirrorStoreReader(SimpleStreamMirrorReader):
     def __init__(self, objectstore):
         self.objectstore = objectstore
         try:
@@ -258,27 +299,66 @@ class MirrorStoreReader(object):
 
         raise IOError("Unable to open path '%s'" % path)
 
+    def load_stream(self, path, reference=None):
+        # return a Stream object
+        return load_stream_path(path, self.objectstore.reader, reference)
 
 
-class MirrorStoreWriter(object):
+class MirrorStoreWriter(SimpleStreamMirrorWriter):
     def __init__(self, objectstore):
         self.objectstore = objectstore
 
     def reader(self, path):
         return self.objectstore.reader(path)
 
+    def load_stream(self, path, reference=None):
+        # return a Stream object
+        return load_stream_path(path, self.objectstore.reader, reference)
+
+    def store_stream_file(self, path, content):
+        # store the stream file content
+        self.insert_path_content(path, content)
+
+    def store_collection_file(self, path, content):
+        # store the collection file content
+        self.insert_path_content(path, content)
+
+    def insert_group(self, group, reader):
+        self.insert_group_pre(group)
+        for item in group.items:
+            if item.path:
+                self.insert_object(item.path, reader,
+                                   checksums=item.checksums,
+                                   mutable=False)
+            self.insert_item(item, reader)
+        self.insert_group_post(group)
+
+    def remove_group(self, group):
+        self.remove_group_pre(group)
+        for item in group.items:
+            self.remove_item(item)
+            if item.path:
+                self.remove_object(path, item)
+        self.remove_group_post(group)
+
     def insert_object(self, path, reader, checksums=None, mutable=True):
         self.objectstore.insert(path=path, reader=reader,
                                 checksums=checksums, mutable=mutable)
 
-    def insert_object_content(self, path, content, checksums={}):
+    def insert_path_content(self, path, content, checksums={}):
         self.objectstore.insert_content(path, content, checksums)
 
-    def insert_item(self, item):
-        pass
+    def remove_object(self, path):
+        self.objectstore.remove(path)
+
+    def insert_item(self, item, reader):
+        if item.path:
+            self.objectstore.insert(item.path, reader,
+                                    checksums=item.checksums, mutable=False)
 
     def remove_item(self, item):
-        pass
+        if item.path:
+            self.remove_object(item.path, item)
 
     def insert_group_pre(self, group):
         pass
@@ -292,25 +372,15 @@ class MirrorStoreWriter(object):
     def remove_group_post(self, group):
         pass
 
-    def remove_object(self, path):
-        self.objectstore.remove(path)
 
-    def insert_group(self, group, reader):
-        self.insert_group_pre(group)
-        for item in group.items:
-            if item.path:
-                self.insert_object(item.path, reader,
-                                   checksums=item.checksums, mutable=False)
-            self.insert_item(item)
-        self.insert_group_post(group)
+def load_stream_path(path, reader, reference=None):
+    try:
+        (data, sig) = read_possibly_signed(path, reader)
+        return stream.Stream(load_content(data))
 
-    def remove_group(self, group):
-        self.remove_group_pre(group)
-        for item in group.items:
-            self.remove_item(item)
-            if item.path:
-                self.remove_object(path, item)
-        self.remove_group_post(group)
-
-
+    except IOError as e:
+        if e.errno != errno.ENOENT:
+            raise Exception("Failed to load %s" % path)
+        return stream.Stream({'iqn': reference.get('iqn', None),
+                              'format': reference.get('format', None)})
 # vi: ts=4 expandtab
