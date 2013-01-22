@@ -59,11 +59,11 @@ class SimpleStreamMirrorWriter(object):
         # on reference (set iqn and mirrors)
         raise NotImplementedError()
 
-    def store_stream_file(self, path, content):
+    def store_stream(self, path, stream, content):
         # store the stream file content
         raise NotImplementedError()
 
-    def store_collection_file(self, path, content):
+    def store_collection(self, path, collection, content):
         # store the collection file content
         raise NotImplementedError()
 
@@ -315,11 +315,11 @@ class MirrorStoreWriter(SimpleStreamMirrorWriter):
         # return a Stream object
         return load_stream_path(path, self.objectstore.reader, reference)
 
-    def store_stream_file(self, path, content):
+    def store_stream(self, path, stream, content):
         # store the stream file content
         self.insert_path_content(path, content)
 
-    def store_collection_file(self, path, content):
+    def store_collection(self, path, collection, content):
         # store the collection file content
         self.insert_path_content(path, content)
 

@@ -154,7 +154,8 @@ def sync_stream(src_stream, src_mirror, target_stream, target_mirror,
             with src_mirror.reader(path) as fp:
                 src_content = fp.read()
 
-        target_mirror.store_stream_file(path, src_content)
+    target_mirror.store_stream(path, stream=target_stream,
+                               content=src_content)
 
     return target_stream
 
@@ -187,7 +188,9 @@ def sync_collection(src_collection, src_mirror, target_mirror, path=None,
             with src_mirror.reader(path) as fp:
                 src_content = fp.read()
 
-        target_mirror.store_collection_file(path, src_content)
+    # FIXME: if we'd filtered src_collection we should store target_collection
+    target_mirror.store_collection(path, collection=src_collection,
+                                   content=src_content)
 
 
 def mkdir_p(path):
