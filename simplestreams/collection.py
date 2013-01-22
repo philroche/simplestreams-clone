@@ -79,6 +79,8 @@ class Collection(dict):
     def tags(self):
         return self.get('tags')
 
+    def as_dict(self):
+        return simplestreams.as_dict(self)
 
 def validate(name, value):
     rtype = RESTRICTED_TYPES[name]

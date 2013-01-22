@@ -1,4 +1,5 @@
 from items import ItemGroupList as igl
+from simplestreams import as_dict
 
 RESTRICTED_TYPES = {"iqn": str, "format": str, "item_groups": list}
 REQUIRED = ("iqn", "format")
@@ -61,6 +62,9 @@ class Stream(dict):
     @property
     def tags(self):
         return self.get('tags')
+
+    def as_dict(self):
+        return as_dict(self)
 
 
 def validate(name, value):

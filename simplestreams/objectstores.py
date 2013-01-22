@@ -8,6 +8,7 @@ import os.path
 from simplestreams.util import (load_content, mkdir_p, read_possibly_signed,
                                 url_reader)
 from simplestreams import stream
+import yaml
 
 import tempfile
 import StringIO
@@ -111,12 +112,11 @@ class checksummer(object):
 
 
 def has_valid_checksum(path, reader, checksums={}, read_size=READ_BUFFER_SIZE):
+    if not checksums:
+        return False
     cksum = checksummer(checksums)
     try:
         with reader(path) as rfp:
-            if not checksums:
-                # we've already done the open, and no checksum data
-                return True
             while True:
                 buf = rfp.read(read_size)
                 cksum.update(buf)
@@ -313,14 +313,26 @@ class MirrorStoreWriter(SimpleStreamMirrorWriter):
 
     def load_stream(self, path, reference=None):
         # return a Stream object
-        return load_stream_path(path, self.objectstore.reader, reference)
+        dp = self.data_path(path)
+        if self.objectstore.exists_with_checksum(dp):
+            with self.objectstore.reader(dp) as fp:
+                return stream.Stream(yaml.safe_load(fp.read()))
+        else:
+            return load_stream_path(path, self.objectstore.reader, reference)
 
     def store_stream(self, path, stream, content):
         # store the stream file content
+        if path is None:
+            raise TypeError("Empty path for stream")
+
+        self.insert_path_content(self.data_path(path),
+                                 yaml.safe_dump(stream.as_dict()))
         self.insert_path_content(path, content)
 
     def store_collection(self, path, collection, content):
         # store the collection file content
+        self.insert_path_content(self.data_path(path),
+                                 yaml.safe_dump(collection.as_dict()))
         self.insert_path_content(path, content)
 
     def insert_group(self, group, reader):
@@ -337,8 +349,6 @@ class MirrorStoreWriter(SimpleStreamMirrorWriter):
         self.remove_group_pre(group)
         for item in group.items:
             self.remove_item(item)
-            if item.path:
-                self.remove_object(path, item)
         self.remove_group_post(group)
 
     def insert_object(self, path, reader, checksums=None, mutable=True):
@@ -358,7 +368,7 @@ class MirrorStoreWriter(SimpleStreamMirrorWriter):
 
     def remove_item(self, item):
         if item.path:
-            self.remove_object(item.path, item)
+            self.remove_object(item.path)
 
     def insert_group_pre(self, group):
         pass
@@ -372,6 +382,9 @@ class MirrorStoreWriter(SimpleStreamMirrorWriter):
     def remove_group_post(self, group):
         pass
 
+    def data_path(self, path):
+        return ".data/%s" % path
+
 
 def load_stream_path(path, reader, reference=None):
     try:
@@ -381,6 +394,7 @@ def load_stream_path(path, reader, reference=None):
     except IOError as e:
         if e.errno != errno.ENOENT:
             raise Exception("Failed to load %s" % path)
-        return stream.Stream({'iqn': reference.get('iqn', None),
-                              'format': reference.get('format', None)})
+        data = reference.copy()
+        data['item_groups'] = []
+        return stream.Stream(data)
 # vi: ts=4 expandtab
