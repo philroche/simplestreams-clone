@@ -7,4 +7,4 @@ For example of what the server side data looks like:
 to mirror data see tools/do-mirror
 
 example are signed with my key:
-   gpg --import --keyserver keyserver.ubuntu.com 024BC6F0
+   gpg --recv-keys --keyserver keyserver.ubuntu.com 024BC6F0
