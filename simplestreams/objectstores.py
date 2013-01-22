@@ -161,7 +161,7 @@ class FileStore(ObjectStore):
                 pass
             raise e
 
-    def remove(self, path, reader, checksums={}):
+    def remove(self, path):
         try:
             os.unlink(os.path.join(self.prefix, path))
         except OSError as e:
