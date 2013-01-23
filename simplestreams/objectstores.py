@@ -308,9 +308,6 @@ class MirrorStoreWriter(SimpleStreamMirrorWriter):
     def __init__(self, objectstore):
         self.objectstore = objectstore
 
-    def reader(self, path):
-        return self.objectstore.reader(path)
-
     def load_stream(self, path, reference=None):
         # return a Stream object
         dp = self.data_path(path)
