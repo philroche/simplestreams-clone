@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 import yaml
 
-REQUIRED_FIELDS = ("load_stream",)
+REQUIRED_FIELDS = ("stream_load",)
 READ_SIZE = (1024 * 1024)
 
 """
@@ -148,23 +148,22 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
             return (0, '')
 
         if isinstance(hook, str):
-            hook = [hook]
+            hook = ['sh', '-c', hook]
         
-        args = []
+        margs = []
         full_data = data.copy()
         full_data['_all'] = ' '.join(data.keys())
         unset = self.config.get('unset_value', '_unset')
 
         for arg in hook:
             try:
-                args.append(arg % full_data)
+                margs.append(arg % full_data)
             except KeyError as err:
                 for key in err.args:
                     full_data[key] = unset
-                args.append(arg % full_data)
+                margs.append(arg % full_data)
 
-        args = [i % data for i in hook]
-        return run_command(args=args, capture=capture, rcs=rcs)
+        return run_command(args=margs, capture=capture, rcs=rcs)
 
 
 def item_data(item):

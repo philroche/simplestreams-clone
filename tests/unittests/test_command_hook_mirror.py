@@ -26,11 +26,11 @@ class TestCommandHookMirror(TestCase):
         self.assertRaises(TypeError, CommandHookMirror, {})
 
     def test_init_with_load_stream_works(self):
-        mirror = CommandHookMirror({'load_stream': 'true'})
+        mirror = CommandHookMirror({'stream_load': 'true'})
 
-    def test_foo(self):
+    def test_stream_load_empty(self):
         src = get_mirror_reader("example")
-        target = CommandHookMirror({'load_stream': 'true'})
+        target = CommandHookMirror({'stream_load': 'true %(iqn)s'})
         sync_stream_file("unsigned/i386.yaml", src, target)
 
 
