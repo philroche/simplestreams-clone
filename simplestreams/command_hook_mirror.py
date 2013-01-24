@@ -182,7 +182,6 @@ def group_data(group):
 
 
 def stream_data(stream, extra=None):
-    import ipdb; ipdb.set_trace()
     if not stream:
         stream = {}
         tags = {}
