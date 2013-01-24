@@ -44,6 +44,21 @@ class ObjectStore(object):
                                   checksums=checksums,
                                   read_size=self.read_size)
 
+class MemoryObjectStore(ObjectStore):
+    def __init__(self, data):
+        self.data = data
+
+    def insert(self, path, reader, checksums={}, mutable=True):
+        self.data[path] = reader.read(path)
+
+    def remove(self, path):
+        #remove path from store
+        del self.data[path]
+
+    def reader(self, path):
+        # essentially return an 'open(path, r)'
+        return StringReader(self.data['path']).open
+
 
 class SimpleStreamMirrorReader(object):
     def load_stream(self, path, reference=None):

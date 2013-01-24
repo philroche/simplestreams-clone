@@ -13,6 +13,7 @@ from simplestreams import objectstores
 from simplestreams import stream
 from simplestreams import collection
 import sys
+import os
 
 src_d = sys.argv[1]
 tar_d = sys.argv[2]
@@ -45,13 +46,13 @@ for infile in files:
         print "%s (%s)" % (path, fmt)
         tstream = util.sync_stream(src_stream=sstream,
                                    src_mirror=smirror, target_stream=None,
-                                   target_mirror=tmirror, path=path)
+                                   target_mirror=tmirror, path=path, resolve_args={'max': int(os.environ.get("MAX", 100))})
 
     elif fmt == "stream-collection:1.0":
         scoll = collection.Collection(data)
         print "%s (%s) [%s]" % (path, fmt, scoll.iqn)
         util.sync_collection(src_collection=scoll, src_mirror=smirror,
-                             target_mirror=tmirror, path=path)
+                             target_mirror=tmirror, path=path, resolve_args={'max': int(os.environ.get("MAX", 100))})
     else:
         print "Unknown format '%s' in '%s'" % (fmt, infile)
         sys.exit(1)

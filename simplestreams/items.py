@@ -39,6 +39,10 @@ class ItemGroup(dict):
     def items(self):
         return self['items']
 
+    @property
+    def iqn(self):
+        return simplestreams.get_iqn(self)
+
 #class ItemList(list):
 #    """ItemList is a list of Item types."""
 #    parent = None
@@ -89,6 +93,9 @@ class Item(dict):
         return {k: self[k] for k in self if
                 k in simplestreams.CHECKSUMS}
 
+    @property
+    def iqn(self):
+        return simplestreams.get_iqn(self)
 
 class ItemList(simplestreams.RestrictedSimpleParentedList):
     restriction = Item

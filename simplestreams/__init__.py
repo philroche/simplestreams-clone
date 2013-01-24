@@ -41,6 +41,13 @@ def alltags(cur, parent):
     tags.update(parent_tags(parent))
     return tags
 
+def get_iqn(cur):
+    while hasattr(cur, 'parent'):
+        if hasattr(cur.parent, 'iqn'):
+            return cur.parent.iqn
+        cur = cur.parent
+    return None
+
 
 def as_dict(obj, classkey=None):
     if isinstance(obj, dict):
