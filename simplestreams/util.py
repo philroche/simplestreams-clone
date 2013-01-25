@@ -177,14 +177,6 @@ def sync_collection(src_collection, src_mirror, target_mirror, path=None,
         # if path was provided, insert it into the target
         # if we've already read the src_content above, do not read again
         if src_content is None:
-            target_mirror.insert_object(path, src_mirror.reader)
-        else:
-            target_mirror.insert_object_content(path, src_content)
-
-    if path is not None:
-        # if path was provided, insert it into the target
-        # if we've already read the src_content above, do not read again
-        if src_content is None:
             with src_mirror.reader(path) as fp:
                 src_content = fp.read()
 

@@ -79,7 +79,6 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
     def store_collection(self, path, collection, content):
         data = collection_data(collection, {'content': content, 'path': path})
         self.call_hook('collection_store', data)
-        raise NotImplementedError()
 
     def insert_group(self, group, reader):
         items = [i for i in group.items if not self.item_is_filtered(i)]
@@ -155,16 +154,23 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
         full_data['_all'] = ' '.join(data.keys())
         unset = self.config.get('unset_value', '_unset')
 
-        for arg in hook:
-            try:
-                margs.append(arg % full_data)
-            except KeyError as err:
-                for key in err.args:
-                    full_data[key] = unset
-                margs.append(arg % full_data)
+        margs = render(hook, data, unset=unset)
 
         return run_command(args=margs, capture=capture, rcs=rcs)
 
+
+def render(inputs, data, unset="_unset"):
+    fdata = data.copy()
+    outputs = []
+    for i in inputs:
+        while True:
+            try:
+                outputs.append(i % fdata)
+                break
+            except KeyError as err:
+                for key in err.args:
+                    fdata[key] = unset
+    return outputs
 
 def item_data(item):
     data = {'iqn': item.iqn, 'local_path': item.get('local_path', "")}
