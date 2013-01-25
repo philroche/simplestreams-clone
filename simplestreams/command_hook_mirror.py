@@ -131,16 +131,16 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
         return ret == 1
 
     def insert_item(self, item, reader):
-        tmp_item = item.copy()
         tfile_path = None
         tfile_del = None
 
+        extra = {}
         if item.path:
             (tfile_path, tfile_del) = get_local_copy(reader, item.path)
-            tmp_item['path_local'] = tfile_path
+            extra.update({'path_local': tfile_path})
 
         try:
-            self.call_hook('item_insert', item)
+            self.call_hook('item_insert', item, extra=extra)
         finally:
             if tfile_del and os.path.exists(tfile_path):
                 os.unlink(tfile_path)
