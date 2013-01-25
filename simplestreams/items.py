@@ -19,13 +19,13 @@ class ItemGroup(dict):
         super(ItemGroup, self).__init__(mdata)
 
     def __cmp__(self, other):
-        return cmp(self['serial'], other['serial'])
+        return cmp(self.serial, other.serial)
 
     def __eq__(self, other):
-        return (self['serial'] == other['serial'])
+        return (self.serial == other.serial)
 
     def __hash__(self):
-        return self['serial']
+        return self.serial
 
     @property
     def tags(self):
@@ -42,6 +42,16 @@ class ItemGroup(dict):
     @property
     def iqn(self):
         return simplestreams.get_iqn(self)
+
+    @property
+    def serial(self):
+        return str(self['serial'])
+
+    def flattened(self):
+        ret = {}
+        ret.update(self.alltags())
+        ret.update({'iqn': self.iqn, 'serial': self.serial})
+        return ret
 
 #class ItemList(list):
 #    """ItemList is a list of Item types."""
@@ -95,7 +105,20 @@ class Item(dict):
 
     @property
     def iqn(self):
-        return simplestreams.get_iqn(self)
+        return simplestreams.find_attr(self, 'iqn')
+
+    @property
+    def serial(self):
+        return simplestreams.find_attr(self, 'serial')
+
+    def flattened(self):
+        ret = {}
+        ret.update(self.alltags)
+        ret.update(self.checksums)
+        ret.update({'iqn': self.iqn, 'name': self['name'],
+                    'path': self.path, 'serial': self.serial})
+        return ret
+
 
 class ItemList(simplestreams.RestrictedSimpleParentedList):
     restriction = Item

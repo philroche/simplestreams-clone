@@ -41,10 +41,10 @@ def alltags(cur, parent):
     tags.update(parent_tags(parent))
     return tags
 
-def get_iqn(cur):
+def find_attr(cur, name):
     while hasattr(cur, 'parent'):
-        if hasattr(cur.parent, 'iqn'):
-            return cur.parent.iqn
+        if hasattr(cur.parent, name):
+            return cur.parent.get(name)
         cur = cur.parent
     return None
 

@@ -36,8 +36,7 @@ Available command hooks:
     exit 0 for "yes", 1 for "no"
 
   item_insert
-    insert the item.  there will be a 'local_path' exposed for
-    a local path to the file.
+    insert the item.
 
   item_remove
     remove the item.
@@ -53,7 +52,28 @@ Other Configuration:
   unset_value: string, default is '_unset'
     This value is substituted for any invalid %() references
     when invoking a command.
-    
+
+Environments / Variables:
+  When a hook is invoked, data about the relevant entity is
+  made available in 2 ways:
+   a.) through environment variables
+   b.) through substitution of commands
+
+  Each type of data has some fields guaranteed and others optional.
+
+  In all cases:
+    * a special '_fields' key is available which is a space delimited
+      list of keys
+    * all 'tags' for the item (and parent items that apply) will be
+      available.
+
+  item:
+    guaranteed: iqn, name, serial
+    other: path_local
+     * path_local: if the item has a 'path', then it is downloaded
+                   and made available as a file pointed to by 'path_local'
+  group:
+    guaranteed: iqn, serial
 """
 
 
@@ -65,49 +85,49 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
         self.config = config
 
     def load_stream(self, path, reference=None):
-        (_rc, output) = self.hook_stream('load', data=reference,
+        (_rc, output) = self.call_hook('stream_load', data=reference,
                                        capture=True)
-        return load_stream_output(
-            output=output,
-            fmt=self.config.get("stream_load_output_format", "serial_list"),
-            reference=reference)
+        fmt = self.config.get("stream_load_output_format", "serial_list")
+
+        loaded = load_stream_output(output=output, fmt=fmt, reference=reference)
+        return loaded
 
     def store_stream(self, path, stream, content):
-        self.hook_stream('store', data=stream,
-                         extra={'content': content, 'path': path})
+        self.call_hook('stream_store', data=stream,
+                       extra={'content': content, 'path': path})
 
     def store_collection(self, path, collection, content):
-        data = collection_data(collection, {'content': content, 'path': path})
-        self.call_hook('collection_store', data)
+        self.call_hook('collection_store', data=collection,
+                       extra={'content': content, 'path': path})
 
     def insert_group(self, group, reader):
         items = [i for i in group.items if not self.item_is_filtered(i)]
         if not items:
             return
 
-        self.hook_group('insert_pre', group)
+        self.call_hook('group_insert_pre', data=group)
         for item in items:
             self.insert_item(item, reader)
 
-        self.hook_group('insert_post', group)
+        self.call_hook('group_insert_post', data=group)
 
     def remove_group(self, group):
         items = [i for i in group.items if not self.item_is_filtered(i)]
         if not items:
             return
 
-        self.hook_group('remove_pre', group)
+        self.call_hook('group_remove_pre', data=group)
         for item in items:
             self.remove_item(item)
 
-        self.hook_group('remove_post', group)
+        self.call_hook('group_remove_post', data=group)
 
     def item_is_filtered(self, item):
-        (ret, _output) = self.hook_item('filter', item, rcs=[0, 1])
+        (ret, _output) = self.call_hook('item_filter', item, rcs=[0, 1])
         return ret == 1
 
     def stream_is_filtered(self, stream):
-        (ret, _output) = self.hook_stream('filter', stream, rcs=[0, 1])
+        (ret, _output) = self.call_hook('item_filter', stream, rcs=[0, 1])
         return ret == 1
 
     def insert_item(self, item, reader):
@@ -117,49 +137,49 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
 
         if item.path:
             (tfile_path, tfile_del) = get_local_copy(reader, item.path)
-            tmp_item['local_path'] = tfile_path
+            tmp_item['path_local'] = tfile_path
 
         try:
-            self.hook_item('insert', item)
+            self.call_hook('item_insert', item)
         finally:
             if tfile_del and os.path.exists(tfile_path):
                 os.unlink(tfile_path)
 
     def remove_item(self, item):
-        self.hook_item('remove', item)
+        self.call_hook('item_remove', item)
 
-    def hook_group(self, action, data):
-        return self.call_hook("group_%s" % action, group_data(data))
-
-    def hook_stream(self, action, data, capture=False, rcs=None, extra=None):
-        return self.call_hook("stream_%s" % action,
-                              data=stream_data(data, extra=extra),
-                              capture=capture, rcs=rcs)
-
-    def hook_item(self, action, data, rcs=None):
-        return self.call_hook("item_%s" % action, data=item_data(data),
-                              rcs=rcs)
-
-    def call_hook(self, hookname, data, capture=False, rcs=None):
-        hook = self.config.get(hookname)
-        if not hook:
+    def call_hook(self, hookname, data, capture=False, rcs=None, extra=None):
+        command = self.config.get(hookname)
+        if not command:
             # return successful execution with no output
             return (0, '')
 
-        if isinstance(hook, str):
-            hook = ['sh', '-c', hook]
-        
-        margs = []
-        full_data = data.copy()
-        full_data['_all'] = ' '.join(data.keys())
-        unset = self.config.get('unset_value', '_unset')
+        if isinstance(command, str):
+            command = ['sh', '-c', command]
 
-        margs = render(hook, data, unset=unset)
+        fdata = data.flattened()
+        if extra:
+            fdata.update(extra)
+        fdata = {k:str(v) for k, v in fdata.iteritems()}
 
-        return run_command(args=margs, capture=capture, rcs=rcs)
+        return call_hook(command=command, data=fdata,
+                         unset=self.config.get('unset_value', None),
+                         capture=capture, rcs=rcs)
 
 
-def render(inputs, data, unset="_unset"):
+def call_hook(command, data, unset=None, capture=False, rcs=None):
+    env = os.environ.copy()
+    data = data.copy()
+
+    data['_fields'] = ' '.join([k for k in data])
+
+    mcommand = render(command, data, unset=unset)
+
+    env.update(data)
+    return run_command(mcommand, env=env, capture=capture, rcs=rcs)
+
+
+def render(inputs, data, unset=None):
     fdata = data.copy()
     outputs = []
     for i in inputs:
@@ -168,54 +188,11 @@ def render(inputs, data, unset="_unset"):
                 outputs.append(i % fdata)
                 break
             except KeyError as err:
+                if unset is None:
+                    raise
                 for key in err.args:
                     fdata[key] = unset
     return outputs
-
-def item_data(item):
-    data = {'iqn': item.iqn, 'local_path': item.get('local_path', "")}
-    data.update(item.alltags)
-    data['_tags'] = ' '.join(item.alltags.keys())
-    return data
-
-
-def group_data(group):
-    data = {'iqn': group.iqn}
-    data.update(group.alltags)
-    data['_tags'] = ' '.join(group.alltags.keys())
-    return data
-
-
-def stream_data(stream, extra=None):
-    if not stream:
-        stream = {}
-        tags = {}
-    else:
-        tags = stream.tags
-
-    data = {
-        'iqn': stream.get('iqn'),
-        'description': stream.get('description'),
-    }
-    data.update(tags)
-    data['_tags'] = ' '.join(tags.keys())
-
-    if extra:
-        data.update(extra)
-    return data
-
-
-def collection_data(collection, extra=None):
-    if not collection:
-        collection = {}
-
-    data = {
-        'description': collection.get('description'),
-    }
-
-    if extra:
-        data.update(extra)
-    return data
 
 
 def check_config(config):
@@ -250,7 +227,7 @@ def load_stream_output(output, reference, fmt="serial_list"):
     return
 
 
-def run_command(args, capture=False, rcs=None):
+def run_command(cmd, env=None, capture=False, rcs=None):
     if not rcs:
         rcs = [0]
 
@@ -259,12 +236,12 @@ def run_command(args, capture=False, rcs=None):
     else:
         stdout = subprocess.PIPE
 
-    sp = subprocess.Popen(args, stdout=stdout, shell=False)
+    sp = subprocess.Popen(cmd, env=env, stdout=stdout, shell=False)
     (out, _err) = sp.communicate()
     rc = sp.returncode
 
     if rc not in rcs:
-        raise subprocess.CalledProcessError(rc, args)
+        raise subprocess.CalledProcessError(rc, cmd)
 
     if out is None:
         out = ''

@@ -82,6 +82,12 @@ class Collection(dict):
     def as_dict(self):
         return simplestreams.as_dict(self)
 
+    def flattened(self):
+        ret = {k: v for k, v in self.iteritems() if isinstance(v, str)}
+        ret.update(self.tags())
+        return ret
+
+
 def validate(name, value):
     rtype = RESTRICTED_TYPES[name]
     if not isinstance(value, rtype):
