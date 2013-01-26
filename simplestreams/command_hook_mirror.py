@@ -25,7 +25,8 @@ Available command hooks:
   group_remove_pre
   group_remove_post
     invoked with the group information before and after add/remove
-    of a group.  Only groups with non-filtered items will be called.
+    of a item in the group.  Only groups with non-filtered items will be
+    called.
 
   stream_filter:
     invoked to determine if a stream should be operated on

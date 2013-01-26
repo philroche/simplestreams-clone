@@ -41,7 +41,7 @@ class ItemGroup(dict):
 
     @property
     def iqn(self):
-        return simplestreams.get_iqn(self)
+        return simplestreams.find_attr(self, 'iqn')
 
     @property
     def serial(self):
@@ -49,7 +49,7 @@ class ItemGroup(dict):
 
     def flattened(self):
         ret = {}
-        ret.update(self.alltags())
+        ret.update(self.alltags)
         ret.update({'iqn': self.iqn, 'serial': self.serial})
         return ret
 
