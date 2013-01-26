@@ -1,18 +1,19 @@
 import boto.exception
 import boto.s3
 import boto.s3.connection
+from contextlib import closing
 import errno
 import hashlib
 import os
 import os.path
-from simplestreams.util import (load_content, mkdir_p, read_possibly_signed,
-                                url_reader)
-from simplestreams import stream
+import StringIO
+import tempfile
+import urllib2
 import yaml
 
-import tempfile
-import StringIO
-from contextlib import closing
+from simplestreams.util import (load_content, mkdir_p, read_possibly_signed,
+                                url_reader)
+import simplestreams.stream
 
 
 READ_BUFFER_SIZE = 1024 * 1024
@@ -24,11 +25,11 @@ class ObjectStore(object):
     def __init__(self, prefix):
         self.prefix = prefix
 
-    def insert(self, path, reader, checksums={}, mutable=True):
+    def insert(self, path, reader, checksums=None, mutable=True):
         #store content from reader.read() into path, expecting result checksum
         raise NotImplementedError()
 
-    def insert_content(self, path, content, checksums={}):
+    def insert_content(self, path, content, checksums=None):
         self.insert(path, StringReader(content).open, checksums)
 
     def remove(self, path):
@@ -39,16 +40,17 @@ class ObjectStore(object):
         # essentially return an 'open(path, r)'
         raise NotImplementedError()
 
-    def exists_with_checksum(self, path, checksums={}):
+    def exists_with_checksum(self, path, checksums=None):
         return has_valid_checksum(path=path, reader=self.reader,
                                   checksums=checksums,
                                   read_size=self.read_size)
+
 
 class MemoryObjectStore(ObjectStore):
     def __init__(self, data):
         self.data = data
 
-    def insert(self, path, reader, checksums={}, mutable=True):
+    def insert(self, path, reader, checksums=None, mutable=True):
         self.data[path] = reader.read(path)
 
     def remove(self, path):
@@ -62,7 +64,7 @@ class MemoryObjectStore(ObjectStore):
 
 class SimpleStreamMirrorReader(object):
     def load_stream(self, path, reference=None):
-        raise NotImplementedError()
+        return load_stream_path(path, self.reader, reference)
 
     def reader(self, path):
         raise NotImplementedError()
@@ -102,7 +104,7 @@ class checksummer(object):
         if not checksums:
             self._hasher = None
             return
-        for meth in ("md5", "sha512"):
+        for meth in ("md5", "sha256", "sha512"):
             if meth in checksums and meth in hashlib.algorithms:
                 self._hasher = hashlib.new(meth)
                 self.algorithm = meth
@@ -126,8 +128,8 @@ class checksummer(object):
         return (self.expected is None or self.expected == self.hexdigest())
 
 
-def has_valid_checksum(path, reader, checksums={}, read_size=READ_BUFFER_SIZE):
-    if not checksums:
+def has_valid_checksum(path, reader, checksums=None, read_size=READ_BUFFER_SIZE):
+    if checksums is None:
         return False
     cksum = checksummer(checksums)
     try:
@@ -142,8 +144,33 @@ def has_valid_checksum(path, reader, checksums={}, read_size=READ_BUFFER_SIZE):
         return False
 
 
+class UrlMirrorReader(SimpleStreamMirrorReader):
+    def __init__(self, prefix):
+
+        if prefix.startswith("/"):
+            self._reader = open
+        else:
+            self._reader = urllib2.urlopen
+
+        self.prefix = prefix
+        info = load_mirror_info(self.reader)
+        self.iqn = info.get('iqn')
+        self.mirrors = info.get('mirrors', [])
+        self.authoritative = info.get('authoritative_mirror')
+
+    def reader(self, path):
+        try:
+            reader = self.reader(path)
+            return closing(reader)
+        except IOError as e:
+            if e.errno != errno.ENOENT:
+                raise e
+
+        return try_mirrors(path, self.mirrors, self.authoritative)
+
+
 class FileStore(ObjectStore):
-    def insert(self, path, reader, checksums={}, mutable=True):
+    def insert(self, path, reader, checksums=None, mutable=True):
         wpath = os.path.join(self.prefix, path)
         if os.path.isfile(wpath):
             if not mutable:
@@ -172,7 +199,7 @@ class FileStore(ObjectStore):
         except Exception as e:
             try:
                 os.unlink(wpath)
-            except:
+            except IOError:
                 pass
             raise e
 
@@ -215,7 +242,7 @@ class S3ObjectStore(ObjectStore):
             self._bucket = self._conn.get_bucket(self.bucketname)
         return self._bucket
 
-    def insert(self, path, reader, checksums={}, mutable=True):
+    def insert(self, path, reader, checksums=None, mutable=True):
         #store content from reader.read() into path, expecting result checksum
         try:
             tfile = tempfile.TemporaryFile()
@@ -230,7 +257,7 @@ class S3ObjectStore(ObjectStore):
         finally:
             tfile.close()
 
-    def insert_content(self, path, content, checksums={}):
+    def insert_content(self, path, content, checksums=None):
         with closing(self.bucket.new_key(self.path_prefix + path)) as key:
             key.set_contents_from_string(content)
 
@@ -245,11 +272,10 @@ class S3ObjectStore(ObjectStore):
             myerr = IOError("Unable to open %s" % path)
             myerr.errno = errno.ENOENT
             raise myerr
-        raise e
 
         return closing(key)
 
-    def exists_with_checksum(self, path, checksums={}):
+    def exists_with_checksum(self, path, checksums=None):
         key = self.bucket.get_key(self.path_prefix + path)
         if key is None:
             return False
@@ -278,18 +304,15 @@ class StringReader(StringIO.StringIO):
 class MirrorStoreReader(SimpleStreamMirrorReader):
     def __init__(self, objectstore):
         self.objectstore = objectstore
+
         try:
-            content = self.reader("MIRROR.info").read()
-            info = load_content(content)
+            info = load_mirror_info(self.reader)
 
         except Exception as e:
             raise IOError("Failed to read MIRROR.info from %s: %s" %
                           (objectstore, str(e)))
 
         self.iqn = info.get('iqn')
-        if not self.iqn:
-            raise TypeError("MIRROR.info did not contain iqn")
-
         self.mirrors = info.get('mirrors', [])
         self.authoritative = info.get('authoritative_mirror')
 
@@ -301,18 +324,7 @@ class MirrorStoreReader(SimpleStreamMirrorReader):
             if e.errno != errno.ENOENT:
                 raise e
 
-        author = self.authoritative
-        mirrors = [m for m in self.mirrors if m and m != author]
-        if author:
-            mirrors.append(author)
-
-        for mirror in mirrors:
-            try:
-                return url_reader(mirror + path)
-            except IOError as e:
-                continue
-
-        raise IOError("Unable to open path '%s'" % path)
+        try_mirrors(path, self.mirrors, self.authoritative)
 
     def load_stream(self, path, reference=None):
         # return a Stream object
@@ -328,7 +340,7 @@ class MirrorStoreWriter(SimpleStreamMirrorWriter):
         dp = self.data_path(path)
         if self.objectstore.exists_with_checksum(dp):
             with self.objectstore.reader(dp) as fp:
-                return stream.Stream(yaml.safe_load(fp.read()))
+                return simplestreams.stream.Stream(yaml.safe_load(fp.read()))
         else:
             return load_stream_path(path, self.objectstore.reader, reference)
 
@@ -367,7 +379,7 @@ class MirrorStoreWriter(SimpleStreamMirrorWriter):
         self.objectstore.insert(path=path, reader=reader,
                                 checksums=checksums, mutable=mutable)
 
-    def insert_path_content(self, path, content, checksums={}):
+    def insert_path_content(self, path, content, checksums=None):
         self.objectstore.insert_content(path, content, checksums)
 
     def remove_object(self, path):
@@ -400,13 +412,51 @@ class MirrorStoreWriter(SimpleStreamMirrorWriter):
 
 def load_stream_path(path, reader, reference=None):
     try:
-        (data, sig) = read_possibly_signed(path, reader)
-        return stream.Stream(load_content(data))
+        (data, _sig) = read_possibly_signed(path, reader)
+        return simplestreams.stream.Stream(load_content(data))
 
     except IOError as e:
         if e.errno != errno.ENOENT:
             raise Exception("Failed to load %s" % path)
         data = reference.copy()
         data['item_groups'] = []
-        return stream.Stream(data)
+        return simplestreams.stream.Stream(data)
+
+
+def load_mirror_info(reader, path="MIRROR.info"):
+    try:
+        with reader(path) as fp:
+            content = fp.read()
+    except Exception as e:
+        raise IOError("Failed to read %s: %s" % (path, str(e)))
+
+    info = load_content(content)
+
+    if 'iqn' not in info:
+        raise TypeError("%s did not contain iqn" % path)
+
+    for f in ('mirrors', 'authoritative_mirrors'):
+        info[f] = info.get(f, [])
+
+    return info
+
+
+def try_mirrors(path, mirrors=None, authoritative=None):
+    if mirrors is None:
+        mirrors = []
+
+    search = [m for m in mirrors]
+
+    if authoritative and authoritative not in search:
+        search.append(authoritative)
+
+    for mirror in search:
+        try:
+            return url_reader(mirror + path)
+        except IOError:
+            continue
+
+    raise IOError("Unable to open path '%s'. tried %s" % (path, search))
+
+
 # vi: ts=4 expandtab
