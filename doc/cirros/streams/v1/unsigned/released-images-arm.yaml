@@ -1,0 +1,25 @@
+iqn: iqn.2012-12.net.cirros-cloud:cloud-images:released
+format: stream-1.0
+
+description: Cirros Cloud Released images for arm
+
+item_groups:
+ - serial: 20101020
+   version: "0.3.0"
+   items:
+    - name: cirros-0.3.0-arm-rootfs.img.gz
+      path: 0.3.0/cirros-0.3.0-arm-rootfs.img.gz
+      length: 7914961
+      md5: b268cfa7e634f070af401f8169adff79
+    - name: cirros-0.3.0-arm-lxc.tar.gz
+      path: 0.3.0/cirros-0.3.0-arm-lxc.tar.gz
+      length: 2043822
+      md5: 91add49e56cbe6b5004015a4d2f51dbc
+    - name: cirros-0.3.0-arm-uec.tar.gz
+      path: 0.3.0/cirros-0.3.0-arm-uec.tar.gz
+      length: 5761642
+      md5: c31e05f7829ad45f9d9995c35d232769
+
+tags:
+  arch: arm
+  stream: released

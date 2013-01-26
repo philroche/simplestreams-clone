@@ -1,0 +1,3 @@
+authoritative_mirror: http://download.cirros-cloud.net/
+iqn: iqn.2012-12.net.cirros-cloud:cloud-images
+mirrors: []
