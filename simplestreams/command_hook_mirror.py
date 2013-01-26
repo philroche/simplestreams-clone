@@ -135,7 +135,7 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
         tfile_del = None
 
         extra = {}
-        if item.path:
+        if item.path and not self.config.get('item_skip_download', False):
             (tfile_path, tfile_del) = get_local_copy(reader, item.path)
             extra.update({'path_local': tfile_path})
 
