@@ -44,7 +44,7 @@ def alltags(cur, parent):
 def find_attr(cur, name):
     while hasattr(cur, 'parent'):
         if hasattr(cur.parent, name):
-            return cur.parent.get(name)
+            return getattr(cur.parent, name)
         cur = cur.parent
     return None
 
