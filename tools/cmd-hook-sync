@@ -1,0 +1,101 @@
+#!/usr/bin/python
+#
+# Example client showing use of command_hook_mirror
+#
+# Example config:
+# |stream_load: 'cat $XFILE 2>/dev/null || :'
+# |item_insert: [sh, -c, "echo %(serial)s >> $XFILE; echo inserted %(serial)s"]
+# |group_insert_pre: [bash, -c, "echo --; for f in ${_fields}; do echo $f: ${!f}; done"]
+# |unset_value: _unset
+# |item_skip_download: true
+#
+
+import errno
+from simplestreams import collection
+from simplestreams import command_hook_mirror
+from simplestreams import objectstores
+from simplestreams import stream
+from simplestreams import util
+import urllib2
+import urlparse
+import sys
+import os
+
+
+def tokenize_url(url):
+    #given a url, find where the MIRROR.info file lives and return tokenized
+
+    parsed = urlparse.urlparse(url)
+    if not parsed.scheme:
+        if url.startswith("/"):
+            url = "file://%s" % url
+        elif os.path.isfile(url):
+            url = "file://%s" % os.path.abspath(url)
+        parsed = urlparse.urlparse(url)
+
+    url_in = url
+
+    while urlparse.urlparse(url).path:
+        url = os.path.dirname(url)
+        print "url=%s" % url
+        try:
+            urllib2.urlopen("%s/%s" % (url, "MIRROR.info")).read()
+            return (url + "/", url_in[len(url) + 1:])
+        except urllib2.HTTPError as httperr:
+            if httperr.code != 404:
+                raise
+        except urllib2.URLError as uerr:
+            if ((isinstance(uerr.reason, OSError) and
+                 uerr.reason.errno == errno.ENOENT)):
+                pass
+            else:
+                raise
+
+    raise TypeError("Unable to find MIRROR.info above %s" % url_in)
+
+
+def main():
+    cfg_file = sys.argv[1]
+    urls = sys.argv[2:]
+
+    with open(cfg_file) as cfp:
+        cfg_content = cfp.read()
+
+    cfg = util.load_content(cfg_content)
+
+    for url in urls:
+        tmirror = command_hook_mirror.CommandHookMirror(cfg)
+
+        resolve_args = {'max': cfg.get("max"), 'keep': cfg.get("keep")}
+
+        (src_url, path) = tokenize_url(url)
+        print "path=%s src_url=%s" % (path, src_url)
+        smirror = objectstores.UrlMirrorReader(src_url)
+
+        (content, _sig) = util.read_possibly_signed(path,
+                                                    smirror.reader)
+
+        data = util.load_content(content)
+        fmt = data.get("format")
+
+        if fmt == "stream-1.0":
+            print "%s (%s)" % (path, fmt)
+            sstream = stream.Stream(data)
+            util.sync_stream(src_stream=sstream,
+                             src_mirror=smirror, target_stream=None,
+                             target_mirror=tmirror, path=path,
+                             resolve_args=resolve_args)
+
+        elif fmt == "stream-collection:1.0":
+            scoll = collection.Collection(data)
+            print "%s (%s) [%s]" % (path, fmt, scoll.iqn)
+            util.sync_collection(src_collection=scoll, src_mirror=smirror,
+                                 target_mirror=tmirror, path=path,
+                                 resolve_args=resolve_args)
+
+        else:
+            print "Unknown format '%s' in '%s'" % (fmt, url)
+            sys.exit(1)
+
+if __name__ == '__main__':
+    main()

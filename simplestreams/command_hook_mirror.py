@@ -25,10 +25,10 @@ Available command hooks:
   group_remove_pre
   group_remove_post
     invoked with the group information before and after add/remove
-    of a item in the group.  Only groups with non-filtered items will be
-    called.
+    of a item in the group.
 
   stream_filter:
+    FIXME: This does not do anything.
     invoked to determine if a stream should be operated on
     exit 0 for "yes", 1 for "no".
 
@@ -67,6 +67,8 @@ Environments / Variables:
       list of keys
     * all 'tags' for the item (and parent items that apply) will be
       available.
+    * a special '_hookname' field is available that specifies which
+      hook is being called.
 
   item:
     guaranteed: iqn, name, serial
@@ -102,23 +104,15 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
                        extra={'content': content, 'path': path})
 
     def insert_group(self, group, reader):
-        items = [i for i in group.items if not self.item_is_filtered(i)]
-        if not items:
-            return
-
         self.call_hook('group_insert_pre', data=group)
-        for item in items:
+        for item in group.items:
             self.insert_item(item, reader)
 
         self.call_hook('group_insert_post', data=group)
 
     def remove_group(self, group):
-        items = [i for i in group.items if not self.item_is_filtered(i)]
-        if not items:
-            return
-
         self.call_hook('group_remove_pre', data=group)
-        for item in items:
+        for item in group.items:
             self.remove_item(item)
 
         self.call_hook('group_remove_post', data=group)
@@ -132,6 +126,9 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
         return ret == 1
 
     def insert_item(self, item, reader):
+        if self.item_is_filtered(item):
+            return
+
         tfile_path = None
         tfile_del = None
 
@@ -147,6 +144,8 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
                 os.unlink(tfile_path)
 
     def remove_item(self, item):
+        if self.item_is_filtered(item):
+            return
         self.call_hook('item_remove', item)
 
     def call_hook(self, hookname, data, capture=False, rcs=None, extra=None):
@@ -162,6 +161,7 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
         if extra:
             fdata.update(extra)
         fdata = {k:str(v) for k, v in fdata.iteritems()}
+        fdata['_hookname'] = hookname
 
         return call_hook(command=command, data=fdata,
                          unset=self.config.get('unset_value', None),
