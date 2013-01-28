@@ -160,7 +160,7 @@ class UrlMirrorReader(SimpleStreamMirrorReader):
 
     def reader(self, path):
         try:
-            reader = self.reader(path)
+            reader = self._reader(self.prefix + path)
             return closing(reader)
         except IOError as e:
             if e.errno != errno.ENOENT:
