@@ -24,10 +24,6 @@ class TestStreamResolveWork(TestCase):
 
     def test_only_new_with_keep(self):
         self.tryit(src=[10, 9, 8], target=[7, 6, 5],
-                   add=[10, 9, 8], remove=[6,5], keep=4)
-
-    def test_only_new_with_keep(self):
-        self.tryit(src=[10, 9, 8], target=[7, 6, 5],
                    add=[10, 9, 8], remove=[6, 5], keep=4)
 
     def test_only_remove(self):
