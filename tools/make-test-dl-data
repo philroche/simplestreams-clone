@@ -139,6 +139,14 @@ def is_expected(repl, fields):
             # oneiric got -disk1.img after alpha3
             return False
 
+    #if some data in /query is not truely available, fill up this array
+    #to skip it.
+    #broken = ("precise/20130118.1", "lucid/20130121", "raring/20130125")
+    broken = ()
+    if "%s/%s" % (rel, serial) in broken:
+        print "Known broken: %s/%s" % (rel, serial)
+        return False
+
     return True
                         
 
