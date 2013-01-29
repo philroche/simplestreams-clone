@@ -1,4 +1,4 @@
-iqn: iqn.2012-12.net.cirros-cloud:cloud-images:released
+iqn: iqn.2012-12.net.cirros-cloud:cloud-images:devel:x86_64
 format: stream-1.0
 
 description: Cirros Cloud Released images for x86_64
@@ -45,4 +45,4 @@ item_groups:
 
 tags:
   arch: x86_64
-  stream: released
+  stream: devel

@@ -1,7 +1,7 @@
-iqn: iqn.2012-12.net.cirros-cloud:cloud-images:devel
+iqn: iqn.2012-12.net.cirros-cloud:cloud-images:devel:i386
 format: stream-1.0
 
-description: Cirros Cloud Released images for x86_64
+description: Cirros Cloud Released images for i386
 
 item_groups:
  - serial: 20130111
