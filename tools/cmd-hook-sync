@@ -10,48 +10,15 @@
 # |item_skip_download: true
 #
 
-import errno
 from simplestreams import collection
 from simplestreams import command_hook_mirror
 from simplestreams import objectstores
 from simplestreams import stream
 from simplestreams import util
-import urllib2
-import urlparse
+import toolutil
+
 import sys
 import os
-
-
-def tokenize_url(url):
-    #given a url, find where the MIRROR.info file lives and return tokenized
-
-    parsed = urlparse.urlparse(url)
-    if not parsed.scheme:
-        if url.startswith("/"):
-            url = "file://%s" % url
-        elif os.path.isfile(url):
-            url = "file://%s" % os.path.abspath(url)
-        parsed = urlparse.urlparse(url)
-
-    url_in = url
-
-    while urlparse.urlparse(url).path:
-        url = os.path.dirname(url)
-        print "url=%s" % url
-        try:
-            urllib2.urlopen("%s/%s" % (url, "MIRROR.info")).read()
-            return (url + "/", url_in[len(url) + 1:])
-        except urllib2.HTTPError as httperr:
-            if httperr.code != 404:
-                raise
-        except urllib2.URLError as uerr:
-            if ((isinstance(uerr.reason, OSError) and
-                 uerr.reason.errno == errno.ENOENT)):
-                pass
-            else:
-                raise
-
-    raise TypeError("Unable to find MIRROR.info above %s" % url_in)
 
 
 def main():
@@ -68,7 +35,8 @@ def main():
 
         resolve_args = {'max': cfg.get("max"), 'keep': cfg.get("keep")}
 
-        (src_url, path) = tokenize_url(url)
+        norm_url = toolutil.normalize_url(url)
+        (src_url, path) = toolutil.tokenize_url(norm_url)
         print "path=%s src_url=%s" % (path, src_url)
         smirror = objectstores.UrlMirrorReader(src_url)
 

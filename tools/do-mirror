@@ -2,57 +2,63 @@
 #
 # Example of syncing/mirroring:
 #
-# rm -Rf exdata/images
-# make exdata/images
+# rm -Rf exdata/images.fake
+# make exdata/images.fake
 # rm -Rf my-data # optional, it should reasonably resume
-# streams=$(cd exdata/images && find * -name "i386.yaml" -o -name "amd64.yaml")
-# ./go.py exdata/images my-data $streams
+# PYTHONPATH=$PWD ./tools/do-mirror ./doc/example/unsigned/images.yaml my-data
 
 from simplestreams import util
 from simplestreams import objectstores
 from simplestreams import stream
 from simplestreams import collection
-import sys
+import toolutil
+
+import errno
 import os
+import sys
+import urllib2
+import urlparse
 
-src_d = sys.argv[1]
-tar_d = sys.argv[2]
-sstore = objectstores.FileStore(src_d)
-tstore = objectstores.FileStore(tar_d)
 
-smirror = objectstores.MirrorStoreReader(sstore)
-tmirror = objectstores.MirrorStoreWriter(tstore)
+def main():
+    src = sys.argv[1]
+    target_d = sys.argv[2]
 
-if len(sys.argv) < 4:
-    files = ["server/released/server/raring/amd64.yaml"]
-else:
-    files = sys.argv[3:]
+    norm_url = toolutil.normalize_url(src)
+    (src_url, path) = toolutil.tokenize_url(norm_url)
 
-for infile in files:
-    # take off src_d (ie, allow input a full path including src_d)
-    if infile.startswith("%s/" % src_d):
-        path = infile[len(src_d) + 1:]
-    elif infile.startswith("%s" % src_d):
-        path = infile[len(src_d):]
-    else:
-        path = infile
+    smirror = objectstores.UrlMirrorReader(src_url)
 
-    (src_content, signature) = util.read_possibly_signed(path, smirror.reader)
-    data = util.load_content(src_content)
+    (content, _sig) = util.read_possibly_signed(path,
+                                                smirror.reader)
+    data = util.load_content(content)
+
+    tstore = objectstores.FileStore(target_d)
+    tmirror = objectstores.MirrorStoreWriter(tstore)
+
+    resolve_args = {'max': None, 'keep': None}
+
     fmt = data.get("format")
-
     if fmt == "stream-1.0":
+        print "%s/%s (%s)" % (src_url, path, fmt)
         sstream = stream.Stream(data)
-        print "%s (%s)" % (path, fmt)
-        tstream = util.sync_stream(src_stream=sstream,
-                                   src_mirror=smirror, target_stream=None,
-                                   target_mirror=tmirror, path=path, resolve_args={'max': int(os.environ.get("MAX", 100))})
-
+        util.sync_stream(src_stream=sstream,
+                         src_mirror=smirror, target_stream=None,
+                         target_mirror=tmirror, path=path,
+                         resolve_args=resolve_args) 
+                
     elif fmt == "stream-collection:1.0":
         scoll = collection.Collection(data)
-        print "%s (%s) [%s]" % (path, fmt, scoll.iqn)
+        print "%s/%s (%s) [%s]" % (src_url, path, fmt, scoll.iqn)
         util.sync_collection(src_collection=scoll, src_mirror=smirror,
-                             target_mirror=tmirror, path=path, resolve_args={'max': int(os.environ.get("MAX", 100))})
+                             target_mirror=tmirror, path=path,
+                             resolve_args=resolve_args)
+    
     else:
-        print "Unknown format '%s' in '%s'" % (fmt, infile)
+        print "Unknown format '%s' in '%s'" % (fmt, src_url)
         sys.exit(1)
+
+if __name__ == '__main__':
+    main()
+
+# vi: ts=4 expandtab syntax=python

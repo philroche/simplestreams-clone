@@ -7,6 +7,8 @@ import os
 import os.path
 from simplestreams.util import read_possibly_signed
 import subprocess
+import urllib2
+import urlparse
 import yaml
 
 
@@ -19,7 +21,8 @@ REL2VER = {
     "raring": {'version': "13.04", 'devname': "Raring Ringtail"},
 }
 
-SKIP_COPY_UP = ( 'format' )
+SKIP_COPY_UP = ('format')
+
 
 def render_string(content, params):
     if not params:
@@ -105,7 +108,7 @@ def process_collections(stream_files, path_prefix, callback):
                     addstream[topitem] = val
 
             addstream['path'] = url
-                    
+
             collections[ctok]['streams'].append(addstream)
 
     for coll in collections:
@@ -116,3 +119,38 @@ def process_collections(stream_files, path_prefix, callback):
 
         callback(path=coll, path_prefix=path_prefix,
                  collection=collections[coll])
+
+
+def normalize_url(url):
+    parsed = urlparse.urlparse(url)
+    if not parsed.scheme:
+        if url.startswith("/"):
+            url = "file://%s" % url
+        elif os.path.isfile(url):
+            url = "file://%s" % os.path.abspath(url)
+    return url
+
+
+def tokenize_url(url):
+    #given a url, find where the MIRROR.info file lives and return tokenized
+
+    url_in = url
+
+    while urlparse.urlparse(url).path:
+        url = os.path.dirname(url)
+        try:
+            urllib2.urlopen("%s/%s" % (url, "MIRROR.info")).read()
+            return (url + "/", url_in[len(url) + 1:])
+        except urllib2.HTTPError as httperr:
+            if httperr.code != 404:
+                raise
+        except urllib2.URLError as uerr:
+            if ((isinstance(uerr.reason, OSError) and
+                 uerr.reason.errno == errno.ENOENT)):
+                pass
+            else:
+                raise
+
+    raise TypeError("Unable to find MIRROR.info above %s" % url_in)
+
+# vi: ts=4 expandtab syntax=python
