@@ -21,6 +21,4 @@ streams:
    stream: devel
 
 tags:
- release: pinky
- version: 12.04
  build: server
