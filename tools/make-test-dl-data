@@ -77,6 +77,9 @@ item_groups:
       #if $file.sha256
       sha256: ${file.sha256}
       #end if
+      #if $file.size
+      size: ${file.size}
+      #end if
       path: $item.path
    #end for
 #end for
@@ -112,7 +115,8 @@ PGP_SIGNATURE_HEADER = "-----BEGIN PGP SIGNATURE-----"
 PGP_SIGNATURE_FOOTER = "-----END PGP SIGNATURE-----"
 
 
-if bool(os.environ.get("REAL_DATA", False)) is True:
+REAL_DATA = os.environ.get("REAL_DATA", False)
+if REAL_DATA and REAL_DATA != "0":
     CREATE_FILE_REAL_HASHES = True
     CREATE_FILE_CREATE = False
 else:
@@ -140,9 +144,8 @@ def is_expected(repl, fields):
             return False
 
     #if some data in /query is not truely available, fill up this array
-    #to skip it.
-    #broken = ("precise/20130118.1", "lucid/20130121", "raring/20130125")
-    broken = ()
+    #to skip it. ex: export BROKEN="precise/20121212.1 quantal/20130128.1"
+    broken = os.environ.get("BROKEN","").split(" ")
     if "%s/%s" % (rel, serial) in broken:
         print "Known broken: %s/%s" % (rel, serial)
         return False
@@ -210,9 +213,11 @@ def create_file(prefix, path):
 
     if CREATE_FILE_REAL_HASHES:
         data.update(get_cloud_images_file_hash(path))
+        data['size'] = None
     else:
         data['md5'] = KNOWN_HASHES[size]
         data['sha256'] = None
+        data['size'] = size
 
     return data
         
@@ -318,7 +323,7 @@ def streamwriter(item_groups, data, path, passthrough):
     params = data.copy()
     params['item_groups'] = item_groups
     params.update(passthrough.get('params', {}))
-    url = "%s/%s.yaml" % (data['build']['name'], path)
+    url = "v1/%s/%s.yaml" % (data['build']['name'], path)
     fname = "%s/%s" % (passthrough['output_d'], url)
     toolutil.mkdir_p(os.path.dirname(fname))
     with open(fname, "w") as fp:
@@ -387,10 +392,13 @@ def main():
     tmpl = COLLECTION_TEMPLATE.lstrip()
 
     def collwriter(path, path_prefix, collection):
+        if path != "/v1/":
+            return
         toks = ("stream", "release", "buildname", "arch", "cloud", "region")
 
         coll_file = "%s%sstreams%s" % (path_prefix, path, CONTENT_EXT)
 
+        sys.stderr.write("collection: %s\n" % coll_file)
         toolutil.mkdir_p(os.path.dirname(coll_file))
         with open(coll_file, "w") as cfp:
             cfp.write(toolutil.render_string(tmpl, collection))
