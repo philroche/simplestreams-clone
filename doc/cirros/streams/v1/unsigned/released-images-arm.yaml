@@ -9,15 +9,15 @@ item_groups:
    items:
     - name: cirros-0.3.0-arm-rootfs.img.gz
       path: 0.3.0/cirros-0.3.0-arm-rootfs.img.gz
-      length: 7914961
+      size: 7914961
       md5: b268cfa7e634f070af401f8169adff79
     - name: cirros-0.3.0-arm-lxc.tar.gz
       path: 0.3.0/cirros-0.3.0-arm-lxc.tar.gz
-      length: 2043822
+      size: 2043822
       md5: 91add49e56cbe6b5004015a4d2f51dbc
     - name: cirros-0.3.0-arm-uec.tar.gz
       path: 0.3.0/cirros-0.3.0-arm-uec.tar.gz
-      length: 5761642
+      size: 5761642
       md5: c31e05f7829ad45f9d9995c35d232769
 
 tags:

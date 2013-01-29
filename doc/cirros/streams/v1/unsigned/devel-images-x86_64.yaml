@@ -4,24 +4,43 @@ format: stream-1.0
 description: Cirros Cloud Released images for x86_64
 
 item_groups:
+ - serial: 20130111
+   version: "0.3.1~pre4"
+   items:
+    - name: cirros-0.3.1~pre4-x86_64-disk.img
+      path: 0.3.1~pre4/cirros-0.3.1~pre4-x86_64-disk.img
+      md5: c32b60592301c1cf714a93fea0a25352
+      size: 13118976
+    - name: cirros-0.3.1~pre4-x86_64-lxc.tar.gz
+      path: 0.3.1~pre4/cirros-0.3.1~pre4-x86_64-lxc.tar.gz
+      md5: 019857146c4d5c2f99fa03c04ba300db
+      size: 3534613
+    - name: cirros-0.3.1~pre4-x86_64-rootfs.img.gz
+      path: 0.3.1~pre4/cirros-0.3.1~pre4-x86_64-rootfs.img.gz
+      md5: 8cc226def4fa6a50b4dbb0ebae57675e
+      size: 12343217
+    - name: cirros-0.3.1~pre4-x86_64-uec.tar.gz
+      path: 0.3.1~pre4/cirros-0.3.1~pre4-x86_64-uec.tar.gz
+      md5: 414dc72831718ebaaf8a994b59e71f62
+      size: 8633179
  - serial: 20101020
-   version: "0.3.0"
+   version: "0.3.1~pre3"
    items:
     - name: cirros-0.3.1~pre3-x86_64-disk.img
       path: 0.3.1~pre3/cirros-0.3.1~pre3-x86_64-disk.img
-      length: 13089280
+      size: 13089280
       md5: 4b65df206c61e30af1947ee21d5aad40
     - name: cirros-0.3.1~pre3-x86_64-lxc.tar.gz
       path: 0.3.1~pre3/cirros-0.3.1~pre3-x86_64-lxc.tar.gz
-      length: 3527698
+      size: 3527698
       md5: 9fb61f717b367c0d0459eada51fee35f
     - name: cirros-0.3.1~pre3-x86_64-rootfs.img.gz
       path: 0.3.1~pre3/cirros-0.3.1~pre3-x86_64-rootfs.img.gz
-      length: 12328845
+      size: 12328845
       md5: 1c649a0761e80e6e81b34371e3186deb
     - name: cirros-0.3.1~pre3-x86_64-uec.tar.gz
       path: 0.3.1~pre3/cirros-0.3.1~pre3-x86_64-uec.tar.gz
-      length: 8623028
+      size: 8623028
       md5: 0a4cb79338406b275ad0d5be08c9e0dd
 
 tags:

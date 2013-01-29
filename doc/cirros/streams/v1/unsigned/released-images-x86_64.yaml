@@ -9,19 +9,19 @@ item_groups:
    items:
     - name: cirros-0.3.0-x86_64-rootfs.img.gz
       path: 0.3.0/cirros-0.3.0-x86_64-rootfs.img.gz
-      length: 9184057
+      size: 9184057
       md5: 83cd7edde7c99ae520e26d338d397875
     - name: cirros-0.3.0-x86_64-lxc.tar.gz
       path: 0.3.0/cirros-0.3.0-x86_64-lxc.tar.gz
-      length: 2115217
+      size: 2115217
       md5: 1a480e5150db4d93be2aa3c9ced94fa1
     - name: cirros-0.3.0-x86_64-disk.img
       path: 0.3.0/cirros-0.3.0-x86_64-disk.img
-      length: 10682368
+      size: 10682368
       md5: 50bdc35edb03a38d91b1b071afb20a3c
     - name: cirros-0.3.0-x86_64-uec.tar.gz
       path: 0.3.0/cirros-0.3.0-x86_64-uec.tar.gz
-      length: 6957349
+      size: 6957349
       md5: f56d3cffa47b7d209d2b6905628f07b9
 
 tags:

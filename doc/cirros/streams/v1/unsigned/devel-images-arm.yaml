@@ -4,20 +4,35 @@ format: stream-1.0
 description: Cirros Cloud Released images for arm
 
 item_groups:
+ - serial: 20130111
+   version: "0.3.1~pre4"
+   items:
+    - name: cirros-0.3.1~pre4-arm-lxc.tar.gz
+      path: 0.3.1~pre4/cirros-0.3.1~pre4-arm-lxc.tar.gz
+      md5: 55b092bde364aad125a1db57c932f1d0
+      size: 3466163
+    - name: cirros-0.3.1~pre4-arm-rootfs.img.gz
+      path: 0.3.1~pre4/cirros-0.3.1~pre4-arm-rootfs.img.gz
+      md5: 986c9cabd412f12cb5027b7d7eb4ec03
+      size: 10949810
+    - name: cirros-0.3.1~pre4-arm-uec.tar.gz
+      path: 0.3.1~pre4/cirros-0.3.1~pre4-arm-uec.tar.gz
+      md5: 797e2d488c799eab0a8eb09a9c1ff4a3
+      size: 7314153
  - serial: 20101020
-   version: "0.3.0"
+   version: "0.3.1~pre3"
    items:
     - name: cirros-0.3.1~pre3-arm-lxc.tar.gz
       path: 0.3.1~pre3/cirros-0.3.1~pre3-arm-lxc.tar.gz
-      length: 3456925
+      size: 3456925
       md5: fbc83952ca51071c1aea8b0d82c51d1b
     - name: cirros-0.3.1~pre3-arm-rootfs.img.gz
       path: 0.3.1~pre3/cirros-0.3.1~pre3-arm-rootfs.img.gz
-      length: 10922886
+      size: 10922886
       md5: c98688744bdf66b56b19405acfc48966
     - name: cirros-0.3.1~pre3-arm-uec.tar.gz
       path: 0.3.1~pre3/cirros-0.3.1~pre3-arm-uec.tar.gz
-      length: 7302383
+      size: 7302383
       md5: d1703407ad1483e2bbf68d4d78987581
 
 tags:
