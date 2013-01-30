@@ -10,7 +10,7 @@ item_groups:
     - name: cirros-0.3.0-i386-rootfs.img.gz
       path: 0.3.0/cirros-0.3.0-i386-rootfs.img.gz
       size: 8566441
-      md5: 90169ba6f09b5906a7f0755bd00bf2c3
+      md5: 174d97541fadaf4e88d526f656c1e0a5
     - name: cirros-0.3.0-i386-disk.img
       path: 0.3.0/cirros-0.3.0-i386-disk.img
       size: 9159168
