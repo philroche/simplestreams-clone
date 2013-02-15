@@ -121,16 +121,6 @@ def process_collections(stream_files, path_prefix, callback):
                  collection=collections[coll])
 
 
-def normalize_url(url):
-    parsed = urlparse.urlparse(url)
-    if not parsed.scheme:
-        if url.startswith("/"):
-            url = "file://%s" % url
-        elif os.path.isfile(url):
-            url = "file://%s" % os.path.abspath(url)
-    return url
-
-
 def tokenize_url(url):
     #given a url, find where the MIRROR.info file lives and return tokenized
 

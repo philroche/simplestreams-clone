@@ -1,9 +1,12 @@
+from simplestreams import stream
+from simplestreams import collection
+
 import contextlib
 import errno
 import os
 import subprocess
-import stream
 import urllib2
+import urlparse
 import yaml
 
 
@@ -12,7 +15,8 @@ PGP_SIGNATURE_HEADER = "-----BEGIN PGP SIGNATURE-----"
 PGP_SIGNATURE_FOOTER = "-----END PGP SIGNATURE-----"
 
 
-def resolve_work(src, target, max=None, keep=None, sort_reverse=True):
+def resolve_work(src, target, max=None, keep=None, filter=None,
+                 sort_reverse=True):
     add = []
     remove = []
     reverse = sort_reverse
@@ -21,7 +25,9 @@ def resolve_work(src, target, max=None, keep=None, sort_reverse=True):
         raise TypeError("max: %s larger than keep: %s" % (max, keep))
 
     for item in sorted(src, reverse=reverse):
-        if item not in target:
+        if item in target:
+            continue
+        if filter is None or filter(item):
             add.append(item)
 
     for item in sorted(target, reverse=reverse):
@@ -111,13 +117,16 @@ def url_reader(url):
         raise e
 
 
-def sync_stream_file(path, src_mirror, target_mirror, resolve_args={}):
+def sync_stream_file(path, src_mirror, target_mirror, resolve_args=None):
     return sync_stream(src_stream=None, src_mirror=src_mirror,
                        target_stream=None, target_mirror=target_mirror,
                        path=path, resolve_args=resolve_args)
 
 def sync_stream(src_stream, src_mirror, target_stream, target_mirror,
-                path=None, resolve_args={}):
+                path=None, resolve_args=None):
+
+    if resolve_args is None:
+        resolve_args = {}
 
     src_content = None
 
@@ -137,6 +146,7 @@ def sync_stream(src_stream, src_mirror, target_stream, target_mirror,
 
     (to_add, to_remove) = resolve_work(src_stream.item_groups,
                                        target_stream.item_groups,
+                                       filter=target_mirror.filter_group,
                                        **resolve_args)
 
     for item_group in to_add:
@@ -161,7 +171,7 @@ def sync_stream(src_stream, src_mirror, target_stream, target_mirror,
 
 
 def sync_collection(src_collection, src_mirror, target_mirror, path=None,
-                    resolve_args={}):
+                    resolve_args=None):
 
     src_content = None
     if src_collection is None and path:
@@ -170,6 +180,8 @@ def sync_collection(src_collection, src_mirror, target_mirror, path=None,
         src_collection = collection.Collection(load_content(src_content))
 
     for item in src_collection.streams:
+        if target_mirror.filter_stream(item):
+            continue
         sync_stream_file(item.get('path'), src_mirror, target_mirror,
                          resolve_args=resolve_args)
 
@@ -183,6 +195,21 @@ def sync_collection(src_collection, src_mirror, target_mirror, path=None,
     # FIXME: if we'd filtered src_collection we should store target_collection
     target_mirror.store_collection(path, collection=src_collection,
                                    content=src_content)
+
+
+def normalize_url(url):
+    parsed = urlparse.urlparse(url)
+    if not parsed.scheme:
+        orig = url
+        if url.startswith("/"):
+            url = "file://%s" % url
+        elif os.path.exists(url):
+            url = "file://%s" % os.path.abspath(url)
+        else:
+            raise TypeError("Could not convert %s to url", url)
+        if os.path.isdir(orig):
+            url += os.path.sep
+    return url
 
 
 def mkdir_p(path):

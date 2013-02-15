@@ -5,8 +5,26 @@ import subprocess
 import tempfile
 import yaml
 
-REQUIRED_FIELDS = ("stream_load",)
 READ_SIZE = (1024 * 1024)
+
+REQUIRED_FIELDS = ("stream_load",)
+HOOK_NAMES = (
+    "collection_store",
+    "group_insert_post",
+    "group_insert_pre",
+    "group_remove_post",
+    "group_remove_pre",
+    "item_filter",
+    "item_insert",
+    "item_remove",
+    "stream_filter",
+    "stream_load",
+    "stream_store",
+    )
+DEFAULT_HOOK_NAME = "command"
+ENV_HOOK_NAME = "HOOK"
+ENV_FIELDS_NAME = "FIELDS"
+
 
 """
 CommandHookMirror: invoke commands to implement a SimpleStreamMirror
@@ -63,11 +81,11 @@ Environments / Variables:
   Each type of data has some fields guaranteed and others optional.
 
   In all cases:
-    * a special '_fields' key is available which is a space delimited
+    * a special 'FIELDS' key is available which is a space delimited
       list of keys
     * all 'tags' for the item (and parent items that apply) will be
       available.
-    * a special '_hookname' field is available that specifies which
+    * a special 'HOOK' field is available that specifies which
       hook is being called.
 
   item:
@@ -117,12 +135,22 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
 
         self.call_hook('group_remove_post', data=group)
 
+    def filter_stream(self, stream):
+        return not self.stream_is_filtered(stream)
+
+    def filter_group(self, group):
+        return not self.group_is_filtered(group)
+
+    def group_is_filtered(self, group):
+        (ret, _output) = self.call_hook('group_filter', group, rcs=[0, 1])
+        return ret == 1
+        
     def item_is_filtered(self, item):
         (ret, _output) = self.call_hook('item_filter', item, rcs=[0, 1])
         return ret == 1
 
     def stream_is_filtered(self, stream):
-        (ret, _output) = self.call_hook('item_filter', stream, rcs=[0, 1])
+        (ret, _output) = self.call_hook('stream_filter', stream, rcs=[0, 1])
         return ret == 1
 
     def insert_item(self, item, reader):
@@ -149,7 +177,7 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
         self.call_hook('item_remove', item)
 
     def call_hook(self, hookname, data, capture=False, rcs=None, extra=None):
-        command = self.config.get(hookname)
+        command = self.config.get(hookname, self.config.get(DEFAULT_HOOK_NAME))
         if not command:
             # return successful execution with no output
             return (0, '')
@@ -161,7 +189,7 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
         if extra:
             fdata.update(extra)
         fdata = {k:str(v) for k, v in fdata.iteritems()}
-        fdata['_hookname'] = hookname
+        fdata['HOOK'] = hookname
 
         return call_hook(command=command, data=fdata,
                          unset=self.config.get('unset_value', None),
@@ -172,7 +200,7 @@ def call_hook(command, data, unset=None, capture=False, rcs=None):
     env = os.environ.copy()
     data = data.copy()
 
-    data['_fields'] = ' '.join([k for k in data])
+    data[ENV_FIELDS_NAME] = ' '.join([k for k in data if k != ENV_HOOK_NAME])
 
     mcommand = render(command, data, unset=unset)
 
@@ -199,7 +227,7 @@ def render(inputs, data, unset=None):
 def check_config(config):
     missing = []
     for f in REQUIRED_FIELDS:
-        if f not in config:
+        if f not in config and config.get(DEFAULT_HOOK_NAME) is None:
             missing.append(f)
     if missing:
         raise TypeError("Missing required config entries for %s" % missing)

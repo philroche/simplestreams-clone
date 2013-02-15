@@ -35,9 +35,8 @@ def main():
 
         resolve_args = {'max': cfg.get("max"), 'keep': cfg.get("keep")}
 
-        norm_url = toolutil.normalize_url(url)
+        norm_url = util.normalize_url(url)
         (src_url, path) = toolutil.tokenize_url(norm_url)
-        print "path=%s src_url=%s" % (path, src_url)
         smirror = objectstores.UrlMirrorReader(src_url)
 
         (content, _sig) = util.read_possibly_signed(path,
@@ -47,7 +46,7 @@ def main():
         fmt = data.get("format")
 
         if fmt == "stream-1.0":
-            print "%s (%s)" % (path, fmt)
+            LOG.debug("loaded format %s from %s" % (fmt, path))
             sstream = stream.Stream(data)
             util.sync_stream(src_stream=sstream,
                              src_mirror=smirror, target_stream=None,
@@ -55,8 +54,8 @@ def main():
                              resolve_args=resolve_args)
 
         elif fmt == "stream-collection:1.0":
+            LOG.debug("loaded format %s from %s" % (fmt, path))
             scoll = collection.Collection(data)
-            print "%s (%s) [%s]" % (path, fmt, scoll.iqn)
             util.sync_collection(src_collection=scoll, src_mirror=smirror,
                                  target_mirror=tmirror, path=path,
                                  resolve_args=resolve_args)

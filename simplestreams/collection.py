@@ -20,6 +20,10 @@ class CollectionStreamEntry(dict):
         return {k: self[k] for k in self if
                 k not in ('name', 'path', 'md5sum', 'sha512', 'sha256')}
 
+    def flattened(self):
+        ret = {k: v for k, v in self.iteritems() if isinstance(v, str)}
+        ret.update(self.alltags)
+        return ret
 
 class CollectionStreamList(simplestreams.RestrictedSimpleParentedList):
     restriction = CollectionStreamEntry
@@ -84,7 +88,7 @@ class Collection(dict):
 
     def flattened(self):
         ret = {k: v for k, v in self.iteritems() if isinstance(v, str)}
-        ret.update(self.tags())
+        ret.update(self.tags)
         return ret
 
 

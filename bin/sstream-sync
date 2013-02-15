@@ -1,0 +1,113 @@
+#!/usr/bin/python
+#
+# Example client showing use of command_hook_mirror
+#
+# Example config:
+# |stream_load: 'cat $XFILE 2>/dev/null || :'
+# |item_insert: [sh, -c, "echo %(serial)s >> $XFILE; echo inserted %(serial)s"]
+# |group_insert_pre: [bash, -c, "echo --; for f in ${_fields}; do echo $f: ${!f}; done"]
+# |unset_value: _unset
+# |item_skip_download: true
+#
+
+from simplestreams import collection
+from simplestreams import command_hook_mirror
+from simplestreams import objectstores
+from simplestreams import stream
+from simplestreams import util
+
+import argparse
+import logging
+import sys
+import os
+
+LOG = logging.getLogger('sstream-sync')
+LOG.setLevel(logging.ERROR)
+LOG.addHandler(logging.StreamHandler())
+
+def which(program):
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, _fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
+
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    hooks = [("--hook-%s" % hook.replace("_", "-"), hook, False)
+             for hook in command_hook_mirror.HOOK_NAMES]
+    hooks.append(('--hook', command_hook_mirror.DEFAULT_HOOK_NAME, True,))
+    
+    parser.add_argument('--config', '-c',
+                        help='read config file',
+                        type=argparse.FileType('rb'))
+
+    for (argname, cfgname, required) in hooks:
+        parser.add_argument(argname, dest=cfgname, required=required)
+
+    parser.add_argument('--keep', type=int, default=None,
+                        help='keep most recent KEEP items')
+    parser.add_argument('--max', type=int, default=None,
+                        help='keep at most MAX items from source stream')
+
+    parser.add_argument('mirror_ref')
+    parser.add_argument('path', nargs='?', default="v1/streams.yaml")
+    args = parser.parse_args()
+
+    cfg = {}
+    for (argname, cfgname, required) in hooks:
+        val = getattr(args, cfgname)
+        if not val:
+            continue
+        if which(val) is None:
+            msg = "invalid input for %s. '%s' is not executable\n"
+            sys.stderr.write(msg % (argname, val))
+            sys.exit(1)
+            
+        cfg[cfgname] = val
+        
+    tmirror = command_hook_mirror.CommandHookMirror(cfg)
+
+    # mirror_ref is just a url for now
+    url = util.normalize_url(args.mirror_ref)
+
+    smirror = objectstores.UrlMirrorReader(url)
+
+    (content, _sig) = util.read_possibly_signed(args.path, smirror.reader)
+
+
+    resolve_args = {'max': args.max, 'keep': args.keep}
+
+    data = util.load_content(content)
+    fmt = data.get("format")
+    if fmt == "stream-1.0":
+        sstream = stream.Stream(data)
+        util.sync_stream(src_stream=sstream, src_mirror=smirror,
+                         target_stream=None, target_mirror=tmirror,
+                         path=args.path, resolve_args=resolve_args)
+
+    elif fmt == "stream-collection:1.0":
+        scoll = collection.Collection(data)
+        util.sync_collection(src_collection=scoll, src_mirror=smirror,
+                        target_mirror=tmirror, path=args.path,
+                        resolve_args=resolve_args)
+
+    else:
+        sys.stderr.write("Unknown format '%s' in '%s'\n" % (fmt, args.path))
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()

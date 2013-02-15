@@ -3,8 +3,10 @@ from simplestreams.util import resolve_work
 
 class TestStreamResolveWork(TestCase):
 
-    def tryit(self, src=[], target=[], max=None, keep=None, add=[], remove=[]):
-        (r_add, r_remove) = resolve_work(src, target, max=max, keep=keep)
+    def tryit(self, src=[], target=[], max=None, keep=None, filter=None,
+              add=[], remove=[]):
+        (r_add, r_remove) = resolve_work(src, target, max=max, keep=keep,
+                                         filter=filter)
         self.assertEqual(r_add, add)
         self.assertEqual(r_remove, remove)
 
@@ -49,5 +51,9 @@ class TestStreamResolveWork(TestCase):
 
     def test_nothing_needed_with_max(self):
         self.tryit(src=[1], target=[1], max=1, keep=None, add=[], remove=[])
+
+    def test_filtered_items_not_present(self):
+        self.tryit(src=[1,2,3,4,5], target=[1], max=None, keep=None,
+                   filter=lambda a: a < 3, add=[2], remove=[])
 
 # vi: ts=4 expandtab

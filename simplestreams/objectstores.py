@@ -93,6 +93,12 @@ class SimpleStreamMirrorWriter(object):
         # remove item group and items in it
         raise NotImplementedError()
 
+    def filter_stream(self, stream):
+        return True
+
+    def filter_group(self, group):
+        return True
+
 
 class checksummer(object):
     _hasher = None
