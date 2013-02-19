@@ -1,14 +1,6 @@
 #!/usr/bin/python
 #
-# Example client showing use of command_hook_mirror
-#
-# Example config:
-# |stream_load: 'cat $XFILE 2>/dev/null || :'
-# |item_insert: [sh, -c, "echo %(serial)s >> $XFILE; echo inserted %(serial)s"]
-# |group_insert_pre: [bash, -c, "echo --; for f in ${_fields}; do echo $f: ${!f}; done"]
-# |unset_value: _unset
-# |item_skip_download: true
-#
+# client showing use of command_hook_mirror
 
 from simplestreams import collection
 from simplestreams import command_hook_mirror
