@@ -15,14 +15,19 @@ PGP_SIGNATURE_HEADER = "-----BEGIN PGP SIGNATURE-----"
 PGP_SIGNATURE_FOOTER = "-----END PGP SIGNATURE-----"
 
 
-def resolve_work(src, target, max=None, keep=None, filter=None,
+def resolve_work(src, target, max=None, keep=False, filter=None,
                  sort_reverse=True):
+    # if more than max items are in src, only the most recent max will be
+    # stored in target.  If keep is true, then the most recent max items
+    # will be kept in target even if they are no longer in src.
+    # if keep is false the number in target will never be greater than that
+    # in src.
     add = []
     remove = []
     reverse = sort_reverse
 
-    if keep is not None and max is not None and max > keep:
-        raise TypeError("max: %s larger than keep: %s" % (max, keep))
+    if max is None and keep:
+        raise TypeError("max(%s) cannot be None if keep is True" % max)
 
     for item in sorted(src, reverse=reverse):
         if item in target:
@@ -34,9 +39,9 @@ def resolve_work(src, target, max=None, keep=None, filter=None,
         if item not in src:
             remove.append(item)
 
-    if keep is not None and len(remove):
+    if keep and len(remove):
         after_add = len(target) + len(add)
-        while len(remove) and keep > (after_add - len(remove)):
+        while len(remove) and (max > (after_add - len(remove))):
             remove.pop(0)
 
     mtarget = sorted([f for f in target if f not in remove], reverse=reverse)
