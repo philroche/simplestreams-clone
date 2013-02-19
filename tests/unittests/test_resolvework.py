@@ -47,6 +47,10 @@ class TestStreamResolveWork(TestCase):
     def test_null_remote_with_keep(self):
         self.tryit(src=[], target=[3,2,1], max=3, keep=True, add=[], remove=[])
 
+    def test_null_remote_without_keep(self):
+        self.tryit(src=[], target=[3,2,1], max=3, keep=False, add=[],
+                   remove=[3,2,1])
+
     def test_max_forces_remove(self):
         self.tryit(src=[2,1], target=[2,1], max=1, keep=False,
                    add=[], remove=[1])
