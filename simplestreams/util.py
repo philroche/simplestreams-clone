@@ -189,7 +189,7 @@ def sync_collection(src_collection, src_mirror, target_mirror, path=None,
         src_collection = collection.Collection(load_content(src_content))
 
     for item in src_collection.streams:
-        if target_mirror.filter_stream(item):
+        if not target_mirror.filter_stream(item):
             continue
         sync_stream_file(item.get('path'), src_mirror, target_mirror,
                          resolve_args=resolve_args)
