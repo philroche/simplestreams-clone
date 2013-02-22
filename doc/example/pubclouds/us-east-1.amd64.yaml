@@ -1,4 +1,4 @@
-format: stream-1.0
+format: stream:1.0
 iqn: iqn.2012-12.com.example.foovendor:released:pinky:server:amd64:ec2:us-east-1:stream
 updated: 2013-01-10 12.04:29-05:00
 

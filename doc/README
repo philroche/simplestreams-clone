@@ -1,9 +1,11 @@
 == Simple Sync Format ==
 Simple Sync format consists of 2 different file formats.
  * content stream: A collection of multiple item groups of the same "type".
+   this is 'stream:1.0' format.
  * stream collection: a list of content streams
    A stream collection is simply a way to provide an index of known content
    streams, and information about them.
+   This is 'stream-collection:1.0'
 
 Useful definitions
  * item group
@@ -31,7 +33,7 @@ Useful definitions
     * -root.tar.gz produced from the same build.
 
 == Stream ==
-format: stream-1.0
+format: stream:1.0
 examples:  doc/example/amd64.yaml doc/example/i386.yaml
 
 Requirements:

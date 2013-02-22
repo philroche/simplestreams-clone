@@ -2,7 +2,7 @@
 Hash: SHA256
 
 # required
-format: stream-1.0
+format: stream:1.0
 
 # recommended
 description: Foovendor Cloud Images

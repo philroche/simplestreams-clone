@@ -44,7 +44,7 @@ REL2VER = {
 
 STREAM_TEMPLATE = """
 description: Image ids for Ubuntu Cloud Ubuntu ${release.version} (${release.devname}) on ${cloud.name}/${region.name}
-format: stream-1.0
+format: stream:1.0
 iqn: $iqn
 
 item_groups:

@@ -39,7 +39,7 @@ def main():
     resolve_args = {'max': None, 'keep': None}
 
     fmt = data.get("format")
-    if fmt == "stream-1.0":
+    if fmt == "stream:1.0":
         print "%s/%s (%s)" % (src_url, path, fmt)
         sstream = stream.Stream(data)
         util.sync_stream(src_stream=sstream,

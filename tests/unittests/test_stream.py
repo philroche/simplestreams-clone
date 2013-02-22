@@ -3,7 +3,7 @@ from unittest import TestCase
 from simplestreams.stream import Stream
 
 MINIMAL_DATA = {
-    "format": "stream-1.0",
+    "format": "stream:1.0",
     "iqn": "iqn.2012-12.com.example.foo:bar:wark",
     "item_groups": [],
 }

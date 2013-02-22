@@ -45,7 +45,7 @@ def main():
         data = util.load_content(content)
         fmt = data.get("format")
 
-        if fmt == "stream-1.0":
+        if fmt == "stream:1.0":
             LOG.debug("loaded format %s from %s" % (fmt, path))
             sstream = stream.Stream(data)
             util.sync_stream(src_stream=sstream,

@@ -60,7 +60,7 @@ DATA_IN = {
 
 STREAM_TEMPLATE = """
 # required
-format: stream-1.0
+format: stream:1.0
 # recommended
 iqn: $iqn
 description: Ubuntu Cloud Images

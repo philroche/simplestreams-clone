@@ -1,5 +1,5 @@
 iqn: iqn.2012-12.net.cirros-cloud:cloud-images:devel:arm
-format: stream-1.0
+format: stream:1.0
 
 description: Cirros Cloud Released images for arm
 
