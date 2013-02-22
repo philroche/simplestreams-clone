@@ -13,7 +13,7 @@ import yaml
 
 import toolutil
 
-CONTENT_EXT = ".yaml"
+CONTENT_EXT = ".js"
 
 GET_QUERY = ("rsync -avz --delete --exclude \".bzr/*\" " +
              "cloud-images.ubuntu.com::uec-images/query/ ci-query")
@@ -189,12 +189,18 @@ def streamwriter(item, data, path, passthrough):
 
     params = data.copy()
     params['item_groups'] = item
-    rpath = "%s.yaml" % path
+    rpath = "%s.js" % path
     fname = "%s/%s" % (passthrough['output_d'], rpath)
 
     toolutil.mkdir_p(os.path.dirname(fname))
+
+    # this is horrible, in that we render a yaml through the cheetah template
+    # and then load it and write json.
+    yaml_rendered = toolutil.render_string(passthrough['template'], params)
+    data = yaml.load(yaml_rendered)
+
     with open(fname, "w") as fp:
-        fp.write(toolutil.render_string(passthrough['template'], params))
+        fp.write(json.dumps(data, indent=1))
 
     if passthrough['sign']:
         toolutil.signfile(fname)
@@ -240,7 +246,11 @@ def main():
     tmpl = COLLECTION_TEMPLATE.lstrip()
 
     def collwriter(path, path_prefix, collection):
-        coll_file = "%s%sstreams%s" % (path_prefix, path, CONTENT_EXT)
+        if path != "/":
+            # only writing to level collection for now.
+            return
+
+        coll_file = "%s/streams/v1%sstreams%s" % (path_prefix, path, CONTENT_EXT)
         toolutil.mkdir_p(os.path.dirname(coll_file))
         with open(coll_file, "w") as cfp:
             cfp.write(toolutil.render_string(tmpl, collection))
