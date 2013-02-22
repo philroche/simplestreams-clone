@@ -90,6 +90,11 @@ def main():
 
     data = util.load_content(content)
     fmt = data.get("format")
+
+    # allow old format. remove this later.
+    if fmt == "stream-1.0":
+        fmt = "stream:1.0"
+
     if fmt == "stream:1.0":
         sstream = stream.Stream(data)
         util.sync_stream(src_stream=sstream, src_mirror=smirror,
