@@ -54,6 +54,9 @@ def main():
                              'even after they have fallen out of the source')
     parser.add_argument('--max', type=int, default=None,
                         help='store at most MAX items in the target')
+    parser.add_argument('--item-skip-download', action='store_true',
+                        default=False,
+                        help='Do not download items that are to be inserted.')
 
     parser.add_argument('mirror_ref')
     parser.add_argument('path', nargs='?', default="v1/streams.yaml")
@@ -70,6 +73,8 @@ def main():
             sys.exit(1)
             
         cfg[cfgname] = val
+
+    cfg['item_skip_download'] = args.item_skip_download
         
     tmirror = command_hook_mirror.CommandHookMirror(cfg)
 

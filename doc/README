@@ -34,29 +34,30 @@ Useful definitions
 format: stream-1.0
 examples:  doc/example/amd64.yaml doc/example/i386.yaml
 
+Requirements:
+ * must have an 'iqn' entry at top level that uniquely identifies this stream.
+
 Notes:
  * if an item has a 'path' element, that indicates there is a file
    to be downloaded at the 'path' location.
-   * path is required to be relative to the mirror root.
-     It cannot 
-   * All links/urls that appear in collection or stream files must be
-     relative to MIRROR_LOCATION
-     You then get a path simply by concatinating MIRROR_LOCATION with PATH.
-   * '/' is not special to the client.  as that makes mirroring more 
-     difficult. If a PATH starts with /, then it would mean:
-     MIRROR_LOCATION + PATH. ie, with MIRROR_LOCATION=http://foo.bar/mymirror/
-     and PATH=/myfile, you'd end up requesting
-     'http://foo.bar/mymirror//myfile', *not* http://foo.bar/myfile
-   * absolute links are not allowed.
+   path is required to be relative to the mirror root.
  * in the event of a 404 or ENOENT on a PATH, the client will consult the 
    'mirrors' entry in the MIRROR.info file, and try to resolve the file
    from *that* mirror.
 
 == Mirror ==
- * A mirror is required to have a MIRROR.info file at its top level.
+Requirements:
+ * top level MIRROR.info file
    That file is required to define an 'iqn', that indicates what it is
    a mirror of, and should contain a 'authoritative_url' indicating
    the upstream mirror for that.
    iqn is used so a client can easily maintain a list of mirrors not
    by 'authoritative_url' but by iqn.
    iqn cannot contain /.
+ * v1/streams
+
+Optional:
+ * v1/streams.js v1/streams.js.gpg
+   Contains same content as v1/streams
+ * v1/streams/unsigned
+ * A mirror is required to have a MIRROR.info file at its top level.
