@@ -47,6 +47,13 @@ Notes:
    'mirrors' entry in the MIRROR.info file, and try to resolve the file
    from *that* mirror.
 
+== Stream Collection ==
+format: stream-collection:1.0
+
+A stream collection is really just a simple list or index of streams and
+attributes about them.  This is intended to be the entry point into a mirror.
+
+
 == Mirror ==
 Requirements:
  * top level MIRROR.info file
@@ -56,7 +63,8 @@ Requirements:
    iqn is used so a client can easily maintain a list of mirrors not
    by 'authoritative_url' but by iqn.
    iqn cannot contain /.
- * v1/streams
+ * streams/v1/streams.js must be present, and should contain a comprehensive
+   list of streams in this mirror, suitable for a full mirror.
 
 Optional:
  * v1/streams.js v1/streams.js.gpg
