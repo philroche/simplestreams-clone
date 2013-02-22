@@ -1,7 +1,5 @@
-from simplestreams import stream
 from simplestreams import collection
 
-import contextlib
 import errno
 import os
 import subprocess
@@ -123,7 +121,7 @@ def pass_if_enoent(exc):
 
 
 def url_reader(url):
-    return contextlib.closing(urllib2.urlopen(url))
+    return urllib2.urlopen(url)
 
 
 def sync_stream_file(path, src_mirror, target_mirror, resolve_args=None):

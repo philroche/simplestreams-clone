@@ -34,7 +34,7 @@ class ObjectStore(object):
         raise NotImplementedError()
 
     def insert_content(self, path, content, checksums=None):
-        reader = Reader(reader=StringReader(content).open,
+        reader = Reader(reader=StringReader(content),
                         url=(self.prefix + path)),
         self.insert(path, reader, checksums)
 
@@ -65,7 +65,7 @@ class MemoryObjectStore(ObjectStore):
 
     def reader(self, path):
         # essentially return an 'open(path, r)'
-        return Reader(reader=StringReader(self.data['path']).open,
+        return Reader(reader=StringReader(self.data['path']),
                       url="%s://%s" % (self.__class__, path))
 
 
@@ -174,7 +174,7 @@ class UrlMirrorReader(SimpleStreamMirrorReader):
     def reader(self, path):
         try:
             reader = self._reader(self.prefix + path)
-            return Reader(reader=closing(reader), url=self.prefix + path)
+            return Reader(reader=reader, url=self.prefix + path)
         except Exception as e:
             util.pass_if_enoent(e)
 
@@ -287,7 +287,7 @@ class S3ObjectStore(ObjectStore):
             myerr.errno = errno.ENOENT
             raise myerr
 
-        return Reader(reader=closing(key), url=self.path_prefix + path)
+        return Reader(reader=key, url=self.path_prefix + path)
 
     def exists_with_checksum(self, path, checksums=None):
         key = self.bucket.get_key(self.path_prefix + path)
@@ -305,17 +305,14 @@ class Reader(object):
         self.reader = reader
         self.url = url
 
-    def read(self, size):
+    def read(self, size=-1):
         return self.reader.read(size)
 
-    def url(self):
-        return self.url
-
     def __enter__(self):
-        return self.reader.__enter__()
+        return self
 
     def __exit__(self, type, value, trace):
-        return self.reader.__exit__(type, value, trace)
+        self.reader.close()
 
 
 class StringReader(StringIO.StringIO):
