@@ -1,0 +1,42 @@
+#!/bin/bash
+set -f
+if [ "$1" = "--help" -o "$1" = "usage" ]; then
+   cat <<EOF
+Usage: ${0##*/}
+  This program is an example 'hook' for use with bin/sstream-sync.
+  PYTHONPATH=$PWD ./bin/sstream-sync --item-skip-download \
+     --hook=./tools/${0##*/} \
+     http://cloud-images.ubuntu.com/eightprotons/images/ v1/streams.yaml
+EOF
+fi
+
+data=""
+for f in ${FIELDS}; do
+    [ "$f" = "content" ] && data="${data} ${f}=_content_" && continue
+    val="${!f}"
+    [ "${val#* }" != "${val}" ] && data="${data} ${f}='${val}'" ||
+        data="${data} ${f}=${val}"
+done
+data=${data# }
+
+case "$HOOK" in
+   stream_filter|group_filter)
+      # skip streams or groups that do not have arch=i386
+      if [ "$arch" = "i386" ]; then
+        OP="keep"
+      else
+        OP="skip"
+      fi
+      ;;
+   *_filter) OP="keep";;
+esac
+
+echo "=== $HOOK: ${OP:+[${OP}]} ${data}" 1>&2
+case "$HOOK" in
+    *_filter)
+        [ "$OP" = "keep" ] && exit 0;
+        [ "$OP" = "skip" ] && exit 1;
+        exit 2
+        ;;
+esac
+exit 0
