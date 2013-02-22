@@ -105,21 +105,25 @@ def read_possibly_signed(path, reader=open):
 def load_content(content):
     return yaml.safe_load(content)
 
-def url_reader(url):
+
+def pass_if_enoent(exc):
     try:
-        return contextlib.closing(urllib2.urlopen(url))
+        raise exc
     except urllib2.HTTPError as e:
         if e.code == 404:
-            myerr = IOError(e.message)
-            myerr.errno = errno.ENOENT
-            raise myerr
-        raise e
+            return
     except urllib2.URLError as e:
-        if isinstance(e.reason, OSError):
-            myerr = IOError(e.reason.message)
-            myerr.errno = errno.ENOENT
-            raise myerr
-        raise e
+        if (isinstance(e.reason, OSError) and
+            e.reason.errno == errno.ENOENT):
+            return
+    except IOError as e:
+        if e.errno == errno.ENOENT:
+            return
+    raise exc
+
+
+def url_reader(url):
+    return contextlib.closing(urllib2.urlopen(url))
 
 
 def sync_stream_file(path, src_mirror, target_mirror, resolve_args=None):

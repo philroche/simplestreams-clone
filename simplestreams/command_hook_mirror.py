@@ -161,9 +161,13 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
         tfile_del = None
 
         extra = {}
-        if item.path and not self.config.get('item_skip_download', False):
-            (tfile_path, tfile_del) = get_local_copy(reader, item.path)
-            extra.update({'path_local': tfile_path})
+        if item.path:
+            self.config['item_skip_download'] = True
+            handle = reader(item.path)
+            if not self.config.get('item_skip_download', False):
+                (tfile_path, tfile_del) = get_local_copy(handle)
+                extra.update({'path_local': tfile_path})
+            extra.update({'item_url': handle.url})
 
         try:
             self.call_hook('item_insert', item, extra=extra)
@@ -277,16 +281,15 @@ def run_command(cmd, env=None, capture=False, rcs=None):
     return (rc, out)
 
 
-def get_local_copy(reader, path, read_size=READ_SIZE):
+def get_local_copy(rfp, read_size=READ_SIZE):
     (tfd, tpath) = tempfile.mkstemp()
     tfile = os.fdopen(tfd, "w")
     try:
-        with reader(path) as rfp:
-            while True:
-                buf = rfp.read(read_size)
-                tfile.write(buf)
-                if len(buf) != read_size:
-                    break
+        while True:
+            buf = rfp.read(read_size)
+            tfile.write(buf)
+            if len(buf) != read_size:
+                break
         return (tpath, True)
 
     except Exception as e:

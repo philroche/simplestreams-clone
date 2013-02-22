@@ -4,6 +4,7 @@ import boto.s3.connection
 from contextlib import closing
 import errno
 import hashlib
+import logging
 import os
 import os.path
 import StringIO
@@ -11,9 +12,12 @@ import tempfile
 import urllib2
 import yaml
 
-from simplestreams.util import (load_content, mkdir_p, read_possibly_signed,
-                                url_reader)
+import simplestreams.util as util
 import simplestreams.stream
+
+LOG = logging.getLogger('simplestreams')
+LOG.setLevel(logging.ERROR)
+LOG.addHandler(logging.StreamHandler())
 
 
 READ_BUFFER_SIZE = 1024 * 1024
@@ -30,14 +34,16 @@ class ObjectStore(object):
         raise NotImplementedError()
 
     def insert_content(self, path, content, checksums=None):
-        self.insert(path, StringReader(content).open, checksums)
+        reader = Reader(reader=StringReader(content).open,
+                        url=(self.prefix + path)),
+        self.insert(path, reader, checksums)
 
     def remove(self, path):
         #remove path from store
         raise NotImplementedError()
 
     def reader(self, path):
-        # essentially return an 'open(path, r)'
+        # return a Reader
         raise NotImplementedError()
 
     def exists_with_checksum(self, path, checksums=None):
@@ -59,7 +65,8 @@ class MemoryObjectStore(ObjectStore):
 
     def reader(self, path):
         # essentially return an 'open(path, r)'
-        return StringReader(self.data['path']).open
+        return Reader(reader=StringReader(self.data['path']).open,
+                      url="%s://%s" % (self.__class__, path))
 
 
 class SimpleStreamMirrorReader(object):
@@ -167,12 +174,12 @@ class UrlMirrorReader(SimpleStreamMirrorReader):
     def reader(self, path):
         try:
             reader = self._reader(self.prefix + path)
-            return closing(reader)
-        except IOError as e:
-            if e.errno != errno.ENOENT:
-                raise e
+            return Reader(reader=closing(reader), url=self.prefix + path)
+        except Exception as e:
+            util.pass_if_enoent(e)
 
-        return try_mirrors(path, self.mirrors, self.authoritative)
+        return try_mirrors(path, mirrors=self.mirrors,
+                           authoritative=self.authoritative)
 
 
 class FileStore(ObjectStore):
@@ -189,7 +196,7 @@ class FileStore(ObjectStore):
 
         cksum = checksummer(checksums)
         try:
-            mkdir_p(os.path.dirname(wpath))
+            util.mkdir_p(os.path.dirname(wpath))
             with open(wpath, "w") as wfp:
                 with reader(path) as rfp:
                     while True:
@@ -217,7 +224,8 @@ class FileStore(ObjectStore):
                 raise
 
     def reader(self, path):
-        return open(os.path.join(self.prefix, path), "r")
+        fpath = os.path.join(self.prefix, path)
+        return Reader(reader=open(fpath, "r"), url=fpath)
 
 
 class S3ObjectStore(ObjectStore):
@@ -279,7 +287,7 @@ class S3ObjectStore(ObjectStore):
             myerr.errno = errno.ENOENT
             raise myerr
 
-        return closing(key)
+        return Reader(reader=closing(key), url=self.path_prefix + path)
 
     def exists_with_checksum(self, path, checksums=None):
         key = self.bucket.get_key(self.path_prefix + path)
@@ -290,6 +298,24 @@ class S3ObjectStore(ObjectStore):
             return checksums['md5'] == key.etag.replace('"', "")
 
         return False
+
+
+class Reader(object):
+    def __init__(self, reader, url):
+        self.reader = reader
+        self.url = url
+
+    def read(self, size):
+        return self.reader.read(size)
+
+    def url(self):
+        return self.url
+
+    def __enter__(self):
+        return self.reader.__enter__()
+
+    def __exit__(self, type, value, trace):
+        return self.reader.__exit__(type, value, trace)
 
 
 class StringReader(StringIO.StringIO):
@@ -324,13 +350,13 @@ class MirrorStoreReader(SimpleStreamMirrorReader):
 
     def reader(self, path):
         try:
-            reader = self.objectstore.reader(path)
-            return reader
+            return self.objectstore.reader(path)
         except IOError as e:
             if e.errno != errno.ENOENT:
                 raise e
 
-        try_mirrors(path, self.mirrors, self.authoritative)
+        return try_mirrors(path, mirrors=self.mirrors,
+                           authoritative=self.authoritative)
 
     def load_stream(self, path, reference=None):
         # return a Stream object
@@ -418,8 +444,8 @@ class MirrorStoreWriter(SimpleStreamMirrorWriter):
 
 def load_stream_path(path, reader, reference=None):
     try:
-        (data, _sig) = read_possibly_signed(path, reader)
-        return simplestreams.stream.Stream(load_content(data))
+        (data, _sig) = util.read_possibly_signed(path, reader)
+        return simplestreams.stream.Stream(util.load_content(data))
 
     except IOError as e:
         if e.errno != errno.ENOENT:
@@ -436,7 +462,7 @@ def load_mirror_info(reader, path="MIRROR.info"):
     except Exception as e:
         raise IOError("Failed to read %s: %s" % (path, str(e)))
 
-    info = load_content(content)
+    info = util.load_content(content)
 
     if 'iqn' not in info:
         raise TypeError("%s did not contain iqn" % path)
@@ -458,9 +484,10 @@ def try_mirrors(path, mirrors=None, authoritative=None):
 
     for mirror in search:
         try:
-            return url_reader(mirror + path)
-        except IOError:
-            continue
+            url = mirror + path
+            return Reader(reader=util.url_reader(url), url=url)
+        except Exception as e:
+            util.pass_if_enoent(e)
 
     raise IOError("Unable to open path '%s'. tried %s" % (path, search))
 
