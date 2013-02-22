@@ -59,7 +59,7 @@ def main():
                         help='Do not download items that are to be inserted.')
 
     parser.add_argument('mirror_ref')
-    parser.add_argument('path', nargs='?', default="v1/streams.yaml")
+    parser.add_argument('path', nargs='?', default="streams/v1/streams.js")
     args = parser.parse_args()
 
     cfg = {}
