@@ -15,8 +15,7 @@ import urllib2
 
 import toolutil
 
-CONTENT_EXT = ".yaml"
-#CONTENT_EXT = ".json"
+CONTENT_EXT = ".js"
 
 GET_QUERY = ("rsync -avz --delete --exclude \".bzr/*\" " +
              "cloud-images.ubuntu.com::uec-images/query/ ci-query")
@@ -323,13 +322,15 @@ def streamwriter(item_groups, data, path, passthrough):
     params = data.copy()
     params['item_groups'] = item_groups
     params.update(passthrough.get('params', {}))
-    url = "v1/%s/%s.yaml" % (data['build']['name'], path)
+    url = "streams/v1/%s/%s%s" % (data['build']['name'], path, CONTENT_EXT)
     fname = "%s/%s" % (passthrough['output_d'], url)
+
+    rendered_yaml = toolutil.render_string(passthrough['template'], params)
+    data = yaml.load(rendered_yaml)
+
     toolutil.mkdir_p(os.path.dirname(fname))
     with open(fname, "w") as fp:
-        fp.write(toolutil.render_string(
-            passthrough['template'], params))
-
+        fp.write(json.dumps(data, indent=1))
 
     for igroup in item_groups:
         for item in igroup['items']:
@@ -392,7 +393,7 @@ def main():
     tmpl = COLLECTION_TEMPLATE.lstrip()
 
     def collwriter(path, path_prefix, collection):
-        if path != "/v1/":
+        if path != "/streams/v1/":
             return
         toks = ("stream", "release", "buildname", "arch", "cloud", "region")
 
@@ -400,8 +401,10 @@ def main():
 
         sys.stderr.write("collection: %s\n" % coll_file)
         toolutil.mkdir_p(os.path.dirname(coll_file))
+
+        rendered_yaml = toolutil.render_string(tmpl, collection)
         with open(coll_file, "w") as cfp:
-            cfp.write(toolutil.render_string(tmpl, collection))
+            cfp.write(json.dumps(yaml.load(rendered_yaml), indent=1))
 
         if args.sign:
             toolutil.signfile(coll_file)
