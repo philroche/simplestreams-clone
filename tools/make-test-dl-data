@@ -16,6 +16,7 @@ import urllib2
 import toolutil
 
 CONTENT_EXT = ".js"
+SIGNED_CONTENT_EXT = ".sjs"
 
 GET_QUERY = ("rsync -avz --delete --exclude \".bzr/*\" " +
              "cloud-images.ubuntu.com::uec-images/query/ ci-query")
@@ -340,7 +341,8 @@ def streamwriter(item_groups, data, path, passthrough):
                     passthrough['data_files'].append(ipath)
 
     if passthrough['sign']:
-        toolutil.signfile(fname)
+        signed = fname[0:-len(CONTENT_EXT)] + SIGNED_CONTENT_EXT
+        toolutil.signfile(fname, signed)
 
     passthrough['streams'].append(url)
     sys.stderr.write(fname + "\n")
@@ -407,7 +409,8 @@ def main():
             cfp.write(json.dumps(yaml.load(rendered_yaml), indent=1))
 
         if args.sign:
-            toolutil.signfile(coll_file)
+            signed = coll_file[0:-len(CONTENT_EXT)] + SIGNED_CONTENT_EXT
+            toolutil.signfile(coll_file, signed)
 
     toolutil.process_collections(passthrough['streams'], args.out_d,
                                  collwriter)

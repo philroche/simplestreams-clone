@@ -14,6 +14,7 @@ import yaml
 import toolutil
 
 CONTENT_EXT = ".js"
+SIGNED_CONTENT_EXT = ".sjs"
 
 GET_QUERY = ("rsync -avz --delete --exclude \".bzr/*\" " +
              "cloud-images.ubuntu.com::uec-images/query/ ci-query")
@@ -203,7 +204,8 @@ def streamwriter(item, data, path, passthrough):
         fp.write(json.dumps(data, indent=1))
 
     if passthrough['sign']:
-        toolutil.signfile(fname)
+        signed = fname[0:-len(CONTENT_EXT)] + SIGNED_CONTENT_EXT
+        toolutil.signfile(fname, signed)
         
     passthrough['streams'].append(rpath)
     sys.stderr.write(fname + "\n")
@@ -256,7 +258,8 @@ def main():
             cfp.write(toolutil.render_string(tmpl, collection))
 
         if args.sign:
-            toolutil.signfile(coll_file)
+            signed = coll_file[0:-len(CONTENT_EXT)] + SIGNED_CONTENT_EXT
+            toolutil.signfile(coll_file, signed)
 
     toolutil.process_collections(passthrough['streams'], args.out_d,
                                  collwriter)

@@ -39,12 +39,22 @@ def mkdir_p(path):
     return
 
 
-def signfile(path):
-    tmpfile = "%s.tmp" % path
-    os.rename(path, tmpfile)
-    subprocess.check_output(["gpg", "--batch", "--output", path,
-                             "--clearsign", tmpfile])
-    os.unlink(tmpfile)
+def signfile(path, output=None):
+    infile = path
+    tmpfile = None
+    if output is None:
+        # sign "in place" by using a temp file.
+        tmpfile = "%s.tmp" % path
+        os.rename(path, tmpfile)
+        output = path
+        infile = tmpfile
+
+    subprocess.check_output(["gpg", "--batch", "--output", output,
+                             "--clearsign", infile])
+    subprocess.check_output(["gpg", "--batch", "--output", path + ".gpg",
+                             "--armor", "--sign", infile])
+    if tmpfile:
+        os.unlink(tmpfile)
 
 
 def dumps(content, fmt="yaml"):
