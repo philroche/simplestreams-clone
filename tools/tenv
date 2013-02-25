@@ -1,0 +1,21 @@
+#!/bin/sh
+
+# trunkenv. prep the environment to run from this trunk
+# then execute program
+
+[ "${TENV_SETUP:-0}" != "0" ] && exec "$@"
+if [ -z "$TOPDIR" ]; then
+        mydir=${0%/*}
+        startd="$PWD"
+        cd "${mydir}/.."
+        topdir=${PWD}
+        cd $startd
+else
+       topdir=$TOPDIR
+fi
+
+export GNUPGHOME="$topdir/gnupg"
+export PYTHONPATH="$topdir${PYTHONPATH:+:${PYTHONPATH}}"
+export PATH=$topdir/tools:$topdir/bin:$PATH
+export TENV_SETUP=1
+exec "$@"
