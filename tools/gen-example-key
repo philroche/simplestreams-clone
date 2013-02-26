@@ -51,7 +51,6 @@ Name-Real: Simple Streams Test User
 Name-Comment: Test Usage Only. Do Not Import.
 Name-Email: simplestreams@bogus.example.com
 Expire-Date: 10y
-Passphrase: ""
 %pubring $tpub
 %secring $tsec
 %commit
