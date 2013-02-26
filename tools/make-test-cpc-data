@@ -190,8 +190,8 @@ def streamwriter(item, data, path, passthrough):
 
     params = data.copy()
     params['item_groups'] = item
-    rpath = "%s.js" % path
-    fname = "%s/%s" % (passthrough['output_d'], rpath)
+    rpath = "streams/v1/%s%s" % (path, CONTENT_EXT)
+    fname = os.path.join(passthrough['output_d'], rpath)
 
     toolutil.mkdir_p(os.path.dirname(fname))
 
