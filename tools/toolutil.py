@@ -40,6 +40,16 @@ def mkdir_p(path):
 
 
 def signfile(path, output=None):
+    if output is None:
+        output = path + ".gpg"
+
+    if os.path.exists(output):
+        os.unlink(output)
+
+    subprocess.check_output(["gpg", "--batch", "--output", output,
+                             "--armor", "--sign", path])
+
+def signfile_inline(path, output=None):
     infile = path
     tmpfile = None
     if output is None:
@@ -48,11 +58,11 @@ def signfile(path, output=None):
         os.rename(path, tmpfile)
         output = path
         infile = tmpfile
+    elif os.path.exists(output):
+        os.unlink(output)
 
     subprocess.check_output(["gpg", "--batch", "--output", output,
                              "--clearsign", infile])
-    subprocess.check_output(["gpg", "--batch", "--output", path + ".gpg",
-                             "--armor", "--sign", infile])
     if tmpfile:
         os.unlink(tmpfile)
 
