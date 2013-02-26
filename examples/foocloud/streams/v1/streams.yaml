@@ -1,9 +1,9 @@
 description: Foovendor Cloud Image streams
 format: stream-collection:1.0
 streams:
- - path: unsigned/i386.yaml
+ - path: streams/v1/i386.yaml
    arch: i386
- - path: unsigned/amd64.yaml
+ - path: streams/v1/amd64.yaml
    arch: amd64
 
 tags:
