@@ -3,7 +3,7 @@ format: stream:1.0
 
 # recommended
 description: Foovendor Cloud Images
-iqn: iqn.2012-12.com.example.foovendor:released:pinky:server:amd64
+iqn: iqn.2012-12.com.example.foovendor:cloud-images:released:pinky:server:amd64
 
 item_groups:
  - serial: 20121026.1
