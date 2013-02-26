@@ -196,7 +196,6 @@ def get_cloud_images_file_hash(path, algo="md5"):
 
 def create_file(prefix, path):
     fpath = os.path.join(prefix, path)
-    toolutil.mkdir_p(os.path.dirname(fpath))
 
     data = {'name': path}
     size = 1024
@@ -208,6 +207,7 @@ def create_file(prefix, path):
         size = 1024 * 1024 * 10 + 300
 
     if CREATE_FILE_CREATE:
+        toolutil.mkdir_p(os.path.dirname(fpath))
         with open(fpath, "w") as fp:
             fp.truncate(size)
 
