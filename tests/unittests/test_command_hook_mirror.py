@@ -29,9 +29,9 @@ class TestCommandHookMirror(TestCase):
         mirror = CommandHookMirror({'stream_load': 'true'})
 
     def test_stream_load_empty(self):
-        src = get_mirror_reader("example")
+        src = get_mirror_reader("foocloud-images")
         target = CommandHookMirror({'stream_load': 'true %(iqn)s'})
-        sync_stream_file("unsigned/i386.yaml", src, target)
+        sync_stream_file("streams/v1/i386.js", src, target)
 
 
 # vi: ts=4 expandtab syntax=python

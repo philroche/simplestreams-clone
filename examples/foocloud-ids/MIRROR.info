@@ -1,0 +1,3 @@
+authoritative_mirror: http://foovendor.example.com/cloud-ids
+iqn: iqn.2012-12.com.example.foovendor:cloud-ids
+mirrors: []

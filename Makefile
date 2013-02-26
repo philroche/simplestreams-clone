@@ -1,18 +1,40 @@
+TENV := ./tools/tenv
+
+PUBKEY := examples/keys/example.pub
+SECKEY := examples/keys/example.sec
+
+
 test:
 	nosetests -v tests/
 
 exdata: exdata/cpc exdata/images exdata/images.fake
 
-exdata/cpc: exdata-query 
-	PYTHONPATH=$(PYTHONPATH):$(CURDIR) ./tools/make-test-cpc-data exdata-query/ exdata/cpc
+exdata/cpc: exdata-query
+	$(TENV) ./tools/make-test-cpc-data exdata-query/ exdata/cpc
 
 exdata/images: exdata-query
-	PYTHONPATH=$(PYTHONPATH):$(CURDIR) REAL_DATA=1 ./tools/make-test-dl-data exdata-query/ exdata/images
+	$(TENV) env REAL_DATA=1 ./tools/make-test-dl-data exdata-query/ exdata/images
 
 exdata/images.fake: exdata-query
-	PYTHONPATH=$(PYTHONPATH):$(CURDIR) ./tools/make-test-dl-data exdata-query/ exdata/images.fake
+	$(TENV) ./tools/make-test-dl-data exdata-query/ exdata/images.fake
 
 exdata-query:
 	rsync -avz --delete --exclude HASH_CACHE --exclude ".bzr/*" cloud-images.ubuntu.com::uec-images/query/ exdata-query
+
+$(PUBKEY) $(SECKEY):
+	@mkdir -p $$(dirname "$(PUBKEY)") $$(dirname "$(SECKEY)")
+	$(TENV) gen-example-key $(PUBKEY) $(SECKEY)
+
+gnupg: gnupg/README
+
+gnupg/README: $(PUBKEY) $(SECKEY)
+	rm -Rf gnupg
+	@umask 077 && mkdir -p gnupg
+	$(TENV) gpg --import $(SECKEY) >/dev/null 2>&1
+	$(TENV) gpg --import $(PUBKEY) >/dev/null 2>&1
+	fp=$$($(TENV) gpg --with-fingerprint --with-colons $(PUBKEY) \
+	    | awk -F: '$$1 == "fpr" {print $$10}') && \
+	    echo "$${fp}:6:" | $(TENV) gpg --import-ownertrust
+	@echo "this is used by $(TENV) as the gpg directory" > gnupg/README
 
 .PHONY: exdata/cpc exdata/images exdata-query exdata/images.fake

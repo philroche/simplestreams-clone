@@ -342,7 +342,8 @@ def streamwriter(item_groups, data, path, passthrough):
 
     if passthrough['sign']:
         signed = fname[0:-len(CONTENT_EXT)] + SIGNED_CONTENT_EXT
-        toolutil.signfile(fname, signed)
+        toolutil.signfile_inline(fname, signed)
+        toolutil.signfile(fname)
 
     passthrough['streams'].append(url)
     sys.stderr.write(fname + "\n")
@@ -410,7 +411,8 @@ def main():
 
         if args.sign:
             signed = coll_file[0:-len(CONTENT_EXT)] + SIGNED_CONTENT_EXT
-            toolutil.signfile(coll_file, signed)
+            toolutil.signfile_inline(coll_file, signed)
+            toolutil.signfile(coll_file)
 
     toolutil.process_collections(passthrough['streams'], args.out_d,
                                  collwriter)

@@ -1,0 +1,75 @@
+#!/bin/sh
+
+set -f
+TEMP_D=""
+
+cleanup() {
+   [ -z "${TEMP_D}" ] || rm -Rf "${TEMP_D}"
+}
+Usage() {
+   cat <<EOF
+${0##*/} public secret
+generate an example public and private key
+
+Generate the example key for signing and verifying.
+will create public key in 'public' and secret key in 'secret'
+EOF
+}
+
+fail() { [ $# -eq 0 ] || error "$@"; exit 1; }
+error() { echo "$@" 1>&2; }
+
+out_pub=${1}
+out_sec=${2}
+
+[ "$1" = "-h" -o "$1" = "--help" ] && { Usage; exit 0; }
+[ $# -eq 2 ] || { Usage 1>&2; fail "expect 2 args"; }
+
+[ "${out_pub#/}" = "${out_pub}" -a "${out_pub#./}" = "${out_pub}" ] &&
+	out_pub="./${out_pub}"
+[ "${out_sec#/}" = "${out_sec}" -a "${out_sec#./}" = "${out_sec}" ] &&
+	out_sec="./${out_sec}"
+
+error "writing to ${out_pub} and ${out_sec}"
+
+TEMP_D=$(mktemp -d "${TEMPDIR:-/tmp}/${0##*/}.XXXXXX")
+trap cleanup EXIT 
+
+# so your local gpg will not be modified
+export HOME="${TEMP_D}"
+export GNUPGHOME="${TEMP_D}/gnupg"
+( umask 077 && mkdir $GNUPGHOME )
+
+bfile="${TEMP_D}/batch"
+tpub="${TEMP_D}/out.pub"
+tsec="${TEMP_D}/out.sec"
+
+cat > "$bfile" <<EOF
+Key-Type: RSA
+Key-Length: 1024
+Name-Real: Simple Streams Test User
+Name-Comment: Test Usage Only. Do Not Import.
+Name-Email: simplestreams@bogus.example.com
+Expire-Date: 10y
+%pubring $tpub
+%secring $tsec
+%commit
+EOF
+
+out=$(gpg --list-public-keys 2>&1) ||
+	fail "failed to initialize gpg dir: $out"
+
+out=$(gpg --batch --gen-key "$bfile" 2>&1) ||
+	fail "failed to generate key in batch mode:$out"
+
+topts="--no-default-keyring --secret-keyring ${tsec} --keyring ${tpub}"
+
+gpg $topts --armor --export-secret-keys > "${TEMP_D}/secret" ||
+	fail "failed to export secret key to armor"
+gpg $topts --armor --export > "${TEMP_D}/public" ||
+	fail "failed to export public key to armor"
+
+cp "${TEMP_D}/public" "${out_pub}" && cp "${TEMP_D}/secret" "${out_sec}" ||
+   fail "failed to copy output"
+
+gpg $out_pub
