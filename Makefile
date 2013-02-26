@@ -23,7 +23,7 @@ exdata/images.fake: exdata-query gnupg
 	$(TENV) ./tools/make-test-dl-data $(EXDATA_SIGN_ARG) exdata-query/ exdata/images.fake
 
 exdata-query:
-	rsync -avz --delete --exclude HASH_CACHE --exclude ".bzr/*" cloud-images.ubuntu.com::uec-images/query/ exdata-query
+	rsync -avz --delete --exclude "*_CACHE" --exclude ".bzr/*" cloud-images.ubuntu.com::uec-images/query/ exdata-query
 
 $(PUBKEY) $(SECKEY):
 	@mkdir -p $$(dirname "$(PUBKEY)") $$(dirname "$(SECKEY)")

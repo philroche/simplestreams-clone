@@ -124,6 +124,7 @@ else:
     CREATE_FILE_CREATE = True
 
 CREATE_FILE_DATA = {}
+FILE_SIZE_DATA = {}
 
 def is_expected(repl, fields):
     rel = fields[0]
@@ -194,6 +195,41 @@ def get_cloud_images_file_hash(path, algo="md5"):
 
     return CREATE_FILE_DATA[dirname][bname]
 
+
+def get_url_len(url):
+    if url.startswith("file:///"):
+        path = url[len("file://"):]
+        return os.stat(path).st_size
+    if os.path.exists(url):
+        return os.stat(url).st_size
+
+    # http://stackoverflow.com/questions/4421170/python-head-request-with-urllib2
+
+    sys.stderr.write("getting size for %s\n" % url)
+    request = urllib2.Request(url)
+    request.get_method = lambda : 'HEAD'
+    response = urllib2.urlopen(request)
+    return response.headers['content-length']
+
+
+def get_cloud_images_file_size(path):
+    if path in FILE_SIZE_DATA:
+        return FILE_SIZE_DATA[path]
+
+    burls = ("http://cloud-images.ubuntu.com/",)
+    size = None
+    for burl in burls:
+        try:
+            size = get_url_len(burl + path)
+            break
+        except urllib2.HTTPError as error:
+            pass
+
+    if not size:
+        raise error
+    FILE_SIZE_DATA[path] = size
+    return size
+
 def create_file(prefix, path):
     fpath = os.path.join(prefix, path)
 
@@ -213,7 +249,7 @@ def create_file(prefix, path):
 
     if CREATE_FILE_REAL_HASHES:
         data.update(get_cloud_images_file_hash(path))
-        data['size'] = None
+        data['size'] = get_cloud_images_file_size(path)
     else:
         data['md5'] = KNOWN_HASHES[size]
         data['sha256'] = None
@@ -381,11 +417,15 @@ def main():
         'collections': []
     }
 
-    global CREATE_FILE_DATA
+    global CREATE_FILE_DATA, FILE_SIZE_DATA
     if CREATE_FILE_REAL_HASHES:
         hashcache = os.path.join(args.query_tree, "HASH_CACHE")
         if os.path.isfile(hashcache):
             CREATE_FILE_DATA = yaml.safe_load(open(hashcache, "r"))
+
+    sizecache = os.path.join(args.query_tree, "SIZE_CACHE")
+    if os.path.isfile(sizecache):
+        FILE_SIZE_DATA = yaml.safe_load(open(sizecache, "r"))
 
     toolutil.process(tree, {}, 0, layout, streamwriter, passthrough)
 
@@ -429,6 +469,10 @@ def main():
     if CREATE_FILE_REAL_HASHES:
         with open(hashcache, "w") as hfp:
             hfp.write(yaml.safe_dump(CREATE_FILE_DATA))
+
+    if FILE_SIZE_DATA:
+        with open(sizecache, "w") as hfp:
+            hfp.write(yaml.safe_dump(FILE_SIZE_DATA))
 
     return
 
