@@ -34,7 +34,7 @@ gnupg/README: $(PUBKEY) $(SECKEY)
 	$(TENV) gpg --import $(PUBKEY) >/dev/null 2>&1
 	fp=$$($(TENV) gpg --with-fingerprint --with-colons $(PUBKEY) \
 	    | awk -F: '$$1 == "fpr" {print $$10}') && \
-	    echo "$${fp}:4:" | $(TENV) gpg --import-ownertrust
+	    echo "$${fp}:6:" | $(TENV) gpg --import-ownertrust
 	@echo "this is used by $(TENV) as the gpg directory" > gnupg/README
 
 .PHONY: exdata/cpc exdata/images exdata-query exdata/images.fake
