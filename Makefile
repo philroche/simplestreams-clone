@@ -13,7 +13,7 @@ exdata/cpc: exdata-query
 	$(TENV) ./tools/make-test-cpc-data exdata-query/ exdata/cpc
 
 exdata/images: exdata-query
-	$(TENV) REAL_DATA=1 ./tools/make-test-dl-data exdata-query/ exdata/images
+	$(TENV) env REAL_DATA=1 ./tools/make-test-dl-data exdata-query/ exdata/images
 
 exdata/images.fake: exdata-query
 	$(TENV) ./tools/make-test-dl-data exdata-query/ exdata/images.fake
