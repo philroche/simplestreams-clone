@@ -49,6 +49,7 @@ def signfile(path, output=None):
     subprocess.check_output(["gpg", "--batch", "--output", output,
                              "--armor", "--sign", path])
 
+
 def signfile_inline(path, output=None):
     infile = path
     tmpfile = None
@@ -162,5 +163,40 @@ def tokenize_url(url):
                 raise
 
     raise TypeError("Unable to find MIRROR.info above %s" % url_in)
+
+
+def signjs_file(fname, status_cb=None):
+    content = ""
+    with open(fname) as fp:
+        content = fp.read()
+    data = json.loads(content)
+    fmt = data.get("format")
+    sjs = fname[0:-len(".js")] + ".sjs"
+
+    if status_cb is None:
+        def null_cb(fname, fmt):
+            pass
+        status_cb = null_cb
+
+    if fmt == "stream-collection:1.0":
+        status_cb(fname, fmt)
+        signfile(fname)
+        for stream in data.get('streams'):
+            path = stream.get('path')
+            if path.endswith(".js"):
+                stream['path'] = path[0:-len(".js")] + ".sjs"
+        with open(sjs, "w") as fp:
+            fp.write(json.dumps(data, indent=1))
+        signfile_inline(sjs)
+    elif fmt == "stream:1.0":
+        status_cb(fname, fmt)
+        signfile(fname)
+        signfile_inline(fname, sjs)
+    elif fmt is None:
+        status_cb(fname, fmt)
+        return
+    else:
+        status_cb(fname, fmt)
+        return
 
 # vi: ts=4 expandtab syntax=python

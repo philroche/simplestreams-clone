@@ -203,11 +203,6 @@ def streamwriter(item, data, path, passthrough):
     with open(fname, "w") as fp:
         fp.write(json.dumps(data, indent=1))
 
-    if passthrough['sign']:
-        signed = fname[0:-len(CONTENT_EXT)] + SIGNED_CONTENT_EXT
-        toolutil.signfile_inline(fname, signed)
-        toolutil.signfile(fname)
-        
     passthrough['streams'].append(rpath)
     sys.stderr.write(fname + "\n")
 
@@ -238,9 +233,11 @@ def main():
         {"name": "arch"},
     ]
 
+    args.out_d = os.path.abspath(args.out_d)
     passthrough = {'output_d': args.out_d,
         'template': STREAM_TEMPLATE.lstrip(),
         'streams': [],
+        'collections': [],
         'sign': args.sign,
         }
 
@@ -250,21 +247,26 @@ def main():
 
     def collwriter(path, path_prefix, collection):
         if path != "/":
-            # only writing to level collection for now.
+            # only writing to top level collection for now.
             return
 
-        coll_file = "%s/streams/v1%sstreams%s" % (path_prefix, path, CONTENT_EXT)
+        coll_file_rel = "streams/v1%sstreams%s" % (path, CONTENT_EXT)
+        coll_file = os.path.join(path_prefix, coll_file_rel)
+
+        data = yaml.safe_load(toolutil.render_string(tmpl, collection))
         toolutil.mkdir_p(os.path.dirname(coll_file))
         with open(coll_file, "w") as cfp:
-            cfp.write(toolutil.render_string(tmpl, collection))
+            cfp.write(json.dumps(data, indent=1))
 
-        if args.sign:
-            signed = coll_file[0:-len(CONTENT_EXT)] + SIGNED_CONTENT_EXT
-            toolutil.signfile_inline(coll_file, signed)
-            toolutil.signfile(coll_file)
+        passthrough['collections'].append(coll_file_rel)
+
 
     toolutil.process_collections(passthrough['streams'], args.out_d,
                                  collwriter)
+
+    if args.sign:
+        for path in passthrough['streams'] + passthrough['collections']:
+            toolutil.signjs_file(os.path.join(args.out_d, path))
 
     with open(os.path.join(args.out_d, "MIRROR.info"), "w") as mfp:
         mfp.write(toolutil.dumps({

@@ -340,11 +340,6 @@ def streamwriter(item_groups, data, path, passthrough):
                 if ipath not in passthrough['data_files']:
                     passthrough['data_files'].append(ipath)
 
-    if passthrough['sign']:
-        signed = fname[0:-len(CONTENT_EXT)] + SIGNED_CONTENT_EXT
-        toolutil.signfile_inline(fname, signed)
-        toolutil.signfile(fname)
-
     passthrough['streams'].append(url)
     sys.stderr.write(fname + "\n")
 
@@ -374,6 +369,7 @@ def main():
         {"name": "arch"},
     ]
 
+    args.out_d = os.path.abspath(args.out_d)
     passthrough = {'output_d': args.out_d,
         'template': STREAM_TEMPLATE.lstrip(),
         'streams': [],
@@ -382,7 +378,7 @@ def main():
             'utils': { 'create_file': create_file },
             'prefix': args.out_d,
         },
-        'sign': args.sign,
+        'collections': []
     }
 
     global CREATE_FILE_DATA
@@ -400,22 +396,27 @@ def main():
             return
         toks = ("stream", "release", "buildname", "arch", "cloud", "region")
 
-        coll_file = "%s%sstreams%s" % (path_prefix, path, CONTENT_EXT)
+        if path[0] == os.path.sep:
+            path = path[1:]
 
-        sys.stderr.write("collection: %s\n" % coll_file)
+        coll_file_rel = "%sstreams%s" % (path, CONTENT_EXT)
+        coll_file = os.path.join(path_prefix, coll_file_rel)
+
         toolutil.mkdir_p(os.path.dirname(coll_file))
 
         rendered_yaml = toolutil.render_string(tmpl, collection)
         with open(coll_file, "w") as cfp:
             cfp.write(json.dumps(yaml.load(rendered_yaml), indent=1))
 
-        if args.sign:
-            signed = coll_file[0:-len(CONTENT_EXT)] + SIGNED_CONTENT_EXT
-            toolutil.signfile_inline(coll_file, signed)
-            toolutil.signfile(coll_file)
+
+        passthrough['collections'].append(coll_file_rel)
 
     toolutil.process_collections(passthrough['streams'], args.out_d,
                                  collwriter)
+
+    if args.sign:
+        for path in passthrough['streams'] + passthrough['collections']:
+            toolutil.signjs_file(os.path.join(args.out_d, path))
 
     with open(os.path.join(args.out_d, "MIRROR.info"), "w") as mfp:
         mfp.write(toolutil.dumps({
