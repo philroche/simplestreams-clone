@@ -21,6 +21,13 @@ SIGNED_CONTENT_EXT = ".sjs"
 GET_QUERY = ("rsync -avz --delete --exclude \".bzr/*\" " +
              "cloud-images.ubuntu.com::uec-images/query/ ci-query")
 
+# could support reading from other mirrors
+# for example: 
+#   http://cloud-images-archive.ubuntu.com/
+#   file:///srv/ec2-images
+#  
+BASE_URLS = ("http://cloud-images.ubuntu.com/",)
+
 RELEASES = (
 #    "hardy",
     "lucid",
@@ -165,19 +172,13 @@ def get_cloud_images_file_hash(path, algo="md5"):
         return CREATE_FILE_DATA[dirname][bname]
 
     CREATE_FILE_DATA[dirname] = {}
-    base_url = "http://cloud-images.ubuntu.com/%s" % dirname
-
-    # http://cloud-images.ubuntu.com/server/releases/precise/beta-2/MD5SUMS
-    # was giving 403 due to bad redirect, so tried both links.  However
-    # seems to work fine now
-    # burls = ("http://cloud-images.ubuntu.com",
-    #         "http://cloud-images-archive.ubuntu.com")
-    burls = ("http://cloud-images.ubuntu.com")
     for cksum in ("md5", "sha256"):
         content = None
-        for burl in burls:
+        for burl in BASE_URLS:
+            dir_url = burl + dirname
+
             try:
-                content = readurl(base_url + "/%sSUMS" % cksum.upper())
+                content = readurl(dir_url + "/%sSUMS" % cksum.upper())
                 break
             except urllib2.HTTPError as error:
                 pass
@@ -216,9 +217,8 @@ def get_cloud_images_file_size(path):
     if path in FILE_SIZE_DATA:
         return FILE_SIZE_DATA[path]
 
-    burls = ("http://cloud-images.ubuntu.com/",)
     size = None
-    for burl in burls:
+    for burl in BASE_URLS:
         try:
             size = get_url_len(burl + path)
             break
