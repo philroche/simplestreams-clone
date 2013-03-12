@@ -107,7 +107,7 @@ streams:
 #for $stream in $streams:
  - path: $stream.path
  #for $tag in $stream.tags:
-   $tag: $stream.tags[$tag]
+   $tag: "$stream.tags[$tag]"
  #end for
 #end for
 
