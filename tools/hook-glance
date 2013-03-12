@@ -1,0 +1,141 @@
+#!/bin/bash
+set -f
+
+RC_FILTER_INCLUDE=0
+RC_FILTER_EXCLUDE=1
+RC_FAIL=2
+
+error() { echo "$@" 1>&2; }
+fail() { [ $# -eq 0 ] || error "$@"; exit "$RC_FAIL"; }
+
+Usage() {
+   cat <<EOF
+Usage: ${0##*/}
+  This program is expected to be called by sstream-sync.
+
+  It uses the 'glance' command to synchronize the remote source
+  with the a glance server.
+
+  sstream-sync "--hook=$0" \
+     http://cloud-images.ubuntu.com/eightprotons/images/ v1/streams.yaml
+EOF
+}
+
+required() {
+    local req="" missing=""
+    for req in "$@"; do
+        [ -z "${!req}" ] || missing="${missing} ${req}"
+    done
+    missing=${missing# }
+    _RET="$missing"
+    [ -z "$_RET" ]
+}
+
+
+run() {
+    local ret=""
+    debug 1 "$@"
+    "$@"
+    ret=$?
+    error "failed:" "$@"
+    return $ret
+}
+
+stream_load() {
+    local output="" ids="" id=""
+    output=$(run glance image-list "--property-filter=iqn=$iqn") || fail
+    ids=$(echo "$output" | awk '$2 ~ uuid { print $2 }' "uuid=[0-9a-f-]{36}")
+    for id in $ids; do
+        out=$(run glance image-show "$id") || fail "failed to show image $id"
+        serial=$(echo "$out" |
+            awk '$2 == "Property" && $3 == sname { print $5 }'
+                sname="'serial'")
+        [ -n "$serial" ] &&
+            fail "image-id '$id' had no 'serial' tag"
+        debug 1 "$iqn $serial $id"
+        # report we have the given serial for this iqn
+        echo "$serial"
+    done
+    return 0
+}
+
+
+item_insert() {
+    required iqn serial path_local arch ||
+        fail "missing required fields: $_RET"
+
+    local xname="${pubname:-${name##*/}}"
+    run glance image-create --disk-format=qcow2 --container-format=bare \
+          "--name=$xname" \
+          ${arch:+"--property=architecture=${arch}"} \
+          "--property=iqn=$iqn" "--property=serial=$serial" \
+          ${md5:+"--checksum=$md5"} \
+          "--file=${path_local}" ||
+        fail "failed to add image $iqn / $name"
+}
+
+
+group_remove_pre() {
+    required iqn serial ||
+        fail "missing required fields: $_RET"
+
+    local output="" ids=""
+    output=$(run glance image-list "--property-filter=iqn=$iqn" \
+                 "--property-filter=serial=$serial") ||
+    fail "failed to list images with $iqn and $serial"
+    
+    ids=$(echo "$output" | awk '$2 ~ uuid { print $2 }' "uuid=[0-9a-f-]{36}")
+    for id in $ids; do
+        debug 1 "remove $iqn $serial $id"
+        run glance image-delete "$id" ||
+            fail "failed to remove $id"
+    done
+    return 0
+}
+
+
+item_filter() {
+    case "$name" in
+        *-disk1.img) return "${RC_FILTER_INCLUDE}";;
+        *) return "${RC_FILTER_EXCLUDE}"
+    esac
+}
+
+
+stream_filter() {
+    return "${RC_FILTER_INCLUDE}"
+}
+
+
+group_filter() {
+    return "${RC_FILTER_INCLUDE}"
+}
+
+
+noop() {
+    return 0;
+}
+
+
+main() {
+    [ "$1" = "--help" -o "$1" = "-h" -o "$1" = "usage" ] &&
+        { Usage; exit 0; }
+
+    [ $# -eq 0 ] || fail "Unexpected arguments.  See --help" 
+
+    [ -n "$HOOK" ] ||
+        { Usage 1>&2; fail "HOOK not available in environment"; }
+   
+    # we only operate on
+    case "$HOOK" in
+        item_filter|item_insert|\
+        group_filter|group_remove_pre|\
+        stream_filter|stream_load)
+            "$HOOK";;
+        *) noop;;
+    esac
+    exit $?
+}
+main "$@"
+
+# vi: ts=4 expandtab
