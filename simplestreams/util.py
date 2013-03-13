@@ -191,7 +191,9 @@ class RequestsUrlReader(object):
         else:
             self._read = self.read_raw
 
-    def read(self, size=None):
+    def read(self, size=-1):
+        if size < 0:
+            size = None
         return self._read(size)
 
     def read_compressed(self, size=None):
