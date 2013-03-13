@@ -4,9 +4,9 @@ if [ "$1" = "--help" -o "$1" = "usage" ]; then
    cat <<EOF
 Usage: ${0##*/}
   This program is an example 'hook' for use with bin/sstream-sync.
-  PYTHONPATH=$PWD ./bin/sstream-sync --item-skip-download \
-     --hook=./tools/${0##*/} \
-     http://cloud-images.ubuntu.com/eightprotons/images/ v1/streams.yaml
+  PYTHONPATH=$PWD ./bin/sstream-sync --item-skip-download \\
+     --hook=./tools/hook-debug \\
+     http://cloud-images.ubuntu.com/eightprotons/images/ streams/v1/streams.js
 EOF
 fi
 
@@ -18,6 +18,8 @@ for f in ${FIELDS}; do
         data="${data} ${f}=${val}"
 done
 data=${data# }
+
+[ -z "$HOOK" ] && { echo "HOOK not set. see usage --help"; exit 1; }
 
 case "$HOOK" in
    stream_filter|group_filter)
