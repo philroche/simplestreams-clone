@@ -171,6 +171,7 @@ def sync_stream(src_stream, src_mirror, target_stream, target_mirror,
 
 class RequestsUrlReader(object):
     def __init__(self, url, buflen=None):
+        self.url = url
         self.req = requests.get(url, stream=True)
         self.r_iter = None
         if buflen is None:
@@ -226,6 +227,9 @@ class RequestsUrlReader(object):
 
     def read_raw(self, size=None):
         return self.req.raw.read(size)
+
+    def close(self):
+        self.req.close()
 
 
 def sync_collection(src_collection, src_mirror, target_mirror, path=None,
