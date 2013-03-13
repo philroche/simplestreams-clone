@@ -9,7 +9,6 @@ import os
 import os.path
 import StringIO
 import tempfile
-import urllib2
 import yaml
 
 import simplestreams.util as util
@@ -163,7 +162,7 @@ class UrlMirrorReader(SimpleStreamMirrorReader):
         if prefix.startswith("/"):
             self._reader = open
         else:
-            self._reader = urllib2.urlopen
+            self._reader = util.url_reader
 
         self.prefix = prefix
         info = load_mirror_info(self.reader)

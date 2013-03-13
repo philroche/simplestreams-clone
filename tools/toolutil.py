@@ -7,7 +7,6 @@ import os
 import os.path
 from simplestreams.util import read_possibly_signed
 import subprocess
-import urllib2
 import urlparse
 import yaml
 
@@ -150,17 +149,10 @@ def tokenize_url(url):
     while urlparse.urlparse(url).path:
         url = os.path.dirname(url)
         try:
-            urllib2.urlopen("%s/%s" % (url, "MIRROR.info")).read()
+            util.url_reader("%s/%s" % (url, "MIRROR.info")).read()
             return (url + "/", url_in[len(url) + 1:])
-        except urllib2.HTTPError as httperr:
-            if httperr.code != 404:
-                raise
-        except urllib2.URLError as uerr:
-            if ((isinstance(uerr.reason, OSError) and
-                 uerr.reason.errno == errno.ENOENT)):
-                pass
-            else:
-                raise
+        except IOError as err:
+            util.pass_if_enoent(err)
 
     raise TypeError("Unable to find MIRROR.info above %s" % url_in)
 

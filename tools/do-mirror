@@ -16,7 +16,6 @@ import toolutil
 import errno
 import os
 import sys
-import urllib2
 import urlparse
 
 

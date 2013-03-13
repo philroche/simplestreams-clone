@@ -1,17 +1,13 @@
 #!/usr/bin/python
 
 import argparse
-import copy
-import errno
-from Cheetah.Template import Template
 import json
 import os
 import os.path
-import StringIO
-import subprocess
+import requests
 import sys
+from simplestreams import util
 import yaml
-import urllib2
 
 import toolutil
 
@@ -163,9 +159,9 @@ def is_expected(repl, fields):
 
 def readurl(url):
     sys.stderr.write("reading %s\n" % url)
-    return urllib2.urlopen(url).read()
+    return util.url_reader(url).read()
 
-def get_cloud_images_file_hash(path, algo="md5"):
+def get_cloud_images_file_hash(path):
     dirname = os.path.dirname(path)
     bname = os.path.basename(path)
     if dirname in CREATE_FILE_DATA:
@@ -180,7 +176,7 @@ def get_cloud_images_file_hash(path, algo="md5"):
             try:
                 content = readurl(dir_url + "/%sSUMS" % cksum.upper())
                 break
-            except urllib2.HTTPError as error:
+            except requests.HTTPError as error:
                 pass
 
         if not content:
@@ -207,10 +203,8 @@ def get_url_len(url):
     # http://stackoverflow.com/questions/4421170/python-head-request-with-urllib2
 
     sys.stderr.write("getting size for %s\n" % url)
-    request = urllib2.Request(url)
-    request.get_method = lambda : 'HEAD'
-    response = urllib2.urlopen(request)
-    return response.headers['content-length']
+    request = requests.head(url)
+    return request.headers.get('content-length')
 
 
 def get_cloud_images_file_size(path):
@@ -222,7 +216,7 @@ def get_cloud_images_file_size(path):
         try:
             size = get_url_len(burl + path)
             break
-        except urllib2.HTTPError as error:
+        except requests.HTTPError as error:
             pass
 
     if not size:
@@ -286,7 +280,6 @@ def load_query(path, tree=None):
 
         field_path = 5
         field_name = 6
-        field_release = 0
         # stream/build/release/arch
         cdata = tree[stream]
         for dl_file in dl_files:

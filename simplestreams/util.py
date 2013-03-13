@@ -2,8 +2,8 @@ from simplestreams import collection
 
 import errno
 import os
+import requests
 import subprocess
-import urllib2
 import urlparse
 import yaml
 
@@ -107,13 +107,6 @@ def load_content(content):
 def pass_if_enoent(exc):
     try:
         raise exc
-    except urllib2.HTTPError as e:
-        if e.code == 404:
-            return
-    except urllib2.URLError as e:
-        if (isinstance(e.reason, OSError) and
-            e.reason.errno == errno.ENOENT):
-            return
     except IOError as e:
         if e.errno == errno.ENOENT:
             return
@@ -121,7 +114,7 @@ def pass_if_enoent(exc):
 
 
 def url_reader(url):
-    return urllib2.urlopen(url)
+    return RequestsUrlReader(url)
 
 
 def sync_stream_file(path, src_mirror, target_mirror, resolve_args=None):
@@ -175,6 +168,64 @@ def sync_stream(src_stream, src_mirror, target_stream, target_mirror,
                                content=src_content)
 
     return target_stream
+
+class RequestsUrlReader(object):
+    def __init__(self, url, buflen=None):
+        self.req = requests.get(url, stream=True)
+        self.r_iter = None
+        if buflen is None:
+            buflen = 1024 * 1024
+        self.buflen = buflen
+        self.leftover = None
+        self.consumed = False
+
+        if self.req.status_code == requests.codes.NOT_FOUND:
+            myerr = IOError("Unable to open %s" % url)
+            myerr.errno = errno.ENOENT
+            raise myerr
+
+        ce = self.req.headers.get('content-encoding', '').lower()
+        if 'gzip' in ce or 'deflate' in ce:
+            self._read = self.read_compressed
+        else:
+            self._read = self.read_raw
+
+    def read(self, size=None):
+        return self._read(size)
+
+    def read_compressed(self, size=None):
+        if not self.r_iter:
+            self.r_iter = self.req.iter_content(self.buflen)
+
+        if self.consumed:
+            return bytes()
+
+        ret = bytes()
+
+        if self.leftover is not None:
+            if len(self.leftover) > size:
+                ret = self.leftover[0:size]
+                self.leftover = self.leftover[size:]
+                return ret
+            ret = self.leftover
+            self.leftover = None
+
+        size_end = (size is not None and size >= 0)
+
+        while True:
+            try:
+                ret += self.r_iter.next()
+                if not size_end:
+                    next
+                if len(ret) >= size:
+                    self.leftover = ret[size:]
+                    return ret[0:size]
+            except StopIteration as e:
+                self.consumed = True
+                return ret
+
+    def read_raw(self, size=None):
+        return self.req.raw.read(size)
 
 
 def sync_collection(src_collection, src_mirror, target_mirror, path=None,
