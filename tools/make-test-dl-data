@@ -454,7 +454,7 @@ def main():
     with open(os.path.join(args.out_d, "MIRROR.info"), "w") as mfp:
         mfp.write(toolutil.dumps({
             'iqn': 'iqn.2005-04.com.ubuntu:cloud-images:download',
-            'authoritative_mirror': 'http://cloud-images.ubuntu.com/',
+            'authoritative_mirror': 'http://cloud-images.ubuntu.com/eightprotons/images',
             'mirrors': []
             }))
 
