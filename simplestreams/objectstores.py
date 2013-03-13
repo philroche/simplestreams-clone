@@ -304,7 +304,7 @@ class Reader(object):
         self.reader = reader
         self.url = url
 
-    def read(self, size=-1):
+    def read(self, size=None):
         return self.reader.read(size)
 
     def __enter__(self):
