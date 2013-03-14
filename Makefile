@@ -11,19 +11,16 @@ endif
 test:
 	nosetests -v tests/
 
-exdata: exdata/cpc exdata/images exdata/images.fake
+exdata: exdata/fake exdata/data
 
-exdata/cpc: exdata-query gnupg
-	$(TENV) ./tools/make-test-cpc-data $(EXDATA_SIGN_ARG) exdata-query/ exdata/cpc
+exdata/data: exdata-query gnupg
+	$(TENV) env REAL_DATA=1 ./tools/make-test-data $(EXDATA_SIGN_ARG) exdata-query/ exdata/data
 
-exdata/images: exdata-query gnupg
-	$(TENV) env REAL_DATA=1 ./tools/make-test-dl-data $(EXDATA_SIGN_ARG) exdata-query/ exdata/images
-
-exdata/images.fake: exdata-query gnupg
-	$(TENV) ./tools/make-test-dl-data $(EXDATA_SIGN_ARG) exdata-query/ exdata/images.fake
+exdata/fake: exdata-query gnupg
+	$(TENV) ./tools/make-test-data $(EXDATA_SIGN_ARG) exdata-query/ exdata/fake
 
 exdata-query:
-	rsync -avz --delete --exclude "*_CACHE" --exclude ".bzr/*" cloud-images.ubuntu.com::uec-images/query/ exdata-query
+	rsync -avz --delete --exclude "FILE_DATA_CACHE" --exclude ".bzr/*" cloud-images.ubuntu.com::uec-images/query/ exdata-query
 
 $(PUBKEY) $(SECKEY):
 	@mkdir -p $$(dirname "$(PUBKEY)") $$(dirname "$(SECKEY)")
@@ -41,4 +38,4 @@ gnupg/README: $(PUBKEY) $(SECKEY)
 	    echo "$${fp}:6:" | $(TENV) gpg --import-ownertrust
 	@echo "this is used by $(TENV) as the gpg directory" > gnupg/README
 
-.PHONY: exdata/cpc exdata/images exdata-query exdata/images.fake
+.PHONY: exdata/fake exdata/data exdata-query

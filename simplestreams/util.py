@@ -12,6 +12,23 @@ PGP_SIGNED_MESSAGE_HEADER = "-----BEGIN PGP SIGNED MESSAGE-----"
 PGP_SIGNATURE_HEADER = "-----BEGIN PGP SIGNATURE-----"
 PGP_SIGNATURE_FOOTER = "-----END PGP SIGNATURE-----"
 
+def walk_items(tree, callback):
+    exdata = {}
+    def stringvalues(data):
+        return {k:v for k,v in data.iteritems() if
+                isinstance(v, (unicode, str))}
+
+    for prodname, product in tree['products'].iteritems():
+        proddata = stringvalues(product)
+        proddata['product'] = prodname
+        for serial, version in product['versions'].iteritems():
+            verdata = stringvalues(version)
+            verdata['serial'] = serial
+            for item in version['items']:
+                exdata = {}
+                exdata.update(proddata)
+                exdata.update(verdata)
+                callback(item, exdata)
 
 def resolve_work(src, target, max=None, keep=False, filter=None,
                  sort_reverse=True):
