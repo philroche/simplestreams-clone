@@ -12,6 +12,9 @@ class Reader(object):
     def __exit__(self, type, value, trace):
         self.reader.close()
 
+    def close(self):
+        self.reader.close()
+
 
 class RequestsUrlReader(object):
     def __init__(self, url, buflen=None):

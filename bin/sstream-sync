@@ -2,10 +2,8 @@
 #
 # client showing use of command_hook_mirror
 
-from simplestreams import collection
 from simplestreams import command_hook_mirror
 from simplestreams import objectstores
-from simplestreams import stream
 from simplestreams import util
 
 import argparse
@@ -59,7 +57,7 @@ def main():
                         help='Do not download items that are to be inserted.')
 
     parser.add_argument('mirror_ref')
-    parser.add_argument('path', nargs='?', default="streams/v1/streams.js")
+    parser.add_argument('path', nargs='?', default="content/v1/index.sjs")
     args = parser.parse_args()
 
     cfg = {}
@@ -85,25 +83,20 @@ def main():
 
     (content, _sig) = util.read_possibly_signed(args.path, smirror.reader)
 
-
     resolve_args = {'max': args.max, 'keep': args.keep}
 
     data = util.load_content(content)
     fmt = data.get("format")
 
-    # allow old format. remove this later.
-    if fmt == "stream-1.0":
-        fmt = "stream:1.0"
+    util.expand_tree(data)
 
-    if fmt == "stream:1.0":
-        sstream = stream.Stream(data)
-        util.sync_stream(src_stream=sstream, src_mirror=smirror,
-                         target_stream=None, target_mirror=tmirror,
-                         path=args.path, resolve_args=resolve_args)
+    if fmt == "products:1.0":
+        util.sync_products(src_products=data, src_mirror=smirror,
+                           target_mirror=tmirror, path=args.path,
+                           resolve_args=resolve_args)
 
-    elif fmt == "stream-collection:1.0":
-        scoll = collection.Collection(data)
-        util.sync_collection(src_collection=scoll, src_mirror=smirror,
+    elif fmt == "collection:1.0":
+        util.sync_collection(src_collection=data, src_mirror=smirror,
                         target_mirror=tmirror, path=args.path,
                         resolve_args=resolve_args)
 

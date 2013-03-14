@@ -6,31 +6,48 @@ import requests
 import subprocess
 import time
 import urlparse
-import yaml
+import json
 
 import simplestreams.reader as sreader
+
+ALIASNAME = "_aliases"
 
 PGP_SIGNED_MESSAGE_HEADER = "-----BEGIN PGP SIGNED MESSAGE-----"
 PGP_SIGNATURE_HEADER = "-----BEGIN PGP SIGNATURE-----"
 PGP_SIGNATURE_FOOTER = "-----END PGP SIGNATURE-----"
 
+def stringitems(data):
+    return {k:v for k,v in data.iteritems() if
+            isinstance(v, (unicode, str))}
+
 def walk_items(tree, callback):
     exdata = {}
-    def stringvalues(data):
-        return {k:v for k,v in data.iteritems() if
-                isinstance(v, (unicode, str))}
 
     for prodname, product in tree['products'].iteritems():
-        proddata = stringvalues(product)
+        proddata = stringitems(product)
         proddata['product'] = prodname
         for serial, version in product['versions'].iteritems():
-            verdata = stringvalues(version)
+            verdata = stringitems(version)
             verdata['serial'] = serial
             for item in version['items']:
                 exdata = {}
                 exdata.update(proddata)
                 exdata.update(verdata)
                 callback(item, exdata)
+
+
+def walk_products(tree, callback):
+    exdata = {}
+    for prodname, product in tree['products'].iteritems():
+        proddata = stringitems(product)
+        proddata['product'] = prodname
+        callback(product, proddata)
+
+
+def expand_tree(tree, refs=None, delete=False):
+    if refs is None:
+        refs = tree.get(ALIASNAME, None)
+    expand_data(tree, refs, delete)
 
 
 def expand_data(data, refs=None, delete=False):
@@ -142,7 +159,7 @@ def read_possibly_signed(path, reader=open):
 
 
 def load_content(content):
-    return yaml.safe_load(content)
+    return json.loads(content)
 
 
 def timestamp(ts=None):
@@ -284,20 +301,27 @@ class RequestsUrlReader(object):
         self.req.close()
 
 
-def sync_collection(src_collection, src_mirror, target_mirror, path=None,
-                    resolve_args=None):
+def sync_products(src_products, src_mirror, target_mirror, path=None,
+                  resolve_args=None):
 
     src_content = None
-    if src_collection is None and path:
+    if src_products is None and path:
         (src_content, signature) = read_possibly_signed(path,
                                                         src_mirror.reader)
-        src_collection = collection.Collection(load_content(src_content))
+        src_products = load_content(src_product)
 
-    for item in src_collection.streams:
-        if not target_mirror.filter_stream(item):
-            continue
-        sync_stream_file(item.get('path'), src_mirror, target_mirror,
-                         resolve_args=resolve_args)
+    def wrap_sync_product(product, exdata):
+        fullproduct = exdata.copy()
+        fullproduct.update(product)
+
+        if not target_mirror.filter_product(fullproduct):
+            return
+
+        print "sync_product: %s" % fullproduct['product']
+        #sync_product(item.get('path'), src_mirror, target_mirror,
+                     #resolve_args=resolve_args)
+
+    walk_products(src_products, wrap_sync_product)
 
     if path is not None:
         # if path was provided, insert it into the target
@@ -307,8 +331,8 @@ def sync_collection(src_collection, src_mirror, target_mirror, path=None,
                 src_content = fp.read()
 
     # FIXME: if we'd filtered src_collection we should store target_collection
-    target_mirror.store_collection(path, collection=src_collection,
-                                   content=src_content)
+    target_mirror.store_products(path, products=src_products,
+                                content=src_content)
 
 
 def normalize_url(url):

@@ -1,13 +1,14 @@
 import os
 from simplestreams.objectstores import SimpleStreamMirrorWriter
 from simplestreams.stream import Stream
+from simplestreams import util
 import subprocess
 import tempfile
 import yaml
 
 READ_SIZE = (1024 * 1024)
 
-REQUIRED_FIELDS = ("stream_load",)
+REQUIRED_FIELDS = ("product_load",)
 HOOK_NAMES = (
     "collection_store",
     "group_insert_post",
@@ -17,9 +18,9 @@ HOOK_NAMES = (
     "item_filter",
     "item_insert",
     "item_remove",
-    "stream_filter",
-    "stream_load",
-    "stream_store",
+    "product_filter",
+    "product_load",
+    "product_store",
     )
 DEFAULT_HOOK_NAME = "command"
 ENV_HOOK_NAME = "HOOK"
@@ -30,10 +31,10 @@ ENV_FIELDS_NAME = "FIELDS"
 CommandHookMirror: invoke commands to implement a SimpleStreamMirror
 
 Available command hooks:
-  stream_load:
-    invoked to list items in the stream. See stream_load_output_format.
-  stream_store:
-    invoked to store the stream, after all add/remove have been done.
+  product_load:
+    invoked to list items in the product. See product_load_output_format.
+  product_store:
+    invoked to store the product, after all add/remove have been done.
 
   collection_store:
     invoked to store a collection after all add/remove have been done.
@@ -45,9 +46,8 @@ Available command hooks:
     invoked with the group information before and after add/remove
     of a item in the group.
 
-  stream_filter:
-    FIXME: This does not do anything.
-    invoked to determine if a stream should be operated on
+  product_filter:
+    invoked to determine if a product should be operated on
     exit 0 for "yes", 1 for "no".
 
   item_filter
@@ -62,7 +62,7 @@ Available command hooks:
 
 
 Other Configuration:
-  stream_load_output_format: one of [serial_list, yaml]
+  product_load_output_format: one of [serial_list, yaml]
     serial_list: The default output should be one serial per line
                  representing an item_groups serial that is present
     yaml: output should be a dictionary that can be passed into
@@ -105,21 +105,21 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
         check_config(config)
         self.config = config
 
-    def load_stream(self, path, reference=None):
-        (_rc, output) = self.call_hook('stream_load', data=reference,
+    def load_product(self, path, reference=None):
+        (_rc, output) = self.call_hook('product_load', data=reference,
                                        capture=True)
-        fmt = self.config.get("stream_load_output_format", "serial_list")
+        fmt = self.config.get("product_load_output_format", "serial_list")
 
-        loaded = load_stream_output(output=output, fmt=fmt, reference=reference)
+        loaded = load_product_output(output=output, fmt=fmt, reference=reference)
         return loaded
 
-    def store_stream(self, path, stream, content):
-        self.call_hook('stream_store', data=stream,
-                       extra={'content': content, 'path': path})
+    def store_product(self, path, product):
+        self.call_hook('product_store', data=product,
+                       extra={'path': path})
 
-    def store_collection(self, path, collection, content):
-        self.call_hook('collection_store', data=collection,
-                       extra={'content': content, 'path': path})
+    def store_products(self, path, products, content):
+        self.call_hook('products_store', data=products, content=content,
+                       extra={'path': path})
 
     def insert_group(self, group, reader):
         self.call_hook('group_insert_pre', data=group)
@@ -135,8 +135,8 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
 
         self.call_hook('group_remove_post', data=group)
 
-    def filter_stream(self, stream):
-        return not self.stream_is_filtered(stream)
+    def filter_product(self, product):
+        return not self.product_is_filtered(product)
 
     def filter_group(self, group):
         return not self.group_is_filtered(group)
@@ -149,8 +149,8 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
         (ret, _output) = self.call_hook('item_filter', item, rcs=[0, 1])
         return ret == 1
 
-    def stream_is_filtered(self, stream):
-        (ret, _output) = self.call_hook('stream_filter', stream, rcs=[0, 1])
+    def product_is_filtered(self, product):
+        (ret, _output) = self.call_hook('product_filter', product, rcs=[0, 1])
         return ret == 1
 
     def insert_item(self, item, reader):
@@ -179,7 +179,8 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
             return
         self.call_hook('item_remove', item)
 
-    def call_hook(self, hookname, data, capture=False, rcs=None, extra=None):
+    def call_hook(self, hookname, data, capture=False, rcs=None, extra=None,
+                  content=None):
         command = self.config.get(hookname, self.config.get(DEFAULT_HOOK_NAME))
         if not command:
             # return successful execution with no output
@@ -188,15 +189,28 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
         if isinstance(command, str):
             command = ['sh', '-c', command]
 
-        fdata = data.flattened()
+        fdata = util.stringitems(data)
+
+        content_file = None
+        if content is not None:
+            (tfd, content_file) = tempfile.mkstemp()
+            tfile = os.fdopen(tfd, "w")
+            tfile.write(content)
+            tfile.close()
+            fdata['content_file_path'] = content_file
+
         if extra:
             fdata.update(extra)
-        fdata = {k:str(v) for k, v in fdata.iteritems()}
         fdata['HOOK'] = hookname
 
-        return call_hook(command=command, data=fdata,
-                         unset=self.config.get('unset_value', None),
-                         capture=capture, rcs=rcs)
+        print "calling hook: %s" % hookname
+        try:
+            return call_hook(command=command, data=fdata,
+                             unset=self.config.get('unset_value', None),
+                             capture=capture, rcs=rcs)
+        finally:
+            if content_file:
+                os.unlink(content_file)
 
 
 def call_hook(command, data, unset=None, capture=False, rcs=None):
@@ -236,7 +250,7 @@ def check_config(config):
         raise TypeError("Missing required config entries for %s" % missing)
 
 
-def load_stream_output(output, reference, fmt="serial_list"):
+def load_product_output(output, reference, fmt="serial_list"):
     # parse command output and return
 
     if fmt == "serial_list":

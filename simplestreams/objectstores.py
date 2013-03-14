@@ -100,7 +100,7 @@ class SimpleStreamMirrorWriter(object):
         # remove item group and items in it
         raise NotImplementedError()
 
-    def filter_stream(self, stream):
+    def filter_product(self, stream):
         return True
 
     def filter_group(self, group):
@@ -166,20 +166,10 @@ class UrlMirrorReader(SimpleStreamMirrorReader):
             self._reader = util.url_reader
 
         self.prefix = prefix
-        info = load_mirror_info(self.reader)
-        self.iqn = info.get('iqn')
-        self.mirrors = info.get('mirrors', [])
-        self.authoritative = info.get('authoritative_mirror')
 
     def reader(self, path):
-        try:
-            reader = self._reader(self.prefix + path)
-            return sreader.Reader(reader=reader, url=self.prefix + path)
-        except Exception as e:
-            util.pass_if_enoent(e)
-
-        return try_mirrors(path, mirrors=self.mirrors,
-                           authoritative=self.authoritative)
+        reader = self._reader(self.prefix + path)
+        return sreader.Reader(reader=reader, url=self.prefix + path)
 
 
 class FileStore(ObjectStore):
