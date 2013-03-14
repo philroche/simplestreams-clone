@@ -13,6 +13,7 @@ import yaml
 
 import simplestreams.util as util
 import simplestreams.stream
+import simplestreams.reader as sreader
 
 LOG = logging.getLogger('simplestreams')
 LOG.setLevel(logging.ERROR)
@@ -33,8 +34,8 @@ class ObjectStore(object):
         raise NotImplementedError()
 
     def insert_content(self, path, content, checksums=None):
-        reader = Reader(reader=StringReader(content),
-                        url=(self.prefix + path)),
+        reader = sreader.Reader(reader=StringReader(content),
+                               url=(self.prefix + path)),
         self.insert(path, reader, checksums)
 
     def remove(self, path):
@@ -64,8 +65,8 @@ class MemoryObjectStore(ObjectStore):
 
     def reader(self, path):
         # essentially return an 'open(path, r)'
-        return Reader(reader=StringReader(self.data['path']),
-                      url="%s://%s" % (self.__class__, path))
+        return sreader.Reader(reader=StringReader(self.data['path']),
+                             url="%s://%s" % (self.__class__, path))
 
 
 class SimpleStreamMirrorReader(object):
@@ -173,7 +174,7 @@ class UrlMirrorReader(SimpleStreamMirrorReader):
     def reader(self, path):
         try:
             reader = self._reader(self.prefix + path)
-            return Reader(reader=reader, url=self.prefix + path)
+            return sreader.Reader(reader=reader, url=self.prefix + path)
         except Exception as e:
             util.pass_if_enoent(e)
 
@@ -224,7 +225,7 @@ class FileStore(ObjectStore):
 
     def reader(self, path):
         fpath = os.path.join(self.prefix, path)
-        return Reader(reader=open(fpath, "r"), url=fpath)
+        return sreader.Reader(reader=open(fpath, "r"), url=fpath)
 
 
 class S3ObjectStore(ObjectStore):
@@ -286,7 +287,7 @@ class S3ObjectStore(ObjectStore):
             myerr.errno = errno.ENOENT
             raise myerr
 
-        return Reader(reader=key, url=self.path_prefix + path)
+        return sreader.Reader(reader=key, url=self.path_prefix + path)
 
     def exists_with_checksum(self, path, checksums=None):
         key = self.bucket.get_key(self.path_prefix + path)
@@ -297,21 +298,6 @@ class S3ObjectStore(ObjectStore):
             return checksums['md5'] == key.etag.replace('"', "")
 
         return False
-
-
-class Reader(object):
-    def __init__(self, reader, url):
-        self.reader = reader
-        self.url = url
-
-    def read(self, size=-1):
-        return self.reader.read(size)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, type, value, trace):
-        self.reader.close()
 
 
 class StringReader(StringIO.StringIO):
@@ -481,7 +467,7 @@ def try_mirrors(path, mirrors=None, authoritative=None):
     for mirror in search:
         try:
             url = mirror + path
-            return Reader(reader=util.url_reader(url), url=url)
+            return sreader.Reader(reader=util.url_reader(url), url=url)
         except Exception as e:
             util.pass_if_enoent(e)
 

@@ -8,6 +8,7 @@ import time
 import urlparse
 import yaml
 
+import simplestreams.reader as sreader
 
 PGP_SIGNED_MESSAGE_HEADER = "-----BEGIN PGP SIGNED MESSAGE-----"
 PGP_SIGNATURE_HEADER = "-----BEGIN PGP SIGNATURE-----"
@@ -158,7 +159,12 @@ def pass_if_enoent(exc):
 
 
 def url_reader(url):
-    return RequestsUrlReader(url)
+    norm = normalize_url(url)
+    if norm.startswith("file://"):
+        fpath = norm[len("file://"):]
+        return sreader.Reader(reader=open(fpath, "r"), url=norm)
+    else:
+        return RequestsUrlReader(url)
 
 
 def sync_stream_file(path, src_mirror, target_mirror, resolve_args=None):
