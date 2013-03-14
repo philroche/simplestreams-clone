@@ -252,6 +252,7 @@ def create_image_data(query_tree, out_d):
     if os.path.isfile(hashcache):
         FILE_DATA.update(json.loads(open(hashcache).read()))
 
+    ts = util.timestamp()
     tree = dl_load_query(query_tree)
 
     def update_hashes(item, exdata):
@@ -263,7 +264,9 @@ def create_image_data(query_tree, out_d):
     def create_file(item, exdata):
         create_fake_file(out_d, item)
 
+    cid_fmt = "com.ubuntu.cloud:v1:content:%s:download"
     for stream in tree:
+        cid = cid_fmt % stream
         if REAL_DATA:
             util.walk_items(tree[stream], update_hashes)
             util.walk_items(tree[stream], update_sizes)
@@ -271,8 +274,10 @@ def create_image_data(query_tree, out_d):
             util.walk_items(tree[stream], create_file)
 
         tree[stream]['format'] = "products:1.0"
+        tree[stream]['updated'] = ts
+        tree[stream]['content_id'] = cid
 
-        outfile = os.path.join(out_d, stream, 'dl.js')
+        outfile = os.path.join(out_d, stream, cid + ".js")
         util.mkdir_p(os.path.dirname(outfile))
         with open(outfile, "w") as fp:
             sys.stderr.write("writing %s\n" % outfile)
@@ -285,7 +290,10 @@ def create_image_data(query_tree, out_d):
 
 def create_aws_data(query_tree, out_d):
     tree = ec2_load_query(query_tree)
+    ts = util.timestamp()
+    cid_fmt = "com.ubuntu.cloud:v1:content:%s:aws"
     for stream in tree:
+        cid = cid_fmt % stream
         # now add the '_alias' data
         regions = set()
         def findregions(item, exdata):
@@ -299,7 +307,9 @@ def create_aws_data(query_tree, out_d):
                 'region': region}
 
         tree[stream]['format'] = "products:1.0"
-        outfile = os.path.join(out_d, stream, 'aws.js')
+        tree[stream]['updated'] = ts
+        tree[stream]['content_id'] = cid
+        outfile = os.path.join(out_d, stream, cid + ".js")
         util.mkdir_p(os.path.dirname(outfile))
         with open(outfile, "w") as fp:
             sys.stderr.write("writing %s\n" % outfile)
@@ -327,23 +337,28 @@ def main():
 
     aws_tree = create_aws_data(args.query_tree, args.out_d)
 
-    indexes = {stream:{"index": [], 'format': 'collection:1.0'}
-               for stream in aws_tree}
+    blank = {"index": [], 'format': 'collection:1.0',
+             'updated': util.timestamp()}
+    indexes = {stream: blank.copy() for stream in aws_tree}
 
     for streamname in aws_tree:
         index = indexes[streamname]['index']
 
         clouds = aws_tree[streamname]['_aliases']['cloud'].values()
         index.append({
+            'updated': aws_tree[streamname]['updated'],
+            'content_id': aws_tree[streamname]['content_id'],
             'datatype': 'image-ids',
             'clouds': clouds,
             'cloudname': "aws",
-            'path': "aws.js",
+            'path': "%s.js" % aws_tree[streamname]['content_id'],
             'products': aws_tree[streamname]['products'].keys(),
         })
         index.append({
+            'updated': dltree[streamname]['updated'],
+            'content_id': dltree[streamname]['content_id'],
             'datatype': 'image-downloads',
-            'path': "dl.js",
+            'path': "%s.js" % aws_tree[streamname]['content_id'],
             'products': dltree[streamname]['products'].keys()
             })
 
@@ -360,35 +375,6 @@ def main():
             for f in [f for f in files if f.endswith(".js")]:
                 toolutil.signjs_file(os.path.join(root, f), status_cb=printstatus)
 
-#for streamname in STREAMS:
-#    aws_stream = copy.deepcopy(aws[streamname])
-#    expand_data(aws_stream, aws_stream[ALIASNAME])
-#
-#    index = indexes[streamname]['index']
-#    endpoints = set()
-#    products = set()
-#    for (pname, product) in aws_stream['products'].iteritems():
-#        products.add(pname)
-#        for v in product['versions'].values():
-#            for i in v['items']:
-#                endpoints.add((i['endpoint'], i['region']))
-#    clouds = []
-#    for (e, r) in endpoints:
-#        clouds.append({'endpoint': e, 'region': r})
-#
-#    index.append({
-#        'datatype': 'image-ids',
-#        'clouds': clouds,
-#        'cloudname': "aws",
-#        'path': "aws.js",
-#        'products': list(products),
-#        })
-#
-#    index.append({
-#        'datatype': 'image-downloads',
-#        'path': "dl.js",
-#        'products': dl[streamname]['products'].keys()
-#        })
 
     return
 

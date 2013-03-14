@@ -4,6 +4,7 @@ import errno
 import os
 import requests
 import subprocess
+import time
 import urlparse
 import yaml
 
@@ -29,6 +30,28 @@ def walk_items(tree, callback):
                 exdata.update(proddata)
                 exdata.update(verdata)
                 callback(item, exdata)
+
+
+def expand_data(data, refs=None, delete=False):
+    if isinstance(data, dict):
+        if isinstance(refs, dict):
+            for key in data.keys():
+                if key == ALIASNAME:
+                    continue
+                ref = refs.get(key)
+                if not ref:
+                    continue
+                value = data.get(key)
+                if value and isinstance(value, (unicode, str)):
+                    data.update(ref[value])
+                    if delete:
+                        del data[key]
+        for key in data:
+            expand_data(data[key], refs)
+    elif isinstance(data, list):
+        for item in data:
+            expand_data(item, refs)
+
 
 def resolve_work(src, target, max=None, keep=False, filter=None,
                  sort_reverse=True):
@@ -119,6 +142,10 @@ def read_possibly_signed(path, reader=open):
 
 def load_content(content):
     return yaml.safe_load(content)
+
+
+def timestamp(ts=None):
+    return time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime(ts))
 
 
 def pass_if_enoent(exc):
