@@ -142,12 +142,13 @@ def load_query_ec2(path, builds=None, rels=None, max_dailies=NUM_DAILIES):
                 ret = [stream]
                 ret.extend(line.split("\t", 11)[0:11])
 
-                serial = ret[4]
-                if serial != last_serial:
-                    serials_seen += 1
-                last_serial = serial
-                if serials_seen > NUM_DAILIES:
-                    break
+                if stream == "daily":
+                    serial = ret[4]
+                    if serial != last_serial:
+                        serials_seen += 1
+                    last_serial = serial
+                    if serials_seen > NUM_DAILIES:
+                        break
 
                 results.append(ret)
 
