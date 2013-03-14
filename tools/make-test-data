@@ -138,7 +138,7 @@ def create_fake_file(prefix, item):
     elif path.endswith(".tar.gz"):
         size = 1024 * 1024 * 10 + 300
 
-    toolutil.mkdir_p(os.path.dirname(fpath))
+    util.mkdir_p(os.path.dirname(fpath))
     print "creating %s" % fpath
     with open(fpath, "w") as fp:
         fp.truncate(size)
