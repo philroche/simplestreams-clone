@@ -156,7 +156,7 @@ def dl_load_query(path):
             tree[stream] = {'products': {}}
         products = tree[stream]['products']
 
-        prodname = "com.ubuntu.cloud:%s:%s:%s" % (build, rel, arch)
+        prodname = "%s:%s:%s" % (build, rel, arch)
 
         if prodname not in products:
             products[prodname] = {
@@ -204,7 +204,7 @@ def ec2_load_query(path):
             tree[stream] = {'products': {}}
         products = tree[stream]['products']
 
-        prodname = "com.ubuntu.cloud:%s:%s:%s" % (build, rel, arch)
+        prodname = "%s:%s:%s" % (build, rel, arch)
 
         if prodname not in products:
             products[prodname] = {
@@ -257,7 +257,7 @@ def create_image_data(query_tree, out_d, streamdir):
     def update_sizes(item, exdata):
         item.update({'size': get_cloud_images_file_size(item['path'])})
 
-    cid_fmt = "com.ubuntu.cloud:v1:content:%s:download"
+    cid_fmt = "com.ubuntu.cloud:%s:download"
     for stream in tree:
         def create_file(item, exdata):
             create_fake_file(os.path.join(out_d, stream), item)
@@ -287,7 +287,7 @@ def create_image_data(query_tree, out_d, streamdir):
 def create_aws_data(query_tree, out_d, streamdir):
     tree = ec2_load_query(query_tree)
     ts = util.timestamp()
-    cid_fmt = "com.ubuntu.cloud:v1:content:%s:aws"
+    cid_fmt = "com.ubuntu.cloud:%s:aws"
     for stream in tree:
         cid = cid_fmt % stream
         # now add the '_alias' data
