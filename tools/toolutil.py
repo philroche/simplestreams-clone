@@ -213,21 +213,11 @@ def signjs_file(fname, status_cb=None):
             pass
         status_cb = null_cb
 
-    if fmt == "stream-collection:1.0":
-        status_cb(fname, fmt)
-        signfile(fname)
-        for stream in data.get('streams'):
-            path = stream.get('path')
-            if path.endswith(".js"):
-                stream['path'] = path[0:-len(".js")] + ".sjs"
-        with open(sjs, "w") as fp:
-            fp.write(json.dumps(data, indent=1))
-        signfile_inline(sjs)
-    elif fmt == "stream:1.0" or fmt == "products:1.0":
+    if fmt == "products:1.0":
         status_cb(fname, fmt)
         signfile(fname)
         signfile_inline(fname, sjs)
-    elif fmt == "collection:1.0":
+    elif fmt == "index:1.0":
         status_cb(fname, fmt)
         signfile(fname)
         for item in data.get('index'):

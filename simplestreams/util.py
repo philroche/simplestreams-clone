@@ -1,6 +1,5 @@
-from simplestreams import collection
-
 import errno
+import hashlib
 import os
 import requests
 import subprocess
@@ -8,7 +7,7 @@ import time
 import urlparse
 import json
 
-import simplestreams.reader as sreader
+import simplestreams.contentsource as cs
 
 ALIASNAME = "_aliases"
 
@@ -16,32 +15,59 @@ PGP_SIGNED_MESSAGE_HEADER = "-----BEGIN PGP SIGNED MESSAGE-----"
 PGP_SIGNATURE_HEADER = "-----BEGIN PGP SIGNATURE-----"
 PGP_SIGNATURE_FOOTER = "-----END PGP SIGNATURE-----"
 
+_UNSET = object()
+CHECKSUMS = ("md5", "sha256", "sha512")
+
+
 def stringitems(data):
     return {k:v for k,v in data.iteritems() if
             isinstance(v, (unicode, str))}
 
-def walk_items(tree, callback):
+
+def products_exdata(tree=None, prodname=None, proddata=None, vername=None,
+                    verdata=None, idata=None):
     exdata = {}
+    for p in (tree, proddata, verdata, idata):
+        if p:
+            exdata.update(stringitems(p))
+    for (name, val) in (('product', prodname), ('version', vername)):
+        if val:
+            exdata[name] = val
 
-    for prodname, product in tree['products'].iteritems():
-        proddata = stringitems(product)
-        proddata['product'] = prodname
-        for serial, version in product['versions'].iteritems():
-            verdata = stringitems(version)
-            verdata['serial'] = serial
-            for item in version['items']:
-                exdata = {}
-                exdata.update(proddata)
-                exdata.update(verdata)
-                callback(item, exdata)
+    return exdata
 
 
-def walk_products(tree, callback):
-    exdata = {}
-    for prodname, product in tree['products'].iteritems():
-        proddata = stringitems(product)
-        proddata['product'] = prodname
-        callback(product, proddata)
+def walk_products(tree, cb_product=None, cb_version=None, cb_item=None,
+              ret_finished=_UNSET):
+    # walk a product tree
+    for prodname, proddata in tree['products'].iteritems():
+        if cb_product:
+            ex = products_exdata(prodname=prodname, proddata=proddata)
+            ret = cb_product(proddata, ex)
+            if ret_finished != _UNSET and ret == ret_finished:
+                return
+
+        if not cb_version and not cb_item:
+            continue
+
+        for vername, verdata in proddata['versions'].iteritems():
+            if cb_version:
+                ex = products_exdata(prodname=prodname, proddata=proddata,
+                                     vername=vername, verdata=verdata)
+                ret = cb_version(verdata, ex)
+                if ret_finished != _UNSET and ret == ret_finished:
+                    return
+
+            if not cb_item:
+                continue
+
+            for item in verdata['items']:
+                ex = products_exdata(prodname=prodname, proddata=proddata,
+                                     vername=vername, verdata=verdata,
+                                     idata=item)
+                ret = cb_item(item, ex)
+                if ret_finished != _UNSET and ret == ret_finished:
+                    return
 
 
 def expand_tree(tree, refs=None, delete=False):
@@ -162,8 +188,50 @@ def load_content(content):
     return json.loads(content)
 
 
+def dump_data(data):
+    return json.dumps(data, indent=1)
+
+
 def timestamp(ts=None):
     return time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime(ts))
+
+
+def item_checksums(item):
+    return {k:item[k] for k in CHECKSUMS if k in item}
+
+
+class checksummer(object):
+    _hasher = None
+    algorithm = None
+    expected = None
+
+    def __init__(self, checksums):
+        # expects a dict of hashname/value
+        if not checksums:
+            self._hasher = None
+            return
+        for meth in CHECKSUMS:
+            if meth in checksums and meth in hashlib.algorithms:
+                self._hasher = hashlib.new(meth)
+                self.algorithm = meth
+
+        self.expected = checksums.get(self.algorithm, None)
+
+        if not self._hasher:
+            raise TypeError("Unable to find suitable hash algorithm")
+
+    def update(self, data):
+        if self._hasher is None:
+            return
+        self._hasher.update(data)
+
+    def hexdigest(self):
+        if self._hasher is None:
+            return None
+        return self._hasher.hexdigest()
+
+    def check(self):
+        return (self.expected is None or self.expected == self.hexdigest())
 
 
 def pass_if_enoent(exc):
@@ -175,130 +243,65 @@ def pass_if_enoent(exc):
     raise exc
 
 
+def read_url(url):
+    return cs.UrlContentSource(url).read()
+
 def url_reader(url):
     norm = normalize_url(url)
     if norm.startswith("file://"):
         fpath = norm[len("file://"):]
         return sreader.Reader(reader=open(fpath, "r"), url=norm)
     else:
-        return RequestsUrlReader(url)
+        return cs.RequestsUrlReader(url)
 
 
-def sync_stream_file(path, src_mirror, target_mirror, resolve_args=None):
-    return sync_stream(src_stream=None, src_mirror=src_mirror,
-                       target_stream=None, target_mirror=target_mirror,
-                       path=path, resolve_args=resolve_args)
-
-def sync_stream(src_stream, src_mirror, target_stream, target_mirror,
-                path=None, resolve_args=None):
+def sync_product(src_product, src_mirror, target_product, target_mirror,
+                 products_path=None, prodname=None, resolve_args=None):
 
     if resolve_args is None:
         resolve_args = {}
 
-    src_content = None
+    if src_product is None and products_path and prodname:
+        src_product = src_mirror.load_product(path, prodname)
 
-    if src_stream is None and path:
-        src_stream = src_mirror.load_stream(path)
+    if not prodname:
+        prodname = src_product['product']
 
-    if target_stream is None:
-        if not path:
-            raise TypeError("target_stream is none, but no path provided")
-        # if target_stream was not provided
-        target_stream = target_mirror.load_stream(path, src_stream)
+    if target_product is None:
+        target_product = target_mirror.load_product(products_path, prodname)
 
-        if target_stream.iqn != src_stream.iqn:
-            raise TypeError("source content iqn (%s) != "
-                            "mirrored content iqn (%s) at %s" %
-                            (src_stream.iqn, target_stream.iqn, path))
+        tprodname = target_product.get('product')
 
-    (to_add, to_remove) = resolve_work(src_stream.item_groups,
-                                       target_stream.item_groups,
-                                       filter=target_mirror.filter_group,
+    # get a hash of version: flattened so that we have it.
+    flatdata = {}
+    for vername, verdata in src_product['versions'].iteritems():
+        extra = exdata(prodname=prodname, proddata=src_product, vername=vername,
+                       verdata=verdata)
+        extra.update(verdata)
+        flatdata[vername] = extra
+        
+    def version_filter(version):
+        data = src_product['versions'][version].copy()
+        #data['version'] = version
+        
+        return target_mirror.filter_version(flatdata[version])
+
+    (to_add, to_remove) = resolve_work(src_product['versions'].keys(),
+                                       target_product['versions'].keys(),
+                                       filter=version_filter,
                                        **resolve_args)
 
-    for item_group in to_add:
-        target_mirror.insert_group(item_group, src_mirror.reader)
-        target_stream.item_groups.append(item_group)
+    for version in to_add:
+        target_mirror.insert_version(src_product['versions'][version], src_mirror.reader)
+        target_stream['versions'] = version
 
-    for item_group in to_remove:
-        target_mirror.remove_group(item_group)
-        target_stream.item_groups.remove(item_group)
+    for version in to_remove:
+        target_mirror.remove_version(flatdata[version])
+        del target_stream['versions'][version]
 
-    if path is not None:
-        # if path was provided, insert it into the target
-        # if we've already read the src_content above, do not read again
-        if src_content is None:
-            with src_mirror.reader(path) as fp:
-                src_content = fp.read()
+    target_mirror.store_product(products_path, product=target_product)
 
-    target_mirror.store_stream(path, stream=target_stream,
-                               content=src_content)
-
-    return target_stream
-
-class RequestsUrlReader(object):
-    def __init__(self, url, buflen=None):
-        self.url = url
-        self.req = requests.get(url, stream=True)
-        self.r_iter = None
-        if buflen is None:
-            buflen = 1024 * 1024
-        self.buflen = buflen
-        self.leftover = None
-        self.consumed = False
-
-        if self.req.status_code == requests.codes.NOT_FOUND:
-            myerr = IOError("Unable to open %s" % url)
-            myerr.errno = errno.ENOENT
-            raise myerr
-
-        ce = self.req.headers.get('content-encoding', '').lower()
-        if 'gzip' in ce or 'deflate' in ce:
-            self._read = self.read_compressed
-        else:
-            self._read = self.read_raw
-
-    def read(self, size=-1):
-        if size < 0:
-            size = None
-        return self._read(size)
-
-    def read_compressed(self, size=None):
-        if not self.r_iter:
-            self.r_iter = self.req.iter_content(self.buflen)
-
-        if self.consumed:
-            return bytes()
-
-        ret = bytes()
-
-        if self.leftover is not None:
-            if len(self.leftover) > size:
-                ret = self.leftover[0:size]
-                self.leftover = self.leftover[size:]
-                return ret
-            ret = self.leftover
-            self.leftover = None
-
-        size_end = (size is not None and size >= 0)
-
-        while True:
-            try:
-                ret += self.r_iter.next()
-                if not size_end:
-                    next
-                if len(ret) >= size:
-                    self.leftover = ret[size:]
-                    return ret[0:size]
-            except StopIteration as e:
-                self.consumed = True
-                return ret
-
-    def read_raw(self, size=None):
-        return self.req.raw.read(size)
-
-    def close(self):
-        self.req.close()
+    return target_product
 
 
 def sync_products(src_products, src_mirror, target_mirror, path=None,
@@ -308,7 +311,7 @@ def sync_products(src_products, src_mirror, target_mirror, path=None,
     if src_products is None and path:
         (src_content, signature) = read_possibly_signed(path,
                                                         src_mirror.reader)
-        src_products = load_content(src_product)
+        src_products = load_content(src_content)
 
     def wrap_sync_product(product, exdata):
         fullproduct = exdata.copy()
@@ -317,9 +320,10 @@ def sync_products(src_products, src_mirror, target_mirror, path=None,
         if not target_mirror.filter_product(fullproduct):
             return
 
-        print "sync_product: %s" % fullproduct['product']
-        #sync_product(item.get('path'), src_mirror, target_mirror,
-                     #resolve_args=resolve_args)
+        sync_product(product, src_mirror, target_product=None,
+                     target_mirror=target_mirror, products_path=path,
+                     prodname = fullproduct['product'],
+                     resolve_args=resolve_args)
 
     walk_products(src_products, wrap_sync_product)
 

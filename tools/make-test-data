@@ -32,11 +32,6 @@ else:
 FILE_DATA = {}
 
 
-def readurl(url):
-    sys.stderr.write("reading %s\n" % url)
-    return util.url_reader(url).read()
-
-
 def get_cache_data(path, field):
     dirname = os.path.dirname(path)
     bname = os.path.basename(path)
@@ -74,7 +69,8 @@ def get_cloud_images_file_hash(path):
             dir_url = burl + dirname
 
             try:
-                content = readurl(dir_url + "/%sSUMS" % cksum.upper())
+                sys.stderr.write("reading %s\n" % url)
+                content = util.read_url(dir_url + "/%sSUMS" % cksum.upper())
                 break
             except requests.HTTPError as error:
                 pass
@@ -246,7 +242,7 @@ def printitem(item, exdata):
     full.update(item)
     print full
 
-def create_image_data(query_tree, out_d):
+def create_image_data(query_tree, out_d, streamdir):
     hashcache = os.path.join(query_tree, "FILE_DATA_CACHE")
     FILE_DATA['filename'] = hashcache
     if os.path.isfile(hashcache):
@@ -261,23 +257,23 @@ def create_image_data(query_tree, out_d):
     def update_sizes(item, exdata):
         item.update({'size': get_cloud_images_file_size(item['path'])})
 
-    def create_file(item, exdata):
-        create_fake_file(out_d, item)
-
     cid_fmt = "com.ubuntu.cloud:v1:content:%s:download"
     for stream in tree:
+        def create_file(item, exdata):
+            create_fake_file(os.path.join(out_d, stream), item)
+
         cid = cid_fmt % stream
         if REAL_DATA:
-            util.walk_items(tree[stream], update_hashes)
-            util.walk_items(tree[stream], update_sizes)
+            util.walk_products(tree[stream], cb_item=update_hashes)
+            util.walk_products(tree[stream], cb_item=update_sizes)
         else:
-            util.walk_items(tree[stream], create_file)
+            util.walk_products(tree[stream], cb_item=create_file)
 
         tree[stream]['format'] = "products:1.0"
         tree[stream]['updated'] = ts
         tree[stream]['content_id'] = cid
 
-        outfile = os.path.join(out_d, stream, cid + ".js")
+        outfile = os.path.join(out_d, stream, streamdir, cid + ".js")
         util.mkdir_p(os.path.dirname(outfile))
         with open(outfile, "w") as fp:
             sys.stderr.write("writing %s\n" % outfile)
@@ -288,7 +284,7 @@ def create_image_data(query_tree, out_d):
     return tree
 
 
-def create_aws_data(query_tree, out_d):
+def create_aws_data(query_tree, out_d, streamdir):
     tree = ec2_load_query(query_tree)
     ts = util.timestamp()
     cid_fmt = "com.ubuntu.cloud:v1:content:%s:aws"
@@ -298,7 +294,7 @@ def create_aws_data(query_tree, out_d):
         regions = set()
         def findregions(item, exdata):
             regions.add(item['cloud'])
-        util.walk_items(tree[stream], findregions)
+        util.walk_products(tree[stream], cb_item=findregions)
 
         tree[stream]['_aliases'] = {'cloud': {}}
         for region in regions:
@@ -309,7 +305,7 @@ def create_aws_data(query_tree, out_d):
         tree[stream]['format'] = "products:1.0"
         tree[stream]['updated'] = ts
         tree[stream]['content_id'] = cid
-        outfile = os.path.join(out_d, stream, cid + ".js")
+        outfile = os.path.join(out_d, stream, streamdir, cid + ".js")
         util.mkdir_p(os.path.dirname(outfile))
         with open(outfile, "w") as fp:
             sys.stderr.write("writing %s\n" % outfile)
@@ -332,41 +328,43 @@ def main():
                         help='sign all generated files')
 
     args = parser.parse_args()
+    streamdir = "streams/v1"
 
-    dltree = create_image_data(args.query_tree, args.out_d)
+    dltree = create_image_data(args.query_tree, args.out_d, streamdir)
 
-    aws_tree = create_aws_data(args.query_tree, args.out_d)
-
-    blank = {"index": [], 'format': 'collection:1.0',
-             'updated': util.timestamp()}
-    indexes = {stream: blank.copy() for stream in aws_tree}
+    aws_tree = create_aws_data(args.query_tree, args.out_d, streamdir)
 
     for streamname in aws_tree:
-        index = indexes[streamname]['index']
+        index = {"index": [], 'format': 'index:1.0',
+                 'updated': util.timestamp()}
 
         clouds = aws_tree[streamname]['_aliases']['cloud'].values()
-        index.append({
+        index['index'].append({
             'updated': aws_tree[streamname]['updated'],
             'content_id': aws_tree[streamname]['content_id'],
             'datatype': 'image-ids',
             'clouds': clouds,
             'cloudname': "aws",
-            'path': "%s.js" % aws_tree[streamname]['content_id'],
+            'path': '/'.join((streamdir,
+                             "%s.js" % aws_tree[streamname]['content_id'],)),
             'products': aws_tree[streamname]['products'].keys(),
+            'format': aws_tree[streamname]['format'],
         })
-        index.append({
+        index['index'].append({
             'updated': dltree[streamname]['updated'],
             'content_id': dltree[streamname]['content_id'],
             'datatype': 'image-downloads',
-            'path': "%s.js" % aws_tree[streamname]['content_id'],
-            'products': dltree[streamname]['products'].keys()
+            'path': '/'.join((streamdir,
+                             "%s.js" % dltree[streamname]['content_id'],)),
+            'products': dltree[streamname]['products'].keys(),
+            'format': dltree[streamname]['format']
             })
 
-        outfile = os.path.join(args.out_d, streamname, 'index.js')
+        outfile = os.path.join(args.out_d, streamname, streamdir, 'index.js')
         util.mkdir_p(os.path.dirname(outfile))
         with open(outfile, "w") as fp:
             sys.stderr.write("writing %s\n" % outfile)
-            fp.write(json.dumps(indexes[streamname], indent=1) + "\n")
+            fp.write(json.dumps(index, indent=1) + "\n")
 
     if args.sign:
         def printstatus(name, fmt):

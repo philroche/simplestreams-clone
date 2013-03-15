@@ -11,10 +11,10 @@ READ_SIZE = (1024 * 1024)
 REQUIRED_FIELDS = ("product_load",)
 HOOK_NAMES = (
     "collection_store",
-    "group_insert_post",
-    "group_insert_pre",
-    "group_remove_post",
-    "group_remove_pre",
+    "version_insert_post",
+    "version_insert_pre",
+    "version_remove_post",
+    "version_remove_pre",
     "item_filter",
     "item_insert",
     "item_remove",
@@ -39,12 +39,12 @@ Available command hooks:
   collection_store:
     invoked to store a collection after all add/remove have been done.
 
-  group_insert_pre
-  group_insert_post
-  group_remove_pre
-  group_remove_post
-    invoked with the group information before and after add/remove
-    of a item in the group.
+  version_insert_pre
+  version_insert_post
+  version_remove_pre
+  version_remove_post
+    invoked with the version information before and after add/remove
+    of a item in the version.
 
   product_filter:
     invoked to determine if a product should be operated on
@@ -64,7 +64,7 @@ Available command hooks:
 Other Configuration:
   product_load_output_format: one of [serial_list, yaml]
     serial_list: The default output should be one serial per line
-                 representing an item_groups serial that is present
+                 representing a version that is present
     yaml: output should be a dictionary that can be passed into
           loaded via yaml.safe_load and passed to Stream()
 
@@ -105,12 +105,13 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
         check_config(config)
         self.config = config
 
-    def load_product(self, path, reference=None):
-        (_rc, output) = self.call_hook('product_load', data=reference,
+    def load_product(self, path, prodname):
+        (_rc, output) = self.call_hook('product_load',
+                                       data={'product': prodname},
                                        capture=True)
         fmt = self.config.get("product_load_output_format", "serial_list")
 
-        loaded = load_product_output(output=output, fmt=fmt, reference=reference)
+        loaded = load_product_output(output=output, prodname=prodname, fmt=fmt)
         return loaded
 
     def store_product(self, path, product):
@@ -121,28 +122,28 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
         self.call_hook('products_store', data=products, content=content,
                        extra={'path': path})
 
-    def insert_group(self, group, reader):
-        self.call_hook('group_insert_pre', data=group)
-        for item in group.items:
+    def insert_version(self, version, reader):
+        self.call_hook('version_insert_pre', data=version)
+        for item in version['items']:
             self.insert_item(item, reader)
 
-        self.call_hook('group_insert_post', data=group)
+        self.call_hook('version_insert_post', data=version)
 
-    def remove_group(self, group):
-        self.call_hook('group_remove_pre', data=group)
-        for item in group.items:
+    def remove_version(self, version):
+        self.call_hook('version_remove_pre', data=version)
+        for item in version['items']
             self.remove_item(item)
 
-        self.call_hook('group_remove_post', data=group)
+        self.call_hook('version_remove_post', data=version)
 
     def filter_product(self, product):
         return not self.product_is_filtered(product)
 
-    def filter_group(self, group):
-        return not self.group_is_filtered(group)
+    def filter_version(self, version):
+        return not self.version_is_filtered(version)
 
-    def group_is_filtered(self, group):
-        (ret, _output) = self.call_hook('group_filter', group, rcs=[0, 1])
+    def version_is_filtered(self, version):
+        (ret, _output) = self.call_hook('version_filter', version, rcs=[0, 1])
         return ret == 1
         
     def item_is_filtered(self, item):
@@ -189,6 +190,7 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
         if isinstance(command, str):
             command = ['sh', '-c', command]
 
+        print "calling hook: %s" % hookname
         fdata = util.stringitems(data)
 
         content_file = None
@@ -203,7 +205,6 @@ class CommandHookMirror(SimpleStreamMirrorWriter):
             fdata.update(extra)
         fdata['HOOK'] = hookname
 
-        print "calling hook: %s" % hookname
         try:
             return call_hook(command=command, data=fdata,
                              unset=self.config.get('unset_value', None),
@@ -250,25 +251,20 @@ def check_config(config):
         raise TypeError("Missing required config entries for %s" % missing)
 
 
-def load_product_output(output, reference, fmt="serial_list"):
+def load_product_output(output, prodname, fmt="serial_list"):
     # parse command output and return
 
     if fmt == "serial_list":
         # "line" format just is a list of serials that are present
-        working = reference.as_dict()
-        items = []
+        working = {'versions': {}}
+        versions = working['versions']
         seen = []
         for line in output.splitlines():
-            if line in seen:
-                continue
-            items.append({'serial': line})
-            seen.append(line)
-
-        working['item_groups'] = items
-        return Stream(working)
+            versions[line] = {}
+        return working
 
     elif fmt == "yaml":
-        return Stream(yaml.safe_load(output))
+        return yaml.safe_load(output)
 
     return
 

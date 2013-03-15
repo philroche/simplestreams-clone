@@ -22,7 +22,7 @@ data=${data# }
 [ -z "$HOOK" ] && { echo "HOOK not set. see usage --help"; exit 1; }
 
 case "$HOOK" in
-   stream_filter|group_filter)
+   product_filter|group_filter)
       # skip streams or groups that do not have arch=i386
       if [ "$arch" = "i386" ]; then
         OP="keep"
