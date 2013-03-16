@@ -150,10 +150,10 @@ def create_fake_file(prefix, item):
 def dl_load_query(path):
     tree = {}
     for rline in toolutil.load_query_download(path):
-        (stream, rel, build, label, serial, arch, filepath, name) = rline
+        (stream, rel, build, label, serial, arch, filepath, fname) = rline
 
         if stream not in tree:
-            tree[stream] = {'products': {}}
+            tree[stream] = {'products': {}, 'item_id': 'ftype'}
         products = tree[stream]['products']
 
         prodname = "%s:%s:%s" % (build, rel, arch)
@@ -170,11 +170,22 @@ def dl_load_query(path):
 
         if serial not in product['versions']:
             product['versions'][serial] = {'items': [], "label": label}
+
+        name = pubname(label, rel, arch, serial, build)
+        product['versions'][serial]['pubname'] = name
+
         items = product['versions'][serial]['items']
 
+        # ftype: finding the unique extension is not-trivial
+        # take basename of the filename, and remove up to "-<arch>?"
+        # so ubuntu-12.04-server-cloudimg-armhf.tar.gz becomes
+        # 'tar.gz' and 'ubuntu-12.04-server-cloudimg-armhf-disk1.img'
+        # becomse 'disk1.img'
+        dash_arch = "-" + arch
+        ftype = filepath[filepath.rindex(dash_arch) + len(dash_arch) + 1:]
         items.append({
             'path': filepath,
-            'name': name
+            'ftype': ftype
         })
 
     return tree
@@ -201,7 +212,7 @@ def ec2_load_query(path):
          iid, _kern, _rmd, vtype) = rline
 
         if stream not in tree:
-            tree[stream] = {'products': {}}
+            tree[stream] = {'products': {}, 'item_id': 'id'}
         products = tree[stream]['products']
 
         prodname = "%s:%s:%s" % (build, rel, arch)
@@ -221,7 +232,7 @@ def ec2_load_query(path):
         items = product['versions'][serial]['items']
 
         name = pubname(label, rel, arch, serial, build)
-        product['versions'][serial]['name'] = name
+        product['versions'][serial]['pubname'] = name
 
         if store == "instance-store":
             store = 'instance'
