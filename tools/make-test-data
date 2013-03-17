@@ -253,6 +253,7 @@ def printitem(item, exdata):
     full.update(item)
     print full
 
+
 def create_image_data(query_tree, out_d, streamdir):
     hashcache = os.path.join(query_tree, "FILE_DATA_CACHE")
     FILE_DATA['filename'] = hashcache
@@ -303,8 +304,10 @@ def create_aws_data(query_tree, out_d, streamdir):
         cid = cid_fmt % stream
         # now add the '_alias' data
         regions = set()
+
         def findregions(item, exdata):
             regions.add(item['cloud'])
+
         util.walk_products(tree[stream], cb_item=findregions)
 
         tree[stream]['_aliases'] = {'cloud': {}}
@@ -369,7 +372,7 @@ def main():
                              "%s.js" % dltree[streamname]['content_id'],)),
             'products': dltree[streamname]['products'].keys(),
             'format': dltree[streamname]['format']
-            })
+        })
 
         outfile = os.path.join(args.out_d, streamname, streamdir, 'index.js')
         util.mkdir_p(os.path.dirname(outfile))
@@ -382,8 +385,8 @@ def main():
             sys.stderr.write("signing %s: %s\n" % (name, fmt))
         for root, dirs, files in os.walk(args.out_d):
             for f in [f for f in files if f.endswith(".js")]:
-                toolutil.signjs_file(os.path.join(root, f), status_cb=printstatus)
-
+                toolutil.signjs_file(os.path.join(root, f),
+                                     status_cb=printstatus)
 
     return
 
