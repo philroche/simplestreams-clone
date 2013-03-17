@@ -69,8 +69,9 @@ def get_cloud_images_file_hash(path):
             dir_url = burl + dirname
 
             try:
+                url = dir_url + "/%sSUMS" % cksum.upper()
                 sys.stderr.write("reading %s\n" % url)
-                content = util.read_url(dir_url + "/%sSUMS" % cksum.upper())
+                content = util.read_url(url)
                 break
             except requests.HTTPError as error:
                 pass
@@ -153,7 +154,7 @@ def dl_load_query(path):
         (stream, rel, build, label, serial, arch, filepath, fname) = rline
 
         if stream not in tree:
-            tree[stream] = {'products': {}, 'item_id': 'ftype'}
+            tree[stream] = {'products': {}}
         products = tree[stream]['products']
 
         prodname = "%s:%s:%s" % (build, rel, arch)
@@ -169,7 +170,7 @@ def dl_load_query(path):
         product = products[prodname]
 
         if serial not in product['versions']:
-            product['versions'][serial] = {'items': [], "label": label}
+            product['versions'][serial] = {'items': {}, "label": label}
 
         name = pubname(label, rel, arch, serial, build)
         product['versions'][serial]['pubname'] = name
@@ -183,10 +184,10 @@ def dl_load_query(path):
         # becomse 'disk1.img'
         dash_arch = "-" + arch
         ftype = filepath[filepath.rindex(dash_arch) + len(dash_arch) + 1:]
-        items.append({
+        items[ftype] = {
             'path': filepath,
             'ftype': ftype
-        })
+        }
 
     return tree
 
@@ -207,6 +208,22 @@ def pubname(label, rel, arch, serial, build='server'):
 
 def ec2_load_query(path):
     tree = {}
+
+    dmap = {
+        "north": "nn",
+        "northeast": "ne",
+        "east": "ee",
+        "southeast": "se",
+        "south": "ss",
+        "southwest": "sw",
+        "west": "ww",
+        "northwest": "nw",
+    }
+    itmap = {
+        'pv': {'instance': "pi", "ebs": "pe"},
+        'hvm': {'instance': "hi", "ebs": "he"}
+    }
+
     for rline in toolutil.load_query_ec2(path):
         (stream, rel, build, label, serial, store, arch, region,
          iid, _kern, _rmd, vtype) = rline
@@ -228,7 +245,7 @@ def ec2_load_query(path):
         product = products[prodname]
 
         if serial not in product['versions']:
-            product['versions'][serial] = {'items': [], "label": label}
+            product['versions'][serial] = {'items': {}, "label": label}
         items = product['versions'][serial]['items']
 
         name = pubname(label, rel, arch, serial, build)
@@ -239,12 +256,21 @@ def ec2_load_query(path):
         if vtype == "paravirtual":
             vtype = "pv"
 
-        items.append({
+        # create the item key:
+        #  - 2 letter country code (us)
+        #  - 2 letter direction ('nn' for north, 'nw' for northwest)
+        #  - 1 digit number
+        #  - 1 char for virt type
+        #  - 1 char for root-store type
+        (cc, direction, num) = region.split("-")
+        ikey = cc + dmap[direction] + num + itmap[vtype][store]
+
+        items[ikey] = {
             'id': iid,
             'root_store': store,
             'virt': vtype,
             'cloud': region,
-        })
+        }
     return tree
 
 

@@ -25,9 +25,9 @@ def stringitems(data):
 
 
 def products_exdata(tree=None, prodname=None, proddata=None, vername=None,
-                    verdata=None, idata=None):
+                    verdata=None, itemname=None, itemdata=None):
     exdata = {}
-    for p in (tree, proddata, verdata, idata):
+    for p in (tree, proddata, verdata, itemdata):
         if p:
             exdata.update(stringitems(p))
     for (name, val) in (('product', prodname), ('version', vername)):
@@ -61,11 +61,11 @@ def walk_products(tree, cb_product=None, cb_version=None, cb_item=None,
             if not cb_item:
                 continue
 
-            for item in verdata['items']:
+            for itemname, itemdata in verdata['items'].iteritems():
                 ex = products_exdata(prodname=prodname, proddata=proddata,
                                      vername=vername, verdata=verdata,
-                                     idata=item)
-                ret = cb_item(item, ex)
+                                     itemname=itemname, itemdata=itemdata)
+                ret = cb_item(itemdata, ex)
                 if ret_finished != _UNSET and ret == ret_finished:
                     return
 
