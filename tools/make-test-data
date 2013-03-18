@@ -17,10 +17,16 @@ import toolutil
 #
 BASE_URLS = ("http://cloud-images.ubuntu.com/",)
 
-KNOWN_HASHES = {
-    10485860: 'c23ea79b857b91a7ff07c6ecf185f1ca',
-    10485960: '184cf91ae405aeabad4c49012f190494',
-    10486060: '07d250277f50c93c1e8dd14a156e7c06',
+FAKE_DATA = {
+    'root.tar.gz': {
+        'size': 10240, 'md5': '1276481102f218c981e0324180bafd9f',
+        'sha256': '84ff92691f909a05b224e1c56abb4864f01b4f8e3c854e4bb4c7baf1d3f6d652'},
+    'tar.gz': {
+        'size': 11264, 'md5': '820a81e0916bac82838fd7e74ab29b15',
+        'sha256': '5309e677c79cffae49a65728c61b436d3cdc2a2bab4c81bf0038415f74a56880'},
+    'disk1.img': {
+        'size': 12288, 'md5': '4072783b8efb99a9e5817067d68f61c6',
+        'sha256': 'f3cc103136423a57975750907ebc1d367e2985ac6338976d4d5a439f50323f4a'},
 }
 
 REAL_DATA = os.environ.get("REAL_DATA", False)
@@ -69,8 +75,9 @@ def get_cloud_images_file_hash(path):
             dir_url = burl + dirname
 
             try:
+                url = dir_url + "/%sSUMS" % cksum.upper()
                 sys.stderr.write("reading %s\n" % url)
-                content = util.read_url(dir_url + "/%sSUMS" % cksum.upper())
+                content = util.read_url(url)
                 break
             except requests.HTTPError as error:
                 pass
@@ -126,23 +133,18 @@ def create_fake_file(prefix, item):
     fpath = os.path.join(prefix, item['path'])
     path = item['path']
 
-    size = 1024
-    if path.endswith("-disk1.img"):
-        size = 1024 * 1024 * 10 + 100
-    elif path.endswith("-root.tar.gz"):
-        size = 1024 * 1024 * 10 + 200
-    elif path.endswith(".tar.gz"):
-        size = 1024 * 1024 * 10 + 300
+    data = FAKE_DATA[item['ftype']]
 
     util.mkdir_p(os.path.dirname(fpath))
     print "creating %s" % fpath
     with open(fpath, "w") as fp:
-        fp.truncate(size)
+        fp.truncate(data['size'])
 
-    item['md5'] = KNOWN_HASHES[size]
-    if 'sha256' in item:
-        del item['sha256']
-    item['size'] = size
+    item.update(data)
+
+    for cksum in util.CHECKSUMS:
+        if cksum in item and not cksum in data:
+            del item[data]
 
     return
 
@@ -153,7 +155,7 @@ def dl_load_query(path):
         (stream, rel, build, label, serial, arch, filepath, fname) = rline
 
         if stream not in tree:
-            tree[stream] = {'products': {}, 'item_id': 'ftype'}
+            tree[stream] = {'products': {}}
         products = tree[stream]['products']
 
         prodname = "%s:%s:%s" % (build, rel, arch)
@@ -169,7 +171,7 @@ def dl_load_query(path):
         product = products[prodname]
 
         if serial not in product['versions']:
-            product['versions'][serial] = {'items': [], "label": label}
+            product['versions'][serial] = {'items': {}, "label": label}
 
         name = pubname(label, rel, arch, serial, build)
         product['versions'][serial]['pubname'] = name
@@ -183,10 +185,10 @@ def dl_load_query(path):
         # becomse 'disk1.img'
         dash_arch = "-" + arch
         ftype = filepath[filepath.rindex(dash_arch) + len(dash_arch) + 1:]
-        items.append({
+        items[ftype] = {
             'path': filepath,
             'ftype': ftype
-        })
+        }
 
     return tree
 
@@ -207,6 +209,22 @@ def pubname(label, rel, arch, serial, build='server'):
 
 def ec2_load_query(path):
     tree = {}
+
+    dmap = {
+        "north": "nn",
+        "northeast": "ne",
+        "east": "ee",
+        "southeast": "se",
+        "south": "ss",
+        "southwest": "sw",
+        "west": "ww",
+        "northwest": "nw",
+    }
+    itmap = {
+        'pv': {'instance': "pi", "ebs": "pe"},
+        'hvm': {'instance': "hi", "ebs": "he"}
+    }
+
     for rline in toolutil.load_query_ec2(path):
         (stream, rel, build, label, serial, store, arch, region,
          iid, _kern, _rmd, vtype) = rline
@@ -228,7 +246,7 @@ def ec2_load_query(path):
         product = products[prodname]
 
         if serial not in product['versions']:
-            product['versions'][serial] = {'items': [], "label": label}
+            product['versions'][serial] = {'items': {}, "label": label}
         items = product['versions'][serial]['items']
 
         name = pubname(label, rel, arch, serial, build)
@@ -239,12 +257,21 @@ def ec2_load_query(path):
         if vtype == "paravirtual":
             vtype = "pv"
 
-        items.append({
+        # create the item key:
+        #  - 2 letter country code (us)
+        #  - 2 letter direction ('nn' for north, 'nw' for northwest)
+        #  - 1 digit number
+        #  - 1 char for virt type
+        #  - 1 char for root-store type
+        (cc, direction, num) = region.split("-")
+        ikey = cc + dmap[direction] + num + itmap[vtype][store]
+
+        items[ikey] = {
             'id': iid,
             'root_store': store,
             'virt': vtype,
             'cloud': region,
-        })
+        }
     return tree
 
 
@@ -263,15 +290,15 @@ def create_image_data(query_tree, out_d, streamdir):
     ts = util.timestamp()
     tree = dl_load_query(query_tree)
 
-    def update_hashes(item, exdata):
+    def update_hashes(item, tree, pedigree):
         item.update(get_cloud_images_file_hash(item['path']))
 
-    def update_sizes(item, exdata):
+    def update_sizes(item, tree, pedigree):
         item.update({'size': get_cloud_images_file_size(item['path'])})
 
     cid_fmt = "com.ubuntu.cloud:%s:download"
     for stream in tree:
-        def create_file(item, exdata):
+        def create_file(item, tree, pedigree):
             create_fake_file(os.path.join(out_d, stream), item)
 
         cid = cid_fmt % stream
@@ -305,7 +332,7 @@ def create_aws_data(query_tree, out_d, streamdir):
         # now add the '_alias' data
         regions = set()
 
-        def findregions(item, exdata):
+        def findregions(item, tree, pedigree):
             regions.add(item['cloud'])
 
         util.walk_products(tree[stream], cb_item=findregions)
@@ -349,13 +376,12 @@ def main():
     aws_tree = create_aws_data(args.query_tree, args.out_d, streamdir)
 
     for streamname in aws_tree:
-        index = {"index": [], 'format': 'index:1.0',
+        index = {"index": {}, 'format': 'index:1.0',
                  'updated': util.timestamp()}
 
         clouds = aws_tree[streamname]['_aliases']['cloud'].values()
-        index['index'].append({
+        index['index'][aws_tree[streamname]['content_id']] = {
             'updated': aws_tree[streamname]['updated'],
-            'content_id': aws_tree[streamname]['content_id'],
             'datatype': 'image-ids',
             'clouds': clouds,
             'cloudname': "aws",
@@ -363,16 +389,15 @@ def main():
                              "%s.js" % aws_tree[streamname]['content_id'],)),
             'products': aws_tree[streamname]['products'].keys(),
             'format': aws_tree[streamname]['format'],
-        })
-        index['index'].append({
+        }
+        index['index'][dltree[streamname]['content_id']] = {
             'updated': dltree[streamname]['updated'],
-            'content_id': dltree[streamname]['content_id'],
             'datatype': 'image-downloads',
             'path': '/'.join((streamdir,
                              "%s.js" % dltree[streamname]['content_id'],)),
             'products': dltree[streamname]['products'].keys(),
             'format': dltree[streamname]['format']
-        })
+        }
 
         outfile = os.path.join(args.out_d, streamname, streamdir, 'index.js')
         util.mkdir_p(os.path.dirname(outfile))

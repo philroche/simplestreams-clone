@@ -12,6 +12,7 @@ LOG = logging.getLogger('simplestreams')
 LOG.setLevel(logging.ERROR)
 LOG.addHandler(logging.StreamHandler())
 
+
 class ObjectStore(object):
     read_size = READ_BUFFER_SIZE
 

@@ -220,10 +220,10 @@ def signjs_file(fname, status_cb=None):
     elif fmt == "index:1.0":
         status_cb(fname, fmt)
         signfile(fname)
-        for item in data.get('index'):
-            path = item.get('path')
+        for content_id, content in data.get('index').iteritems():
+            path = content.get('path')
             if path.endswith(".js"):
-                item['path'] = path[0:-len(".js")] + ".sjs"
+                content['path'] = path[0:-len(".js")] + ".sjs"
         with open(sjs, "w") as fp:
             fp.write(json.dumps(data, indent=1))
         signfile_inline(sjs)

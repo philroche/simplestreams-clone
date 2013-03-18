@@ -24,26 +24,30 @@ def stringitems(data):
             isinstance(v, (unicode, str))}
 
 
-def products_exdata(tree=None, prodname=None, proddata=None, vername=None,
-                    verdata=None, idata=None):
-    exdata = {}
-    for p in (tree, proddata, verdata, idata):
-        if p:
-            exdata.update(stringitems(p))
-    for (name, val) in (('product', prodname), ('version', vername)):
-        if val:
-            exdata[name] = val
+def products_exdata(tree, pedigree):
+    harchy = (("products", "product_name"),
+              ("versions", "version_name"),
+              ("items", "item_name"))
 
+    exdata = {}
+    if tree:
+        exdata.update(stringitems(p))
+    clevel = tree
+    for (n, key) in enumerate(pedigree):
+        dictname, fieldname = harchy[n]
+        clevel = clevel[dictname]
+        exdata.update(stringitems(clevel))
+        exdata[fieldname] = key
     return exdata
 
 
 def walk_products(tree, cb_product=None, cb_version=None, cb_item=None,
               ret_finished=_UNSET):
-    # walk a product tree
+    # walk a product tree. callbacks are called with (item, tree, (pedigree))
     for prodname, proddata in tree['products'].iteritems():
+        ped = [prodname]
         if cb_product:
-            ex = products_exdata(prodname=prodname, proddata=proddata)
-            ret = cb_product(proddata, ex)
+            ret = cb_product(proddata, tree, (prodname,))
             if ret_finished != _UNSET and ret == ret_finished:
                 return
 
@@ -52,20 +56,15 @@ def walk_products(tree, cb_product=None, cb_version=None, cb_item=None,
 
         for vername, verdata in proddata['versions'].iteritems():
             if cb_version:
-                ex = products_exdata(prodname=prodname, proddata=proddata,
-                                     vername=vername, verdata=verdata)
-                ret = cb_version(verdata, ex)
+                ret = cb_version(verdata, tree, (prodname, vername))
                 if ret_finished != _UNSET and ret == ret_finished:
                     return
 
             if not cb_item:
                 continue
 
-            for item in verdata['items']:
-                ex = products_exdata(prodname=prodname, proddata=proddata,
-                                     vername=vername, verdata=verdata,
-                                     idata=item)
-                ret = cb_item(item, ex)
+            for itemname, itemdata in verdata['items'].iteritems():
+                ret = cb_item(itemdata, tree, (prodname, vername, itemname))
                 if ret_finished != _UNSET and ret == ret_finished:
                     return
 
