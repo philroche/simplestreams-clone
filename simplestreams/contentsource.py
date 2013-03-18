@@ -8,10 +8,16 @@ import requests
 class ContentSource(object):
     url = None
 
+    def open(self):
+        # open can be explicitly called to 'open', but might be implicitly
+        # called from read()
+        pass
+
     def read(self, size=-1):
         raise NotImplementedError()
 
     def __enter__(self):
+        self.open()
         return self
 
     def __exit__(self, etype, value, trace):
@@ -23,6 +29,7 @@ class ContentSource(object):
 
 class UrlContentSource(ContentSource):
     fd = None
+    _opener = None
 
     def __init__(self, url):
         parsed = urlparse.urlparse(url)
@@ -35,11 +42,27 @@ class UrlContentSource(ContentSource):
 
         self.url = url
         if parsed.scheme == "file":
-            self.fd = open(parsed.path, "r")
+            path = parsed.path
+            def opener():
+                return open(path, "r")
+            self._opener = opener
         else:
-            self.fd = RequestsUrlReader(url)
+            def opener():
+                return RequestsUrlReader(self.url)
+
+        self._opener = opener
+
+    def open(self):
+        self.fd = self._opener()
+        self.read = self._read
 
     def read(self, size=-1):
+        if self.fd is None:
+            self.open()
+
+        return self._read(size)
+
+    def _read(self, size=-1):
         return self.fd.read(size)
 
     def close(self):
