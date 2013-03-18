@@ -137,7 +137,7 @@ class ObjectStoreMirrorWriter(MirrorWriter):
         util.expand_tree(products)
 
         ptree = products.get('products', {})
-        for pdata in ptree.iteritems():
+        for prodname, product in ptree.iteritems():
             if not self.filter_product(product_data=pdata):
                 continue
             #print " insert product %s" % pdata[0]

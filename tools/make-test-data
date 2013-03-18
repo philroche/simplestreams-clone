@@ -375,13 +375,12 @@ def main():
     aws_tree = create_aws_data(args.query_tree, args.out_d, streamdir)
 
     for streamname in aws_tree:
-        index = {"index": [], 'format': 'index:1.0',
+        index = {"index": {}, 'format': 'index:1.0',
                  'updated': util.timestamp()}
 
         clouds = aws_tree[streamname]['_aliases']['cloud'].values()
-        index['index'].append({
+        index['index'][aws_tree[streamname]['content_id']] = {
             'updated': aws_tree[streamname]['updated'],
-            'content_id': aws_tree[streamname]['content_id'],
             'datatype': 'image-ids',
             'clouds': clouds,
             'cloudname': "aws",
@@ -389,16 +388,15 @@ def main():
                              "%s.js" % aws_tree[streamname]['content_id'],)),
             'products': aws_tree[streamname]['products'].keys(),
             'format': aws_tree[streamname]['format'],
-        })
-        index['index'].append({
+        }
+        index['index'][aws_tree[streamname]['content_id']] = {
             'updated': dltree[streamname]['updated'],
-            'content_id': dltree[streamname]['content_id'],
             'datatype': 'image-downloads',
             'path': '/'.join((streamdir,
                              "%s.js" % dltree[streamname]['content_id'],)),
             'products': dltree[streamname]['products'].keys(),
             'format': dltree[streamname]['format']
-        })
+        }
 
         outfile = os.path.join(args.out_d, streamname, streamdir, 'index.js')
         util.mkdir_p(os.path.dirname(outfile))
