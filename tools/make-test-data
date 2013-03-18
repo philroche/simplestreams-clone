@@ -389,7 +389,7 @@ def main():
             'products': aws_tree[streamname]['products'].keys(),
             'format': aws_tree[streamname]['format'],
         }
-        index['index'][aws_tree[streamname]['content_id']] = {
+        index['index'][dltree[streamname]['content_id']] = {
             'updated': dltree[streamname]['updated'],
             'datatype': 'image-downloads',
             'path': '/'.join((streamdir,
