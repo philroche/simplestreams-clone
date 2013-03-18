@@ -43,8 +43,10 @@ class UrlContentSource(ContentSource):
         self.url = url
         if parsed.scheme == "file":
             path = parsed.path
+
             def opener():
                 return open(path, "r")
+
             self._opener = opener
         else:
             def opener():
@@ -71,7 +73,6 @@ class UrlContentSource(ContentSource):
             self.fd = None
 
 
-
 class FdContentSource(ContentSource):
     def __init__(self, fd, url=None):
         self.fd = fd
@@ -82,6 +83,7 @@ class FdContentSource(ContentSource):
 
     def close(self):
         self.fd.close()
+
 
 class MemoryContentSource(FdContentSource):
     def __init__(self, url=None, content=""):
