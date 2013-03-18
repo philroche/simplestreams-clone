@@ -289,15 +289,15 @@ def create_image_data(query_tree, out_d, streamdir):
     ts = util.timestamp()
     tree = dl_load_query(query_tree)
 
-    def update_hashes(item, exdata):
+    def update_hashes(item, tree, pedigree):
         item.update(get_cloud_images_file_hash(item['path']))
 
-    def update_sizes(item, exdata):
+    def update_sizes(item, tree, pedigree):
         item.update({'size': get_cloud_images_file_size(item['path'])})
 
     cid_fmt = "com.ubuntu.cloud:%s:download"
     for stream in tree:
-        def create_file(item, exdata):
+        def create_file(item, tree, pedigree):
             create_fake_file(os.path.join(out_d, stream), item)
 
         cid = cid_fmt % stream
@@ -331,7 +331,7 @@ def create_aws_data(query_tree, out_d, streamdir):
         # now add the '_alias' data
         regions = set()
 
-        def findregions(item, exdata):
+        def findregions(item, tree, pedigree):
             regions.add(item['cloud'])
 
         util.walk_products(tree[stream], cb_item=findregions)
