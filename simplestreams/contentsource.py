@@ -66,7 +66,9 @@ class UrlContentSource(ContentSource):
         return self.fd.read(size)
 
     def close(self):
-        self.fd.close()
+        if self.fd:
+            self.fd.close()
+            self.fd = None
 
 
 
