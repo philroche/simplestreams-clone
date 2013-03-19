@@ -6,7 +6,7 @@ Usage: ${0##*/}
   This program is an example 'hook' for use with bin/sstream-sync.
   PYTHONPATH=$PWD ./bin/sstream-sync --item-skip-download \\
      --hook=./tools/hook-debug \\
-     http://cloud-images.ubuntu.com/eightprotons/images/ streams/v1/streams.js
+     http://cloud-images.ubuntu.com/eightprotons/images/ streams/v1/streams.sjs
 EOF
 fi
 
@@ -22,7 +22,7 @@ data=${data# }
 [ -z "$HOOK" ] && { echo "HOOK not set. see usage --help"; exit 1; }
 
 case "$HOOK" in
-   product_filter|group_filter)
+   filter_product|filter_version)
       # skip streams or groups that do not have arch=i386
       if [ "$arch" = "i386" ]; then
         OP="keep"
@@ -30,13 +30,13 @@ case "$HOOK" in
         OP="skip"
       fi
       ;;
-   *_filter) OP="keep";;
+   filter_*) OP="keep";;
 esac
 
 echo "=== $HOOK: ${OP:+[${OP}]} ${data}" 1>&2
 case "$HOOK" in
-    *_filter)
-        [ "$OP" = "keep" ] && exit 0;
+    filter_*)
+        [ "$OP" = "keep" ] && exit 1;
         [ "$OP" = "skip" ] && exit 1;
         exit 2
         ;;
