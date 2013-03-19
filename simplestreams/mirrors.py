@@ -1,3 +1,5 @@
+import errno
+
 import simplestreams.util as util
 import simplestreams.contentsource as cs
 
@@ -31,7 +33,7 @@ class MirrorWriter(object):
         #  * if products is None, it will be loaded from content
         raise NotImplementedError()
 
-    def sync_index(self, reader, path=None, index=None,content=None):
+    def sync_index(self, reader, path=None, index=None, content=None):
         # reader:   a Reader for opening files referenced in index or products
         #           files
         # path:     the path of where to store this.
@@ -90,6 +92,15 @@ class MirrorWriter(object):
     def insert_item(self, contentsource, item_id, item, tree, pedigree):
         pass
 
+    def remove_product(self, product_id, product, tree, pedigree):
+        pass
+
+    def remove_version(self, version_id, version, tree, pedigree):
+        pass
+
+    def remove_item(self, contentsource, item_id, item, tree, pedigree):
+        pass
+
 
 class UrlMirrorReader(MirrorReader):
     def __init__(self, prefix):
@@ -109,8 +120,10 @@ class ObjectStoreMirrorReader(MirrorReader):
 
 
 class BasicMirrorWriter(MirrorWriter):
-    def __init__(self, config):
+    def __init__(self, config=None):
         super(BasicMirrorWriter, self).__init__()
+        if config is None:
+            config = {}
         self.config = config
 
     def sync_index(self, reader, path=None, index=None, content=None):
@@ -141,17 +154,57 @@ class BasicMirrorWriter(MirrorWriter):
 
         util.expand_tree(products)
 
-        ptree = products.get('products', {})
-        for prodname, product in ptree.iteritems():
+        tproducts = self.load_products(path)
+        if not tproducts:
+            tproducts = util.stringitems(products)
+
+        util.expand_tree(tproducts)
+
+        stree = products.get('products', {})
+        if 'products' not in tproducts:
+            tproducts['products'] = {}
+
+        ttree = tproducts['products']
+
+        filtered_products = []
+        for prodname, product in stree.iteritems():
             if not self.filter_product(prodname, product, products,
                                        (prodname,)):
+                filtered_products.append(prodname)
                 continue
 
-            for vername, version in product.get('versions', {}).iteritems():
-                if not self.filter_version(vername, version, products,
-                                           (prodname, vername)):
-                    continue
+            if prodname not in ttree:
+                ttree[prodname] = util.stringitems(product)
+            tproduct = ttree[prodname]
+            if 'versions' not in tproduct:
+                tproduct['versions'] = {}
 
+            src_filtered_items = []
+
+            def _filter(itemkey):
+                ret = self.filter_version(itemkey,
+                                          product['versions'][itemkey],
+                                          products, (prodname, itemkey))
+                if not ret:
+                    src_filtered_items.append(itemkey)
+                return ret
+
+            (to_add, to_remove) = util.resolve_work(
+                src=product.get('versions', {}).keys(),
+                target=tproduct.get('versions', {}).keys(),
+                max=self.config.get('max_items'),
+                keep=self.config.get('keep_items'), filter=_filter)
+
+            print "%s: to_add=%s, to_del=%s" % (prodname, to_add, to_remove)
+
+            tversions = tproduct['versions']
+            for vername in to_add:
+                version = product['versions'][vername]
+
+                if vername not in tversions:
+                    tversions[vername] = util.stringitems(version)
+
+                added = {}
                 for itemname, item in version.get('items', {}).iteritems():
                     pgree = (prodname, vername, itemname)
                     if not self.filter_item(itemname, item, products, pgree):
@@ -163,12 +216,50 @@ class BasicMirrorWriter(MirrorWriter):
                         ipath_cs = reader(ipath)
                     self.insert_item(ipath_cs, itemname, item, products, pgree)
 
+                    added[itemname] = item
+
                 self.insert_version(vername, version, products,
                                     (prodname, vername))
 
-            self.insert_product(prodname, product, products, (prodname,))
+                tversions[vername]['items'] = added
 
-        self.insert_products(path, products, content)
+            if self.config.get('delete_filtered_items', False):
+                for v in src_filtered_items:
+                    if v not in to_remove and v in tversions:
+                        to_remove.append(v)
+
+            for vername in to_remove:
+                tversion = tversions[vername]
+                for itemname in tversion.get('items', {}).keys():
+                    self.remove_item(itemname, tversions[itemname],
+                                     (prodname, vername, itemname))
+                    del tversion[itemname]
+
+                self.remove_version(vername, tversion, tproducts,
+                                    (prodname, vername))
+                del tversions[vername]
+
+            self.insert_product(prodname, tproduct, tproducts, (prodname,))
+
+        ## FIXME: below will remove products if they're in target
+        ## (result of load_products) but not in the source products.
+        ## that could accidentally delete a lot.
+        ##
+        del_products = []
+        if self.config.get('delete_products', False):
+            del_products.extend([p for p in ttree.keys() if p not in stree])
+        if self.config.get('delete_filtered_products', False):
+            del_products.extend([p for p in filtered_products
+                                 if p not in stree])
+
+        for prodname in del_products:
+            ## FIXME: we remove a product here, but unless that acts
+            ## recursively, nothing will remove the items in that product
+            self.remove_product(prodname, ttree[prodname], tproducts,
+                                (prodname,))
+            del ttree[prodname]
+
+        self.insert_products(path, tproducts, content)
 
 
 class ObjectStoreMirrorWriter(BasicMirrorWriter):
@@ -178,9 +269,15 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
 
     def load_products(self, path=None):
         if path:
-            content = self.reader(path).read()
-            return util.load_content(content)
-        raise TypeError("unable to with no path")
+            try:
+                (payload, _sig) = util.read_possibly_signed(path, self.reader)
+            except IOError as e:
+                if e.errno != errno.ENOENT:
+                    raise
+                payload = "{}"
+
+            return util.load_content(payload)
+        raise TypeError("unable to load_products with no path")
 
     def reader(self, path):
         return self.store.reader(path)
@@ -188,7 +285,6 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
     def insert_item(self, cs, itemname, item, products, pedigree):
         if 'path' not in item:
             return
-        print "inserting %s" % item['path']
         self.store.insert(item['path'], cs,
                           checksums=util.item_checksums(item), mutable=False)
 
