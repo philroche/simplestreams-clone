@@ -3,8 +3,7 @@
 # client showing use of command_hook_mirror
 
 from simplestreams import command_hook_mirror
-from simplestreams import objectstores
-from simplestreams import util
+from simplestreams import mirrors
 
 import argparse
 import logging
@@ -57,7 +56,7 @@ def main():
                         help='Do not download items that are to be inserted.')
 
     parser.add_argument('mirror_ref')
-    parser.add_argument('path', nargs='?', default="content/v1/index.sjs")
+    parser.add_argument('path', nargs='?', default="streams/v1/index.sjs")
     args = parser.parse_args()
 
     cfg = {}
@@ -73,37 +72,12 @@ def main():
         cfg[cfgname] = val
 
     cfg['item_skip_download'] = args.item_skip_download
-        
-    tmirror = command_hook_mirror.CommandHookMirror(cfg)
+    cfg['max'] = args.max
+    cfg['keep'] = args.keep
 
-    # mirror_ref is just a url for now
-    url = util.normalize_url(args.mirror_ref)
-
-    smirror = objectstores.UrlMirrorReader(url)
-
-    (content, _sig) = util.read_possibly_signed(args.path, smirror.reader)
-
-    resolve_args = {'max': args.max, 'keep': args.keep}
-
-    data = util.load_content(content)
-    fmt = data.get("format")
-
-    util.expand_tree(data)
-
-    if fmt == "products:1.0":
-        util.sync_products(src_products=data, src_mirror=smirror,
-                           target_mirror=tmirror, path=args.path,
-                           resolve_args=resolve_args)
-
-    elif fmt == "collection:1.0":
-        util.sync_collection(src_collection=data, src_mirror=smirror,
-                        target_mirror=tmirror, path=args.path,
-                        resolve_args=resolve_args)
-
-    else:
-        sys.stderr.write("Unknown format '%s' in '%s'\n" % (fmt, args.path))
-        sys.exit(1)
-
+    smirror = mirrors.UrlMirrorReader(args.mirror_ref)
+    tmirror = command_hook_mirror.CommandHookMirror(config=cfg)
+    tmirror.sync(smirror.reader, args.path)
 
 if __name__ == '__main__':
     main()
