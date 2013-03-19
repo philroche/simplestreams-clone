@@ -36,7 +36,7 @@ esac
 echo "=== $HOOK: ${OP:+[${OP}]} ${data}" 1>&2
 case "$HOOK" in
     filter_*)
-        [ "$OP" = "keep" ] && exit 1;
+        [ "$OP" = "keep" ] && exit 0;
         [ "$OP" = "skip" ] && exit 1;
         exit 2
         ;;
