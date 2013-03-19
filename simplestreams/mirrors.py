@@ -154,7 +154,7 @@ class BasicMirrorWriter(MirrorWriter):
 
         util.expand_tree(products)
 
-        tproducts = self.load_products(path, content['content_id'])
+        tproducts = self.load_products(path, products['content_id'])
         if not tproducts:
             tproducts = util.stringitems(products)
 
