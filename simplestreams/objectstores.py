@@ -99,6 +99,16 @@ class FileStore(ObjectStore):
         except OSError as e:
             if e.errno != errno.ENOENT:
                 raise
+        cur_d = os.path.dirname(path)
+        prev_d = None
+        while cur_d and cur_d != prev_d:
+            try:
+                os.rmdir(cur_d)
+            except OSError as e:
+                if e.errno not in (errno.ENOENT, errno.ENOTEMPTY):
+                    raise
+            prev_d = cur_d
+            cur_d = os.path.dirname(path)
 
     def reader(self, path):
         return cs.UrlContentSource(url=self._fullpath(path))
