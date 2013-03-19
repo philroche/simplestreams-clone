@@ -2,7 +2,19 @@ import errno
 import os
 import StringIO
 import urlparse
-import requests
+
+try:
+    import requests
+    from distutils.version import LooseVersion
+    import pkg_resources
+    _REQ = pkg_resources.get_distribution('requests')
+    _REQ_VER = LooseVersion(_REQ.version)  # pylint: disable=E1103
+    if _REQ_VER < LooseVersion('1.1'):
+        raise Exception("Couldn't use requests")
+    URL_READER_CLASSNAME = "RequestsUrlReader"
+except:
+    import urllib2
+    URL_READER_CLASSNAME = "Urllib2UrlReader"
 
 
 class ContentSource(object):
@@ -50,7 +62,7 @@ class UrlContentSource(ContentSource):
             self._opener = opener
         else:
             def opener():
-                return RequestsUrlReader(self.url)
+                return URL_READER(self.url)
 
         self._opener = opener
 
@@ -93,7 +105,37 @@ class MemoryContentSource(FdContentSource):
         super(MemoryContentSource, self).__init__(fd=fd, url=url)
 
 
-class RequestsUrlReader(object):
+class UrlReader(object):
+    def __init__(self, url):
+        raise NotImplementedError()
+
+    def read(self, size=-1):
+        raise NotImplementedError()
+
+    def close(self):
+        raise NotImplementedError()
+
+
+class Urllib2UrlReader(UrlReader):
+    def __init__(self, url):
+	self.url = url
+        try:
+            self.req = urllib2.urlopen(url)
+        except urllib2.HTTPError as e:
+            if e.code == 404:
+                myerr = IOError("Unable to open %s" % url)
+                myerr.errno = errno.ENOENT
+                raise myerr
+            raise e
+ 
+    def read(self, size=-1):
+        return self.req.read(size)
+
+    def close(self):
+        return self.req.close()
+
+
+class RequestsUrlReader(UrlReader):
     # This provides a url reader that supports deflate/gzip encoding
     # but still implements 'read'.
     # r = RequestsUrlReader(http://example.com)
@@ -169,5 +211,13 @@ class RequestsUrlReader(object):
 
     def close(self):
         self.req.close()
+
+
+if URL_READER_CLASSNAME == "RequestsUrlReader":
+    URL_READER = RequestsUrlReader
+elif URL_READER_CLASSNAME == "Urllib2UrlReader":
+    URL_READER = Urllib2UrlReader
+else:
+    raise Exception("Unknown URL_READER_CLASSNAME: %s" % URL_READER_CLASSNAME)
 
 # vi: ts=4 expandtab

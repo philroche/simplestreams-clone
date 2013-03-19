@@ -1,7 +1,6 @@
 import errno
 import hashlib
 import os
-import requests
 import subprocess
 import time
 import urlparse
