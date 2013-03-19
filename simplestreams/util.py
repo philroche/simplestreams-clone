@@ -31,7 +31,7 @@ def products_exdata(tree, pedigree):
 
     exdata = {}
     if tree:
-        exdata.update(stringitems(p))
+        exdata.update(stringitems(tree))
     clevel = tree
     for (n, key) in enumerate(pedigree):
         dictname, fieldname = harchy[n]
