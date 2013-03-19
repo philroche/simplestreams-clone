@@ -12,7 +12,6 @@ fi
 
 data=""
 for f in ${FIELDS}; do
-    [ "$f" = "content" ] && data="${data} ${f}=_content_" && continue
     val="${!f}"
     [ "${val#* }" != "${val}" ] && data="${data} ${f}='${val}'" ||
         data="${data} ${f}=${val}"
