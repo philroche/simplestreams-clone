@@ -98,7 +98,7 @@ class MirrorWriter(object):
     def remove_version(self, version_id, version, tree, pedigree):
         pass
 
-    def remove_item(self, contentsource, item_id, item, tree, pedigree):
+    def remove_item(self, item_id, item, tree, pedigree):
         pass
 
 
@@ -195,6 +195,8 @@ class BasicMirrorWriter(MirrorWriter):
                 max=self.config.get('max_items'),
                 keep=self.config.get('keep_items'), filter=_filter)
 
+            #print "%s: to_add=%s to_remove=%s" % (prodname, to_add, to_remove)
+
             tversions = tproduct['versions']
             for vername in to_add:
                 version = product['versions'][vername]
@@ -229,9 +231,9 @@ class BasicMirrorWriter(MirrorWriter):
             for vername in to_remove:
                 tversion = tversions[vername]
                 for itemname in tversion.get('items', {}).keys():
-                    self.remove_item(itemname, tversions[itemname],
-                                     (prodname, vername, itemname))
-                    del tversion[itemname]
+                    self.remove_item(itemname, tversion['items'][itemname],
+                                     tproducts, (prodname, vername, itemname))
+                    del tversion['items'][itemname]
 
                 self.remove_version(vername, tversion, tproducts,
                                     (prodname, vername))
@@ -305,6 +307,11 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
         if not content:
             content = util.dump_data(index)
         self.store.insert_content(path, content)
+
+    def remove_item(self, item_id, item, tree, pedigree):
+        if 'path' not in item:
+            return
+        self.store.remove(item['path'])
 
 
 def _get_data_content(path, data, content, reader):
