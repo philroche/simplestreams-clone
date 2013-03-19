@@ -154,7 +154,8 @@ class BasicMirrorWriter(MirrorWriter):
 
         util.expand_tree(products)
 
-        tproducts = self.load_products(path, products['content_id'])
+        content_id = products['content_id']
+        tproducts = self.load_products(path, content_id)
         if not tproducts:
             tproducts = util.stringitems(products)
 
@@ -195,7 +196,8 @@ class BasicMirrorWriter(MirrorWriter):
                 max=self.config.get('max_items'),
                 keep=self.config.get('keep_items'), filter=_filter)
 
-            #print "%s: to_add=%s to_remove=%s" % (prodname, to_add, to_remove)
+            #print "%s/%s: to_add=%s to_remove=%s" % (content_id, prodname,
+            #   to_add, to_remove)
 
             tversions = tproduct['versions']
             for vername in to_add:
