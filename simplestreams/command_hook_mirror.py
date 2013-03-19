@@ -147,9 +147,10 @@ class CommandHookMirror(mirrors.BasicMirrorWriter):
         extra = {}
         if 'path' in item:
             extra.update({'item_url': contentsource.url})
-            if self.config.get('item_skip_download', False):
+            if not self.config.get('item_skip_download', False):
                 try:
                     (tmp_path, tmp_del) = get_local_copy(contentsource.read)
+                    extra['path_local'] = tmp_path
                 finally:
                     contentsource.close()
 
@@ -168,7 +169,7 @@ class CommandHookMirror(mirrors.BasicMirrorWriter):
         return self.call_hook('remove_version',
                               data=util.products_exdata(tree, pedigree))
 
-    def remove_item(self, contentsource, item_id, item, tree, pedigree):
+    def remove_item(self, item_id, item, tree, pedigree):
         return self.call_hook('remove_item',
                               data=util.products_exdata(tree, pedigree))
 
