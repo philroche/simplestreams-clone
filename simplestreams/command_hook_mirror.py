@@ -145,7 +145,7 @@ class CommandHookMirror(mirrors.BasicMirrorWriter):
         tmp_path = None
         tmp_del = None
         extra = {}
-        if item['path'] in item:
+        if 'path' in item:
             extra.update({'item_url': contentsource.url})
             if self.config.get('item_skip_download', False):
                 try:
