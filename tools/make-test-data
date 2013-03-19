@@ -230,7 +230,7 @@ def ec2_load_query(path):
          iid, _kern, _rmd, vtype) = rline
 
         if stream not in tree:
-            tree[stream] = {'products': {}, 'item_id': 'id'}
+            tree[stream] = {'products': {}}
         products = tree[stream]['products']
 
         prodname = "%s:%s:%s" % (build, rel, arch)
