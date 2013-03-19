@@ -1,27 +1,31 @@
+import simplestreams.mirrors as mirrors
+import simplestreams.util as util
+
 import os
-from simplestreams.objectstores import SimpleStreamMirrorWriter
-from simplestreams.stream import Stream
-from simplestreams import util
 import subprocess
 import tempfile
 import yaml
 
 READ_SIZE = (1024 * 1024)
 
-REQUIRED_FIELDS = ("product_load",)
+REQUIRED_FIELDS = ("load_products",)
 HOOK_NAMES = (
-    "collection_store",
-    "version_insert_post",
-    "version_insert_pre",
-    "version_remove_post",
-    "version_remove_pre",
-    "item_filter",
-    "item_insert",
-    "item_remove",
-    "product_filter",
-    "product_load",
-    "product_store",
-    )
+    "filter_index_entry",
+    "filter_item",
+    "filter_product",
+    "filter_version",
+    "insert_index",
+    "insert_index_entry",
+    "insert_item",
+    "insert_product",
+    "insert_products",
+    "insert_version",
+    "load_products",
+    "remove_item",
+    "remove_product",
+    "remove_version",
+)
+
 DEFAULT_HOOK_NAME = "command"
 ENV_HOOK_NAME = "HOOK"
 ENV_FIELDS_NAME = "FIELDS"
@@ -31,154 +35,142 @@ ENV_FIELDS_NAME = "FIELDS"
 CommandHookMirror: invoke commands to implement a SimpleStreamMirror
 
 Available command hooks:
-  product_load:
-    invoked to list items in the product. See product_load_output_format.
-  product_store:
-    invoked to store the product, after all add/remove have been done.
+  load_products:
+    invoked to list items in the products in a given content_id.
+    See product_load_output_format.
 
-  collection_store:
-    invoked to store a collection after all add/remove have been done.
-
-  version_insert_pre
-  version_insert_post
-  version_remove_pre
-  version_remove_post
-    invoked with the version information before and after add/remove
-    of a item in the version.
-
-  product_filter:
-    invoked to determine if a product should be operated on
+  filter_index_entry, filter_item, filter_product, filter_version:
+    invoked to determine if the named entity should be operated on
     exit 0 for "yes", 1 for "no".
 
-  item_filter
-    invoked to determine if this item should be operated on
-    exit 0 for "yes", 1 for "no"
+  insert_index, insert_index_entry, insert_item, insert_product,
+  insert_products, insert_version :
+    invoked to insert the given entity.
 
-  item_insert
-    insert the item.
-
-  item_remove
-    remove the item.
+  remove_product, remove_version, remove_item:
+    invoked to remove the given entity
 
 
 Other Configuration:
   product_load_output_format: one of [serial_list, yaml]
-    serial_list: The default output should be one serial per line
-                 representing a version that is present
-    yaml: output should be a dictionary that can be passed into
-          loaded via yaml.safe_load and passed to Stream()
-
-  unset_value: string, default is '_unset'
-    This value is substituted for any invalid %() references
-    when invoking a command.
+    serial_list: The default output should be white space delimited
+                 output of product_name and version.
+    yaml: output should be a yaml formated dictionary formated like
+          products:1.0 content.  Note, json is a proper subset of
+          yaml, so it is acceptable to output json content.
 
 Environments / Variables:
   When a hook is invoked, data about the relevant entity is
-  made available in 2 ways:
-   a.) through environment variables
-   b.) through substitution of commands
-
-  Each type of data has some fields guaranteed and others optional.
+  made available in the environment.
 
   In all cases:
     * a special 'FIELDS' key is available which is a space delimited
       list of keys
-    * all 'tags' for the item (and parent items that apply) will be
-      available.
     * a special 'HOOK' field is available that specifies which
       hook is being called.
 
-  item:
-    guaranteed: iqn, name, serial
-    other: path_local
-     * path_local: if the item has a 'path', then it is downloaded
-                   and made available as a file pointed to by 'path_local'
-  group:
-    guaranteed: iqn, serial
+  For an item in a products:1.0 file that has a 'path' item, the item
+  will be downloaded and a 'path_local' field inserted into the metadata
+  which will contain the path to the local file.
+
+  If the configuration setting 'item_skip_download' is set to True, then
+  'path_url' will be set instead to a url where the item can be found.
 """
 
 
-class CommandHookMirror(SimpleStreamMirrorWriter):
+class CommandHookMirror(mirrors.BasicMirrorWriter):
     def __init__(self, config):
         if isinstance(config, str):
             config = yaml.safe_load(config)
         check_config(config)
-        self.config = config
 
-    def load_product(self, path, prodname):
-        (_rc, output) = self.call_hook('product_load',
-                                       data={'product': prodname},
+        super(CommandHookMirror, self).__init__(config=config)
+
+    def load_products(self, path=None, content_id=None):
+        (_rc, output) = self.call_hook('load_products',
+                                       data={'content_id': content_id},
                                        capture=True)
         fmt = self.config.get("product_load_output_format", "serial_list")
 
-        loaded = load_product_output(output=output, prodname=prodname, fmt=fmt)
+        loaded = load_product_output(output=output, content_id=content_id,
+                                     fmt=fmt)
         return loaded
 
-    def store_product(self, path, product):
-        self.call_hook('product_store', data=product,
-                       extra={'path': path})
+    def filter_index_entry(self, content_id, content, tree, pedigree):
+        data = util.stringitems(tree)
+        data['content_id'] = content_id
+        data.update(util.stringitems(content))
 
-    def store_products(self, path, products, content):
-        self.call_hook('products_store', data=products, content=content,
-                       extra={'path': path})
+        (ret, _output) = self.call_hook('filter_index_entry', data=data,
+                                        rcs=[0, 1])
+        return ret == 0
 
-    def insert_version(self, version, reader):
-        self.call_hook('version_insert_pre', data=version)
-        for item in version['items']:
-            self.insert_item(item, reader)
+    def filter_product(self, product_id, product, tree, pedigree):
+        return self._call_filter('filter_product', tree, pedigree)
 
-        self.call_hook('version_insert_post', data=version)
+    def filter_version(self, version_id, version, tree, pedigree):
+        return self._call_filter('filter_version', tree, pedigree)
 
-    def remove_version(self, version):
-        self.call_hook('version_remove_pre', data=version)
-        for item in version['items']
-            self.remove_item(item)
+    def filter_item(self, item_id, item, tree, pedigree):
+        return self._call_filter('filter_item', tree, pedigree)
 
-        self.call_hook('version_remove_post', data=version)
+    def _call_filter(self, name, tree, pedigree):
+        data = util.products_exdata(tree, pedigree)
+        (ret, _output) = self.call_hook(name, data=data, rcs=[0, 1])
+        return ret == 0
 
-    def filter_product(self, product):
-        return not self.product_is_filtered(product)
+    def insert_index(self, path, index, content):
+        return self.call_hook('insert_index', data=index, content=content,
+                              extra={'path': path})
 
-    def filter_version(self, version):
-        return not self.version_is_filtered(version)
+    def insert_index_entry(self, contentsource, content_id, content, tree,
+                           pedigree):
+        pass
 
-    def version_is_filtered(self, version):
-        (ret, _output) = self.call_hook('version_filter', version, rcs=[0, 1])
-        return ret == 1
-        
-    def item_is_filtered(self, item):
-        (ret, _output) = self.call_hook('item_filter', item, rcs=[0, 1])
-        return ret == 1
+    def insert_products(self, path, products, content):
+        return self.call_hook('insert_products', data=products,
+                              content=content, extra={'path': path})
 
-    def product_is_filtered(self, product):
-        (ret, _output) = self.call_hook('product_filter', product, rcs=[0, 1])
-        return ret == 1
+    def insert_product(self, product_id, product, tree, pedigree):
+        return self.call_hook('insert_product',
+                              data=util.products_exdata(tree, pedigree))
 
-    def insert_item(self, item, reader):
-        if self.item_is_filtered(item):
-            return
+    def insert_version(self, version_id, version, tree, pedigree):
+        return self.call_hook('insert_version',
+                              data=util.products_exdata(tree, pedigree))
 
-        tfile_path = None
-        tfile_del = None
+    def insert_item(self, contentsource, item_id, item, tree, pedigree):
+        data = util.products_exdata(tree, pedigree)
 
+        tmp_path = None
+        tmp_del = None
         extra = {}
-        if item.path:
-            with reader(item.path) as rfp:
-                if not self.config.get('item_skip_download', False):
-                    (tfile_path, tfile_del) = get_local_copy(rfp.read)
-                    extra.update({'path_local': tfile_path})
-                extra.update({'item_url': rfp.url})
+        if item['path'] in item:
+            extra.update({'item_url': contentsource.url})
+            if self.config.get('item_skip_download', False):
+                try:
+                    (tmp_path, tmp_del) = get_local_copy(contentsource.read)
+                finally:
+                    contentsource.close()
 
         try:
-            self.call_hook('item_insert', item, extra=extra)
+            ret = self.call_hook('insert_item', data=data, extra=extra)
         finally:
-            if tfile_del and os.path.exists(tfile_path):
-                os.unlink(tfile_path)
+            if tmp_del and os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+        return ret
 
-    def remove_item(self, item):
-        if self.item_is_filtered(item):
-            return
-        self.call_hook('item_remove', item)
+    def remove_product(self, product_id, product, tree, pedigree):
+        return self.call_hook('remove_product',
+                              data=util.products_exdata(tree, pedigree))
+
+    def remove_version(self, version_id, version, tree, pedigree):
+        return self.call_hook('remove_version',
+                              data=util.products_exdata(tree, pedigree))
+
+    def remove_item(self, contentsource, item_id, item, tree, pedigree):
+        return self.call_hook('remove_item',
+                              data=util.products_exdata(tree, pedigree))
 
     def call_hook(self, hookname, data, capture=False, rcs=None, extra=None,
                   content=None):
@@ -251,16 +243,17 @@ def check_config(config):
         raise TypeError("Missing required config entries for %s" % missing)
 
 
-def load_product_output(output, prodname, fmt="serial_list"):
+def load_product_output(output, content_id, fmt="serial_list"):
     # parse command output and return
 
     if fmt == "serial_list":
         # "line" format just is a list of serials that are present
-        working = {'versions': {}}
-        versions = working['versions']
-        seen = []
+        working = {'content_id': content_id, 'products': {}}
         for line in output.splitlines():
-            versions[line] = {}
+            (product_id, version) = line.split(maxsplit=1)
+            if product_id not in working['products']:
+                working['products'][content_id] = {'versions': {}}
+            working['products'][content_id]['versions'][version] = {}
         return working
 
     elif fmt == "yaml":
