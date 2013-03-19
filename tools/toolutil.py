@@ -1,14 +1,11 @@
 #!/usr/bin/python
 
-import errno
-from Cheetah.Template import Template
 import json
 import os
 import os.path
 from simplestreams.util import read_possibly_signed
 import subprocess
 import urlparse
-import yaml
 
 
 REL2VER = {
@@ -20,22 +17,142 @@ REL2VER = {
     "raring": {'version': "13.04", 'devname': "Raring Ringtail"},
 }
 
-SKIP_COPY_UP = ('format')
+RELEASES = [k for k in REL2VER if k != "hardy"]
+BUILDS = ("server")
 
+NUM_DAILIES = 4
 
-def render_string(content, params):
-    if not params:
-        params = {}
-    return Template(content, searchList=[params]).respond()
+def is_expected(repl, fields):
+    rel = fields[0]
+    serial = fields[3]
+    if repl == "-root.tar.gz":
+        if rel in ("lucid", "oneiric"):
+            # lucid, oneiric do not have -root.tar.gz
+            return False
+        if rel == "precise" and cmp(serial, "20120202") <= 0:
+            # precise got -root.tar.gz after alpha2
+            return False
 
+    if repl == "-disk1.img":
+        if rel == "lucid":
+            return False
+        if rel == "oneiric" and cmp(serial, "20110802.2") <= 0:
+            # oneiric got -disk1.img after alpha3
+            return False
 
-def mkdir_p(path):
-    try:
-        os.makedirs(path)
-    except OSError as exc:
-        if exc.errno != errno.EEXIST:
-            raise
-    return
+    #if some data in /query is not truely available, fill up this array
+    #to skip it. ex: export BROKEN="precise/20121212.1 quantal/20130128.1"
+    broken = os.environ.get("BROKEN","").split(" ")
+    if "%s/%s" % (rel, serial) in broken:
+        print "Known broken: %s/%s" % (rel, serial)
+        return False
+
+    return True
+
+def load_query_download(path, builds=None, rels=None):
+    if builds is None:
+        builds = BUILDS
+    if rels is None:
+        rels = RELEASES
+
+    streams = [f[0:-len(".latest.txt")]
+               for f in os.listdir(path)
+                   if f.endswith("latest.txt")]
+
+    results = []
+    for stream in streams:
+        dl_files = []
+
+        latest_f = "%s/%s.latest.txt" % (path, stream)
+
+        # get the builds and releases
+        with open(latest_f) as fp:
+            for line in fp.readlines():
+                (rel, build, _stream, _serial) = line.split("\t")
+
+                if ((len(builds) and build not in builds) or
+                    (len(rels) and rel not in rels)):
+                    continue
+
+                dl_files.append("%s/%s/%s/%s-dl.txt" %
+                    (path, rel, build, stream))
+
+        field_path = 5
+        field_name = 6
+        # stream/build/release/arch
+        for dl_file in dl_files:
+            olines = open(dl_file).readlines()
+
+            # download files in /query only contain '.tar.gz' (uec tarball)
+            # file.  So we have to make up other entries.
+            lines = []
+            for oline in olines:
+                for repl in (".tar.gz", "-root.tar.gz", "-disk1.img"):
+                    fields = oline.rstrip().split("\t")
+                    if not is_expected(repl, fields):
+                        continue
+
+                    new_path = fields[field_path].replace(".tar.gz", repl)
+
+                    fields[field_path] = new_path
+                    fields[field_name] += repl
+                    lines.append("\t".join(fields) + "\n")
+
+            for line in lines:
+                line = line.rstrip("\n\r") + "\tBOGUS"
+
+                results.append([stream] + line.split("\t", 8)[0:7])
+
+    return results
+
+def load_query_ec2(path, builds=None, rels=None, max_dailies=NUM_DAILIES):
+    if builds is None:
+        builds = BUILDS
+    if rels is None:
+        rels = RELEASES
+
+    streams = [f[0:-len(".latest.txt")]
+               for f in os.listdir(path)
+                   if f.endswith("latest.txt")]
+    results = []
+
+    for stream in streams:
+        id_files = []
+
+        latest_f = "%s/%s.latest.txt" % (path, stream)
+
+        # get the builds and releases
+        with open(latest_f) as fp:
+            for line in fp.readlines():
+                (rel, build, _stream, _serial) = line.split("\t")
+
+                if ((len(builds) and build not in builds) or
+                    (len(rels) and rel not in rels)):
+                    continue
+
+                id_files.append("%s/%s/%s/%s.txt" %
+                    (path, rel, build, stream))
+
+        for id_file in id_files:
+            lines = reversed(open(id_file).readlines())
+            serials_seen = 0
+            last_serial = None
+            for line in lines:
+                line = line.rstrip("\n\r") + "\tBOGUS"
+                ret = [stream]
+                ret.extend(line.split("\t", 11)[0:11])
+
+                if stream == "daily":
+                    serial = ret[4]
+                    if serial != last_serial:
+                        serials_seen += 1
+                    last_serial = serial
+                    if serials_seen > NUM_DAILIES:
+                        break
+
+                results.append(ret)
+
+    return results
 
 
 def signfile(path, output=None):
@@ -67,96 +184,6 @@ def signfile_inline(path, output=None):
         os.unlink(tmpfile)
 
 
-def dumps(content, fmt="yaml"):
-    if fmt == "yaml":
-        return yaml.safe_dump(content)
-    else:
-        return json.dumps(content)
-
-
-def load_content(path):
-    (content, signature) = read_possibly_signed(path)
-    if path.endswith(".yaml"):
-        return yaml.safe_load(content)
-    else:
-        return json.loads(content)
-
-
-def process(cur, data, level, layout, callback, passthrough):
-    for item in cur:
-        if isinstance(item, dict):
-            data[layout[level]['name']] = item.copy()
-        else:
-            data[layout[level]['name']] = {'name': item}
-
-        curdatum = data[layout[level]['name']]
-
-        if callable(layout[level].get('populate', None)):
-            layout[level]['populate'](curdatum)
-
-        if (level + 1) == len(layout):
-            path = '/'.join([data[n['name']]['name'] for n in layout])
-            callback(cur[item], data, path, passthrough)
-        else:
-            process(cur[item], data, level + 1, layout, callback,
-                    passthrough)
-
-
-def process_collections(stream_files, path_prefix, callback):
-    collections = {}
-    for url in stream_files:
-        stream = load_content("%s/%s" % (path_prefix, url))
-        ctok = ""
-        for ptok in [""] + url.split("/")[:-1]:
-            ctok += "%s/" % ptok
-            if ctok not in collections:
-                collections[ctok] = {'streams': []}
-                collections[ctok]['tags'] = stream['tags'].copy()
-            else:
-                clear = []
-                for key, val in collections[ctok]['tags'].iteritems():
-                    if key not in stream['tags'] or stream['tags'][key] != val:
-                        clear.append(key)
-                for key in clear:
-                    del collections[ctok]['tags'][key]
-
-            addstream = {}
-            addstream['tags'] = stream['tags'].copy()
-            for topitem in stream:
-                val = stream[topitem]
-                if isinstance(val, str) and topitem not in SKIP_COPY_UP:
-                    addstream[topitem] = val
-
-            addstream['path'] = url
-
-            collections[ctok]['streams'].append(addstream)
-
-    for coll in collections:
-        for stream in collections[coll]['streams']:
-            for coll_tag in collections[coll]['tags']:
-                if coll_tag in stream['tags']:
-                    del stream['tags'][coll_tag]
-
-        callback(path=coll, path_prefix=path_prefix,
-                 collection=collections[coll])
-
-
-def tokenize_url(url):
-    #given a url, find where the MIRROR.info file lives and return tokenized
-
-    url_in = url
-
-    while urlparse.urlparse(url).path:
-        url = os.path.dirname(url)
-        try:
-            util.url_reader("%s/%s" % (url, "MIRROR.info")).read()
-            return (url + "/", url_in[len(url) + 1:])
-        except IOError as err:
-            util.pass_if_enoent(err)
-
-    raise TypeError("Unable to find MIRROR.info above %s" % url_in)
-
-
 def signjs_file(fname, status_cb=None):
     content = ""
     with open(fname) as fp:
@@ -170,22 +197,20 @@ def signjs_file(fname, status_cb=None):
             pass
         status_cb = null_cb
 
-    if fmt == "stream-collection:1.0":
-        status_cb(fname, fmt)
-        signfile(fname)
-        for stream in data.get('streams'):
-            path = stream.get('path')
-            if path.endswith(".js"):
-                stream['path'] = path[0:-len(".js")] + ".sjs"
-        with open(sjs, "w") as fp:
-            fp.write(json.dumps(data, indent=1))
-        signfile_inline(sjs)
-    elif fmt == "stream:1.0":
+    if fmt == "products:1.0":
         status_cb(fname, fmt)
         signfile(fname)
         signfile_inline(fname, sjs)
-    elif fmt is None:
+    elif fmt == "index:1.0":
         status_cb(fname, fmt)
+        signfile(fname)
+        for content_id, content in data.get('index').iteritems():
+            path = content.get('path')
+            if path.endswith(".js"):
+                content['path'] = path[0:-len(".js")] + ".sjs"
+        with open(sjs, "w") as fp:
+            fp.write(json.dumps(data, indent=1))
+        signfile_inline(sjs)
         return
     else:
         status_cb(fname, fmt)

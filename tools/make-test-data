@@ -1,0 +1,421 @@
+#!/usr/bin/python
+
+import argparse
+import json
+import os
+import os.path
+import requests
+import sys
+from simplestreams import util
+
+import toolutil
+
+# could support reading from other mirrors
+# for example:
+#   http://cloud-images-archive.ubuntu.com/
+#   file:///srv/ec2-images
+#
+BASE_URLS = ("http://cloud-images.ubuntu.com/",)
+
+FAKE_DATA = {
+    'root.tar.gz': {
+        'size': 10240, 'md5': '1276481102f218c981e0324180bafd9f',
+        'sha256': '84ff92691f909a05b224e1c56abb4864f01b4f8e3c854e4bb4c7baf1d3f6d652'},
+    'tar.gz': {
+        'size': 11264, 'md5': '820a81e0916bac82838fd7e74ab29b15',
+        'sha256': '5309e677c79cffae49a65728c61b436d3cdc2a2bab4c81bf0038415f74a56880'},
+    'disk1.img': {
+        'size': 12288, 'md5': '4072783b8efb99a9e5817067d68f61c6',
+        'sha256': 'f3cc103136423a57975750907ebc1d367e2985ac6338976d4d5a439f50323f4a'},
+}
+
+REAL_DATA = os.environ.get("REAL_DATA", False)
+if REAL_DATA and REAL_DATA != "0":
+    REAL_DATA = True
+else:
+    REAL_DATA = False
+
+FILE_DATA = {}
+
+
+def get_cache_data(path, field):
+    dirname = os.path.dirname(path)
+    bname = os.path.basename(path)
+    return FILE_DATA.get(dirname, {}).get(bname, {}).get(field)
+
+
+def store_cache_data(path, field, value):
+    dirname = os.path.dirname(path)
+    bname = os.path.basename(path)
+    if dirname not in FILE_DATA:
+        FILE_DATA[dirname] = {}
+    if bname not in FILE_DATA[dirname]:
+        FILE_DATA[dirname][bname] = {}
+    FILE_DATA[dirname][bname][field] = value
+
+
+def save_cache():
+    if FILE_DATA:
+        hashcache = FILE_DATA['filename']
+        with open(hashcache, "w") as hfp:
+            hfp.write(json.dumps(FILE_DATA, indent=1))
+
+
+def get_cloud_images_file_hash(path):
+    md5 = get_cache_data(path, 'md5')
+    sha256 = get_cache_data(path, 'sha256')
+    if md5 and sha256:
+        return {'md5': md5, 'sha256': sha256}
+
+    found = {}
+    dirname = os.path.dirname(path)
+    for cksum in ("md5", "sha256"):
+        content = None
+        for burl in BASE_URLS:
+            dir_url = burl + dirname
+
+            try:
+                url = dir_url + "/%sSUMS" % cksum.upper()
+                sys.stderr.write("reading %s\n" % url)
+                content = util.read_url(url)
+                break
+            except requests.HTTPError as error:
+                pass
+
+        if not content:
+            raise error
+
+        for line in content.splitlines():
+            (hexsum, fname) = line.split()
+            if fname.startswith("*"):
+                fname = fname[1:]
+            found[cksum] = hexsum
+            store_cache_data(dirname + "/" + fname, cksum, hexsum)
+
+    md5 = get_cache_data(path, 'md5')
+    sha256 = get_cache_data(path, 'sha256')
+    save_cache()
+    return {'md5': md5, 'sha256': sha256}
+
+
+def get_url_len(url):
+    if url.startswith("file:///"):
+        path = url[len("file://"):]
+        return os.stat(path).st_size
+    if os.path.exists(url):
+        return os.stat(url).st_size
+
+    sys.stderr.write("getting size for %s\n" % url)
+    request = requests.head(url)
+    save_cache()
+    return int(request.headers.get('content-length', 0))
+
+
+def get_cloud_images_file_size(path):
+    size = get_cache_data(path, 'size')
+    if size:
+        return size
+
+    for burl in BASE_URLS:
+        try:
+            size = int(get_url_len(burl + path))
+            break
+        except requests.HTTPError as error:
+            pass
+
+    if not size:
+        raise error
+    store_cache_data(path, 'size', size)
+    return size
+
+
+def create_fake_file(prefix, item):
+    fpath = os.path.join(prefix, item['path'])
+    path = item['path']
+
+    data = FAKE_DATA[item['ftype']]
+
+    util.mkdir_p(os.path.dirname(fpath))
+    print "creating %s" % fpath
+    with open(fpath, "w") as fp:
+        fp.truncate(data['size'])
+
+    item.update(data)
+
+    for cksum in util.CHECKSUMS:
+        if cksum in item and not cksum in data:
+            del item[data]
+
+    return
+
+
+def dl_load_query(path):
+    tree = {}
+    for rline in toolutil.load_query_download(path):
+        (stream, rel, build, label, serial, arch, filepath, fname) = rline
+
+        if stream not in tree:
+            tree[stream] = {'products': {}}
+        products = tree[stream]['products']
+
+        prodname = "%s:%s:%s" % (build, rel, arch)
+
+        if prodname not in products:
+            products[prodname] = {
+                "release": rel,
+                "version": toolutil.REL2VER[rel]['version'],
+                "arch": arch,
+                "versions": {}
+            }
+
+        product = products[prodname]
+
+        if serial not in product['versions']:
+            product['versions'][serial] = {'items': {}, "label": label}
+
+        name = pubname(label, rel, arch, serial, build)
+        product['versions'][serial]['pubname'] = name
+
+        items = product['versions'][serial]['items']
+
+        # ftype: finding the unique extension is not-trivial
+        # take basename of the filename, and remove up to "-<arch>?"
+        # so ubuntu-12.04-server-cloudimg-armhf.tar.gz becomes
+        # 'tar.gz' and 'ubuntu-12.04-server-cloudimg-armhf-disk1.img'
+        # becomse 'disk1.img'
+        dash_arch = "-" + arch
+        ftype = filepath[filepath.rindex(dash_arch) + len(dash_arch) + 1:]
+        items[ftype] = {
+            'path': filepath,
+            'ftype': ftype
+        }
+
+    return tree
+
+
+def pubname(label, rel, arch, serial, build='server'):
+    version = toolutil.REL2VER[rel]['version']
+
+    if label == "daily":
+        rv_label = rel + "-daily"
+    elif label == "release":
+        rv_label = "%s-%s" % (rel, version)
+    elif label.startswith("beta"):
+        rv_label = "%s-%s-%s" % (rel, version, label)
+    else:
+        rv_label = "%s-%s" % (rel, label)
+    return "ubuntu-%s-%s-%s-%s" % (rv_label, arch, build, serial)
+
+
+def ec2_load_query(path):
+    tree = {}
+
+    dmap = {
+        "north": "nn",
+        "northeast": "ne",
+        "east": "ee",
+        "southeast": "se",
+        "south": "ss",
+        "southwest": "sw",
+        "west": "ww",
+        "northwest": "nw",
+    }
+    itmap = {
+        'pv': {'instance': "pi", "ebs": "pe"},
+        'hvm': {'instance': "hi", "ebs": "he"}
+    }
+
+    for rline in toolutil.load_query_ec2(path):
+        (stream, rel, build, label, serial, store, arch, region,
+         iid, _kern, _rmd, vtype) = rline
+
+        if stream not in tree:
+            tree[stream] = {'products': {}}
+        products = tree[stream]['products']
+
+        prodname = "%s:%s:%s" % (build, rel, arch)
+
+        if prodname not in products:
+            products[prodname] = {
+                "release": rel,
+                "version": toolutil.REL2VER[rel]['version'],
+                "arch": arch,
+                "versions": {}
+            }
+
+        product = products[prodname]
+
+        if serial not in product['versions']:
+            product['versions'][serial] = {'items': {}, "label": label}
+        items = product['versions'][serial]['items']
+
+        name = pubname(label, rel, arch, serial, build)
+        product['versions'][serial]['pubname'] = name
+
+        if store == "instance-store":
+            store = 'instance'
+        if vtype == "paravirtual":
+            vtype = "pv"
+
+        # create the item key:
+        #  - 2 letter country code (us)
+        #  - 2 letter direction ('nn' for north, 'nw' for northwest)
+        #  - 1 digit number
+        #  - 1 char for virt type
+        #  - 1 char for root-store type
+        (cc, direction, num) = region.split("-")
+        ikey = cc + dmap[direction] + num + itmap[vtype][store]
+
+        items[ikey] = {
+            'id': iid,
+            'root_store': store,
+            'virt': vtype,
+            'cloud': region,
+        }
+    return tree
+
+
+def printitem(item, exdata):
+    full = exdata.copy()
+    full.update(item)
+    print full
+
+
+def create_image_data(query_tree, out_d, streamdir):
+    hashcache = os.path.join(query_tree, "FILE_DATA_CACHE")
+    FILE_DATA['filename'] = hashcache
+    if os.path.isfile(hashcache):
+        FILE_DATA.update(json.loads(open(hashcache).read()))
+
+    ts = util.timestamp()
+    tree = dl_load_query(query_tree)
+
+    def update_hashes(item, tree, pedigree):
+        item.update(get_cloud_images_file_hash(item['path']))
+
+    def update_sizes(item, tree, pedigree):
+        item.update({'size': get_cloud_images_file_size(item['path'])})
+
+    cid_fmt = "com.ubuntu.cloud:%s:download"
+    for stream in tree:
+        def create_file(item, tree, pedigree):
+            create_fake_file(os.path.join(out_d, stream), item)
+
+        cid = cid_fmt % stream
+        if REAL_DATA:
+            util.walk_products(tree[stream], cb_item=update_hashes)
+            util.walk_products(tree[stream], cb_item=update_sizes)
+        else:
+            util.walk_products(tree[stream], cb_item=create_file)
+
+        tree[stream]['format'] = "products:1.0"
+        tree[stream]['updated'] = ts
+        tree[stream]['content_id'] = cid
+
+        outfile = os.path.join(out_d, stream, streamdir, cid + ".js")
+        util.mkdir_p(os.path.dirname(outfile))
+        with open(outfile, "w") as fp:
+            sys.stderr.write("writing %s\n" % outfile)
+            fp.write(json.dumps(tree[stream], indent=1) + "\n")
+
+    # save hashes data
+    save_cache()
+    return tree
+
+
+def create_aws_data(query_tree, out_d, streamdir):
+    tree = ec2_load_query(query_tree)
+    ts = util.timestamp()
+    cid_fmt = "com.ubuntu.cloud:%s:aws"
+    for stream in tree:
+        cid = cid_fmt % stream
+        # now add the '_alias' data
+        regions = set()
+
+        def findregions(item, tree, pedigree):
+            regions.add(item['cloud'])
+
+        util.walk_products(tree[stream], cb_item=findregions)
+
+        tree[stream]['_aliases'] = {'cloud': {}}
+        for region in regions:
+            tree[stream]['_aliases']['cloud'][region] = {
+                'endpoint': 'http://ec2.%s.amazonaws.com' % region,
+                'region': region}
+
+        tree[stream]['format'] = "products:1.0"
+        tree[stream]['updated'] = ts
+        tree[stream]['content_id'] = cid
+        outfile = os.path.join(out_d, stream, streamdir, cid + ".js")
+        util.mkdir_p(os.path.dirname(outfile))
+        with open(outfile, "w") as fp:
+            sys.stderr.write("writing %s\n" % outfile)
+            fp.write(json.dumps(tree[stream], indent=1) + "\n")
+
+    return tree
+
+
+def main():
+    parser = argparse.ArgumentParser(description="create example content tree")
+
+    parser.add_argument("query_tree", metavar='query_tree',
+                        help=('read in content from /query tree. Hint: ' +
+                              'make exdata-query'))
+
+    parser.add_argument("out_d", metavar='out_d',
+                        help=('create content under output_dir'))
+
+    parser.add_argument('--sign', action='store_true', default=False,
+                        help='sign all generated files')
+
+    args = parser.parse_args()
+    streamdir = "streams/v1"
+
+    dltree = create_image_data(args.query_tree, args.out_d, streamdir)
+
+    aws_tree = create_aws_data(args.query_tree, args.out_d, streamdir)
+
+    for streamname in aws_tree:
+        index = {"index": {}, 'format': 'index:1.0',
+                 'updated': util.timestamp()}
+
+        clouds = aws_tree[streamname]['_aliases']['cloud'].values()
+        index['index'][aws_tree[streamname]['content_id']] = {
+            'updated': aws_tree[streamname]['updated'],
+            'datatype': 'image-ids',
+            'clouds': clouds,
+            'cloudname': "aws",
+            'path': '/'.join((streamdir,
+                             "%s.js" % aws_tree[streamname]['content_id'],)),
+            'products': aws_tree[streamname]['products'].keys(),
+            'format': aws_tree[streamname]['format'],
+        }
+        index['index'][dltree[streamname]['content_id']] = {
+            'updated': dltree[streamname]['updated'],
+            'datatype': 'image-downloads',
+            'path': '/'.join((streamdir,
+                             "%s.js" % dltree[streamname]['content_id'],)),
+            'products': dltree[streamname]['products'].keys(),
+            'format': dltree[streamname]['format']
+        }
+
+        outfile = os.path.join(args.out_d, streamname, streamdir, 'index.js')
+        util.mkdir_p(os.path.dirname(outfile))
+        with open(outfile, "w") as fp:
+            sys.stderr.write("writing %s\n" % outfile)
+            fp.write(json.dumps(index, indent=1) + "\n")
+
+    if args.sign:
+        def printstatus(name, fmt):
+            sys.stderr.write("signing %s: %s\n" % (name, fmt))
+        for root, dirs, files in os.walk(args.out_d):
+            for f in [f for f in files if f.endswith(".js")]:
+                toolutil.signjs_file(os.path.join(root, f),
+                                     status_cb=printstatus)
+
+    return
+
+if __name__ == '__main__':
+    sys.exit(main())
+
+# vi: ts=4 expandtab

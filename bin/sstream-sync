@@ -2,11 +2,8 @@
 #
 # client showing use of command_hook_mirror
 
-from simplestreams import collection
 from simplestreams import command_hook_mirror
-from simplestreams import objectstores
-from simplestreams import stream
-from simplestreams import util
+from simplestreams import mirrors
 
 import argparse
 import logging
@@ -59,7 +56,7 @@ def main():
                         help='Do not download items that are to be inserted.')
 
     parser.add_argument('mirror_ref')
-    parser.add_argument('path', nargs='?', default="streams/v1/streams.js")
+    parser.add_argument('path', nargs='?', default="streams/v1/index.sjs")
     args = parser.parse_args()
 
     cfg = {}
@@ -75,42 +72,12 @@ def main():
         cfg[cfgname] = val
 
     cfg['item_skip_download'] = args.item_skip_download
-        
-    tmirror = command_hook_mirror.CommandHookMirror(cfg)
+    cfg['max'] = args.max
+    cfg['keep'] = args.keep
 
-    # mirror_ref is just a url for now
-    url = util.normalize_url(args.mirror_ref)
-
-    smirror = objectstores.UrlMirrorReader(url)
-
-    (content, _sig) = util.read_possibly_signed(args.path, smirror.reader)
-
-
-    resolve_args = {'max': args.max, 'keep': args.keep}
-
-    data = util.load_content(content)
-    fmt = data.get("format")
-
-    # allow old format. remove this later.
-    if fmt == "stream-1.0":
-        fmt = "stream:1.0"
-
-    if fmt == "stream:1.0":
-        sstream = stream.Stream(data)
-        util.sync_stream(src_stream=sstream, src_mirror=smirror,
-                         target_stream=None, target_mirror=tmirror,
-                         path=args.path, resolve_args=resolve_args)
-
-    elif fmt == "stream-collection:1.0":
-        scoll = collection.Collection(data)
-        util.sync_collection(src_collection=scoll, src_mirror=smirror,
-                        target_mirror=tmirror, path=args.path,
-                        resolve_args=resolve_args)
-
-    else:
-        sys.stderr.write("Unknown format '%s' in '%s'\n" % (fmt, args.path))
-        sys.exit(1)
-
+    smirror = mirrors.UrlMirrorReader(args.mirror_ref)
+    tmirror = command_hook_mirror.CommandHookMirror(config=cfg)
+    tmirror.sync(smirror.reader, args.path)
 
 if __name__ == '__main__':
     main()
