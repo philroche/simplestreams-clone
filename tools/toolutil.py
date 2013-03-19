@@ -184,22 +184,6 @@ def signfile_inline(path, output=None):
         os.unlink(tmpfile)
 
 
-def tokenize_url(url):
-    #given a url, find where the MIRROR.info file lives and return tokenized
-
-    url_in = url
-
-    while urlparse.urlparse(url).path:
-        url = os.path.dirname(url)
-        try:
-            util.url_reader("%s/%s" % (url, "MIRROR.info")).read()
-            return (url + "/", url_in[len(url) + 1:])
-        except IOError as err:
-            util.pass_if_enoent(err)
-
-    raise TypeError("Unable to find MIRROR.info above %s" % url_in)
-
-
 def signjs_file(fname, status_cb=None):
     content = ""
     with open(fname) as fp:

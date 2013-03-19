@@ -245,15 +245,6 @@ def pass_if_enoent(exc):
 def read_url(url):
     return cs.UrlContentSource(url).read()
 
-def url_reader(url):
-    norm = normalize_url(url)
-    if norm.startswith("file://"):
-        fpath = norm[len("file://"):]
-        return sreader.Reader(reader=open(fpath, "r"), url=norm)
-    else:
-        return cs.RequestsUrlReader(url)
-
-
 def sync_product(src_product, src_mirror, target_product, target_mirror,
                  products_path=None, prodname=None, resolve_args=None):
 
