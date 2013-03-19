@@ -14,7 +14,7 @@ class MirrorReader(object):
 
 
 class MirrorWriter(object):
-    def load_products(self, path=None):
+    def load_products(self, path=None, content_id=None):
         raise NotImplementedError()
 
     def sync_products(self, reader, path=None, products=None,
@@ -154,7 +154,7 @@ class BasicMirrorWriter(MirrorWriter):
 
         util.expand_tree(products)
 
-        tproducts = self.load_products(path)
+        tproducts = self.load_products(path, content['content_id'])
         if not tproducts:
             tproducts = util.stringitems(products)
 
@@ -194,8 +194,6 @@ class BasicMirrorWriter(MirrorWriter):
                 target=tproduct.get('versions', {}).keys(),
                 max=self.config.get('max_items'),
                 keep=self.config.get('keep_items'), filter=_filter)
-
-            print "%s: to_add=%s, to_del=%s" % (prodname, to_add, to_remove)
 
             tversions = tproduct['versions']
             for vername in to_add:
@@ -267,7 +265,7 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
         super(ObjectStoreMirrorWriter, self).__init__(config=config)
         self.store = objectstore
 
-    def load_products(self, path=None):
+    def load_products(self, path=None, content_id=None):
         if path:
             try:
                 (payload, _sig) = util.read_possibly_signed(path, self.reader)
