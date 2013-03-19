@@ -1,6 +1,130 @@
 == Simple Sync Format ==
 Simple Sync format consists of 2 different file formats.
- * content stream: A collection of multiple item groups of the same "type".
+ * A "products list" (format=products:1.0)
+ * A "index" (format=index:1.0)
+
+Files contain json formated data.
+Data can come in one of 2 formats:
+ * Json file: <file>.js
+   A .js file can be accompanied by a .js.gpg file which contains
+   signature data for .js file.
+
+   Due to race conditions caused by the fact that .js and .js.gpg
+   may not be able to be obtained from a storage location at the same
+   time, the preferred delivery of signed data is via '.sjs' format.
+
+ * Signed Json File: <file>.sjs
+   This is a gpg cleartext signed message.
+      http://rfc-ref.org/RFC-TEXTS/2440/chapter7.html
+   The payload the same content that would be included in the json file.
+
+Special dictionary entries:
+ * 'path': If a 'product' dictionary in an index file or a item dictionary
+   in a products file contains a 'path' element, then that indicates there
+   is content to be downloaded associated with that element.
+
+   A 'path' must value must be relative to the base of the mirror.
+   It is 
+
+ * 'md5', 'sha256', 'sha512':
+   If an item contains a 'path' and one of these fields, then the content
+   referenced must have the given checksum(s).
+
+ * 'size':
+   For an item with a 'path', this indicates the expected download size.
+   It should be present for a item with a path in a products file.
+   Having access to expected size allows the client to provide progress
+   and also reduces the potential for hash collision attacks.
+
+ * 'updated'
+   This field can exist at the top level of a products or index, and
+   contains a rfc-2822 timestamp indicating when the file was last updated
+   This allows a client to quickly note that it is up to date.
+
+== Simple Sync Mirrors ==
+The default/expected location of an index file is 'streams/v1/index.sjs'
+or 'streams/v1/index.js' underneath the top level of a mirror.
+
+'path' entries as described above are relative to the top level of a
+mirror, not relative to the location of the index.
+
+For example:
+ http://example.com/my-mirror/
+would be the top level of a mirror, and the expected path of an index is
+ http://example.com/my-mirror/streams/v1/index.sjs
+
+To describe a file that lives at:
+ http://example.com/my-mirror/streams/v1/products.sjs
+
+The 'path' element must be: 'streams/v1/products.sjs'
+
+== Products List ==
+products list: (format=products:1.0)
+For Ubuntu, a product is 'server:precise:amd64'
+A Products list has a 'content_id' and multiple products.
+a product has multiple versions
+a version has multiple items
+
+An item can be globally uniquely identified by the path to it.
+Ie, the 'content_id' for a products list and the key in each
+element of the tree form a unique tuple for that item.  Given:
+  content_id = tree['content_id']
+  prod_name =  tree['products'].keys()[0]
+  ver_name =   tree['products'][prod_name]['versions'].keys(0)
+  item_name =  tree['products'][prod_name]['versions'][ver_name].keys(0)
+that unique tuple is:
+  (content_id, prod_name, ver_name, item_name)
+
+The following is a description of each of these fields:
+  * content_id is formed similarly to an ISCSI qualified name (IQN)
+    An example is:
+       com.ubuntu.cloud:released:aws
+    It should have a reverse domain portion followed by a portion
+    that represents a name underneith that domain.
+
+  * product_name: product name is unique within a products list.  The same
+    product name may appear in multiple products_lists.  For example,
+    In Ubuntu, 'server:precise:amd64' will appear in both
+    'com.ubuntu.cloud:released:aws' and
+    'com.ubuntu.cloud:released:download'.
+
+    That name collision should imply that the two separate 
+    <content_id><product_name> pairs are equivalent in some manner.
+
+  * version_name:
+    A 'version' of a product represents a release, build or collection of
+    that product.  A key in the 'versions' dictionary should be sortable
+    by rules of a 'LANG=C sort()'.  That allows the client to trivially
+    order versions to find the most recent.  Ubuntu uses "serial" numbers
+    for these keys, in the format YYYYMMDD[.0-9].
+  
+  * item_name:
+    Inside of a version, there may be multiple items.  An example would be
+    a binary build and a source tarball.
+
+    For Ubuntu download images, these are things like '.tar.gz',
+    '-disk1.img' and '-root.tar.gz'.  
+
+    The item name does not need to be user-friendly.  It must be
+    consistent.  Because this id is unique amoungst the given
+    'version_name', a client needs only to store that key, rather than
+    trying to determine which keys inside the item dictionary identify it.
+
+    An 'item' dictionary may contain a 'path' element.
+
+    'path' entries for a given item must be immutable.  That is, for a 
+    given 'path' under a mirror, the content must never change.
+
+== Index ==
+This is a index of products files that are available.
+It has a top level 'index' dictionary.  Each entry in that dictionary is a
+content_id of a products file.  The entry should have a 'path' item that
+indicates where to download the product.
+
+All other data inside the product entry is not required, but helps a client
+to find what they're looking for.
+
+item groups of the same "type".
    this is 'stream:1.0' format.
  * stream collection: a list of content streams
    A stream collection is simply a way to provide an index of known content
@@ -59,31 +183,3 @@ Notes:
  * stream collection files are not required to be signed, as they only
    contain references to other content that is signed, and that is hosted
    on the same mirror.
-
-== Mirror ==
-Requirements:
- * top level MIRROR.info file
-   That file is required to define an 'iqn', that indicates what it is
-   a mirror of, and should contain a 'authoritative_url' indicating
-   the upstream mirror for that.
-   iqn is used so a client can easily maintain a list of mirrors not
-   by 'authoritative_url' but by iqn.
-   iqn cannot contain /.
- * streams/v1/streams.sjs or streams/v1/streams.js must be present.
-   .sjs is "signed json", and must contain inline GPG signature
-   , and should contain a comprehensive
-   list of streams in this mirror, suitable for a full mirror.
-
-Optional:
- * v1/streams.js v1/streams.js.gpg
-   Contains same content as v1/streams
- * A mirror is required to have a MIRROR.info file at its top level.
-
-== GPG Signatures / Security ==
-For secure transmission, inline signed json (.sjs) files are preferred.  Also
-acceptable are json files with detached signatures (ie, '.js' and '.js.gpg'
-file pairs).
-
-Over secured transports, clients may accept non signed data entiresly (just
-.js).
-
