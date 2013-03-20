@@ -41,7 +41,7 @@ def products_exdata(tree, pedigree):
 
 
 def walk_products(tree, cb_product=None, cb_version=None, cb_item=None,
-              ret_finished=_UNSET):
+                  ret_finished=_UNSET):
     # walk a product tree. callbacks are called with (item, tree, (pedigree))
     for prodname, proddata in tree['products'].iteritems():
         ped = [prodname]
@@ -232,115 +232,56 @@ class checksummer(object):
         return (self.expected is None or self.expected == self.hexdigest())
 
 
-def pass_if_enoent(exc):
-    try:
-        raise exc
-    except IOError as e:
-        if e.errno == errno.ENOENT:
-            return
-    raise exc
+def move_dups(src, target):
+    # given dict1 = {e1: {a:a, b:c}, e2: {a:a, b:d, e:f}}
+    # update dict2 with {a:a}, and delete 'a' from entries in dict1
+    # if a key exists in dict2, it will not be copied or deleted.
+
+    everything = {}
+    # first walk through and just get all keys
+    for entry in src.values():
+        try:
+            everything.update(entry)
+        except Exception as e:
+            import ipdb; ipdb.set_trace()
+            raise
+
+    remain = stringitems(everything)
+
+    # if the target had this entry, skip it
+    for k in [k for k in target if k in remain]:
+        del remain[entry]
+
+    # then remove anything that isn't present in every entry or differs.
+    for entry in src.values():
+        for k, v in stringitems(entry).iteritems():
+            if k not in remain:
+                continue
+            if remain[k] != v:
+                del remain[k]
+
+    for entry in src.values():
+        for k in remain:
+            del entry[k]
+
+    target.update(remain)
+
+
+def condense_products(ptree):
+    # walk a products tree, copying up item keys as far as they'll go
+
+    def call_move_dups(cur, tree, pedigree):
+        (mtype, stname) = (("product", "versions"),
+                           ("version", "items"))[len(pedigree) - 1]
+        move_dups(cur.get(stname, {}), cur)
+
+    walk_products(ptree, cb_version=call_move_dups)
+    walk_products(ptree, cb_product=call_move_dups)
+    move_dups(ptree.get('products', {}), ptree)
 
 
 def read_url(url):
     return cs.UrlContentSource(url).read()
-
-def sync_product(src_product, src_mirror, target_product, target_mirror,
-                 products_path=None, prodname=None, resolve_args=None):
-
-    if resolve_args is None:
-        resolve_args = {}
-
-    if src_product is None and products_path and prodname:
-        src_product = src_mirror.load_product(path, prodname)
-
-    if not prodname:
-        prodname = src_product['product']
-
-    if target_product is None:
-        target_product = target_mirror.load_product(products_path, prodname)
-
-        tprodname = target_product.get('product')
-
-    # get a hash of version: flattened so that we have it.
-    flatdata = {}
-    for vername, verdata in src_product['versions'].iteritems():
-        extra = exdata(prodname=prodname, proddata=src_product, vername=vername,
-                       verdata=verdata)
-        extra.update(verdata)
-        flatdata[vername] = extra
-        
-    def version_filter(version):
-        data = src_product['versions'][version].copy()
-        #data['version'] = version
-        
-        return target_mirror.filter_version(flatdata[version])
-
-    (to_add, to_remove) = resolve_work(src_product['versions'].keys(),
-                                       target_product['versions'].keys(),
-                                       filter=version_filter,
-                                       **resolve_args)
-
-    for version in to_add:
-        target_mirror.insert_version(src_product['versions'][version], src_mirror.reader)
-        target_stream['versions'] = version
-
-    for version in to_remove:
-        target_mirror.remove_version(flatdata[version])
-        del target_stream['versions'][version]
-
-    target_mirror.store_product(products_path, product=target_product)
-
-    return target_product
-
-
-def sync_products(src_products, src_mirror, target_mirror, path=None,
-                  resolve_args=None):
-
-    src_content = None
-    if src_products is None and path:
-        (src_content, signature) = read_possibly_signed(path,
-                                                        src_mirror.reader)
-        src_products = load_content(src_content)
-
-    def wrap_sync_product(product, exdata):
-        fullproduct = exdata.copy()
-        fullproduct.update(product)
-
-        if not target_mirror.filter_product(fullproduct):
-            return
-
-        sync_product(product, src_mirror, target_product=None,
-                     target_mirror=target_mirror, products_path=path,
-                     prodname = fullproduct['product'],
-                     resolve_args=resolve_args)
-
-    walk_products(src_products, wrap_sync_product)
-
-    if path is not None:
-        # if path was provided, insert it into the target
-        # if we've already read the src_content above, do not read again
-        if src_content is None:
-            with src_mirror.reader(path) as fp:
-                src_content = fp.read()
-
-    # FIXME: if we'd filtered src_collection we should store target_collection
-    target_mirror.store_products(path, products=src_products,
-                                content=src_content)
-
-
-def normalize_url(url):
-    parsed = urlparse.urlparse(url)
-    if not parsed.scheme:
-        orig = url
-        if url.startswith("/"):
-            url = "file://%s" % url
-        elif os.path.exists(url):
-            url = "file://%s" % os.path.abspath(url)
-        else:
-            raise TypeError("Could not convert %s to url", url)
-        if os.path.isdir(orig):
-            url += os.path.sep
-    return url
 
 
 def mkdir_p(path):
