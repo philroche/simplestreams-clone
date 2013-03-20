@@ -156,30 +156,7 @@ Useful definitions
     * "disk1.img" produced from the amd64 cloud image build done on 2012-04-04
     * -root.tar.gz produced from the same build.
 
-== Stream ==
-format: stream:1.0
-examples:  doc/example/amd64.yaml doc/example/i386.yaml
-
-Requirements:
- * must have an 'iqn' entry at top level that uniquely identifies this stream.
-
 Notes:
- * if an item has a 'path' element, that indicates there is a file
-   to be downloaded at the 'path' location.
-   path is required to be relative to the mirror root.
- * in the event of a 404 or ENOENT on a PATH, the client will consult the 
-   'mirrors' entry in the MIRROR.info file, and try to resolve the file
-   from *that* mirror.
- * In order to be trusted, Stream files must be signed or transferred
-   securely (ie, https).
-
-== Stream Collection ==
-format: stream-collection:1.0
-
-A stream collection is really just a simple list or index of streams and
-attributes about them.  This is intended to be the entry point into a mirror.
-
-Notes:
- * stream collection files are not required to be signed, as they only
+ * index files are not required to be signed, as they only
    contain references to other content that is signed, and that is hosted
    on the same mirror.
