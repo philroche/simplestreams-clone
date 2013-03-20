@@ -17,6 +17,12 @@ For example, to mirror the 'foocloud' example content, do:
 
 That will create a full mirror in my.out/.
 
+   ./tools/tenv do-mirror --mirror=http://download.cirros-cloud.net/ \
+       --max=1 examples/cirros/ cirros.mirror/
+
+That will create a mirror of cirros data in cirros.mirror, with only
+the latest file from each product.
+
 = Hooks =
 To use the "command hooks mirror" for invoking commands to synchronize, between
 one source and another, see bin/sstream-sync.
