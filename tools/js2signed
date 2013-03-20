@@ -12,19 +12,19 @@ def status_cb(fname, fmt):
     sys.stderr.write("%s: %s\n" % (fmt, fname))
 
 def main():
-    if os.path.isfile(sys.argv[1]):
-        fname = sys.argv[1]
-        if not fname.endswith(".js"):
-            sys.stderr.write("file must end with .js\n")
+    for path in sys.argv[1:]:
+        if os.path.isfile(path):
+            if not path.endswith(".js"):
+                sys.stderr.write("file must end with .js\n")
+                sys.exit(1)
+            toolutil.signjs_file(fname)
+        elif os.path.isdir(path):
+            for root, dirs, files in os.walk(path):
+                for f in [f for f in files if f.endswith(".js")]:
+                    toolutil.signjs_file(os.path.join(root, f), status_cb=status_cb)
+        else:
+            sys.stderr.write("input must be file or dir\n")
             sys.exit(1)
-        toolutil.signjs_file(fname)
-    elif os.path.isdir(sys.argv[1]):
-        for root, dirs, files in os.walk(sys.argv[1]):
-            for f in [f for f in files if f.endswith(".js")]:
-                toolutil.signjs_file(os.path.join(root, f), status_cb=status_cb)
-    else:
-        sys.stderr.write("input must be file or dir\n")
-        sys.exit(1)
 
 
 if __name__ == '__main__':
