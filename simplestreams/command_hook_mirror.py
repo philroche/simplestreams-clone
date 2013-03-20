@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 import yaml
 
-READ_SIZE = (1024 * 1024)
+READ_SIZE = (1024 * 50)
 
 REQUIRED_FIELDS = ("load_products",)
 HOOK_NAMES = (

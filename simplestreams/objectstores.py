@@ -6,7 +6,7 @@ import os
 import simplestreams.contentsource as cs
 import simplestreams.util as util
 
-READ_BUFFER_SIZE = 1024 * 1024
+READ_BUFFER_SIZE = 1024 * 50
 
 LOG = logging.getLogger('simplestreams')
 LOG.setLevel(logging.ERROR)

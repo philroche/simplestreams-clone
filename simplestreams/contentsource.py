@@ -159,7 +159,7 @@ class RequestsUrlReader(UrlReader):
         self.req = requests.get(url, stream=True)
         self.r_iter = None
         if buflen is None:
-            buflen = 1024 * 1024
+            buflen = 1024 * 50
         self.buflen = buflen
         self.leftover = bytes()
         self.consumed = False
