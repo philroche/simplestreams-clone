@@ -1,10 +1,28 @@
-This is an example client for syncing data from a remote source.
+== Intro ==
+This is a documentation, examples, a python library and some tools for
+interacting with simple streams format.
 
-For example of what the server side data looks like:
- * look in doc/
- * make exdata
+The intent of simple streams format is to make well formated data available
+about "products".
 
-to mirror data see tools/do-mirror
+There is more documentation in doc/README.
+There are examples in examples/.
 
-example are signed with my key:
-   gpg --recv-keys --keyserver keyserver.ubuntu.com 024BC6F0
+== Simple Streams Getting Started ==
+
+= Mirroring ==
+To mirror one source (http or file) to a local directory, see tools/do-mirror.
+For example, to mirror the 'foocloud' example content, do:
+   ./tools/tenv do-mirror examples/foocloud/ my.out streams/v1/index.js
+
+That will create a full mirror in my.out/.
+
+= Hooks =
+To use the "command hooks mirror" for invoking commands to synchronize, between
+one source and another, see bin/sstream-sync.
+
+   ./tools/tenv sstream-sync examples/foocloud/ --hook=hook-debug
+
+The 'hook-debug' program simply outputs the data it is invoked with.  It does
+not actually mirror anything.
+
