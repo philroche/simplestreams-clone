@@ -1,37 +1,42 @@
 from unittest import TestCase
-from simplestreams.command_hook_mirror import CommandHookMirror
-from simplestreams.util import sync_stream_file
+import simplestreams.command_hook_mirror as chm
 from tests.testutil import get_mirror_reader
-
-MINIMAL_DATA = {
-    "format": "stream-collection:1.0",
-    "streams": [],
-}
-
-TRIVIAL_STREAMS = [
-    {"path": "i386.yaml", "foo-tag": "from-i386"},
-    {"path": "amd64.yaml", "foo-tag": "from-amd64"},
-]
-
-COLLECTION_TAGS = {
-    "mytag1": "some value",
-    "lorum": "ipsum",
-    "cubs": "win"
-}
 
 class TestCommandHookMirror(TestCase):
     """Test of CommandHookMirror."""
 
-    def test_init_without_load_stream_fails(self):
-        self.assertRaises(TypeError, CommandHookMirror, {})
+    def setUp(self):
+        self._run_commands = []
 
-    def test_init_with_load_stream_works(self):
-        mirror = CommandHookMirror({'stream_load': 'true'})
+    def test_init_without_load_stream_fails(self):
+        self.assertRaises(TypeError, chm.CommandHookMirror, {})
+
+    def test_init_with_load_products_works(self):
+        mirror = chm.CommandHookMirror({'load_products': 'true'})
 
     def test_stream_load_empty(self):
-        src = get_mirror_reader("foocloud-images")
-        target = CommandHookMirror({'stream_load': 'true %(iqn)s'})
-        sync_stream_file("streams/v1/i386.js", src, target)
 
+        src = get_mirror_reader("foocloud")
+        target = chm.CommandHookMirror({'load_products': ['true']})
+        oruncmd = chm.run_command
+
+        try:
+            chm.run_command = self._run_command
+            target.sync(src.reader, "streams/v1/index.js")
+
+        finally:
+            chm.run_command = oruncmd
+
+        # the 'load_products' should be called once for each content
+        # in the stream.
+        self.assertEqual(self._run_commands, [['true'], ['true']])
+
+
+    def _run_command(self, cmd, env=None, capture=False, rcs=None):
+        self._run_commands.append(cmd)
+        rc = 0
+        output = ''
+        print cmd
+        return (rc, output)
 
 # vi: ts=4 expandtab syntax=python
