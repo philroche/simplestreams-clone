@@ -82,7 +82,7 @@ def main():
         with open(args.input, "r") as fp:
             tabinput = fp.read()
 
-    streamdir = "v1/streams"
+    streamdir = "streams/v1"
 
     items = tab2items(tabinput)
     data = {'updated': util.timestamp(), 'datatype': 'image-downloads'}

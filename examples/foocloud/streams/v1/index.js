@@ -2,7 +2,7 @@
  "index": {
   "com.example.foovendor:released:aws": {
    "datatype": "image-downloads", 
-   "path": "v1/streams/com.example.foovendor:released:aws.js", 
+   "path": "streams/v1/com.example.foovendor:released:aws.js", 
    "updated": "Wed, 20 Mar 2013 17:56:57 +0000", 
    "products": [
     "pinky:server:amd64", 
@@ -12,7 +12,7 @@
   }, 
   "com.example.foovendor:released:download": {
    "datatype": "image-downloads", 
-   "path": "v1/streams/com.example.foovendor:released:download.js", 
+   "path": "streams/v1/com.example.foovendor:released:download.js", 
    "updated": "Wed, 20 Mar 2013 17:56:57 +0000", 
    "products": [
     "pinky:server:amd64", 
