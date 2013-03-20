@@ -103,12 +103,16 @@ class MirrorWriter(object):
 
 
 class UrlMirrorReader(MirrorReader):
-    def __init__(self, prefix):
+    def __init__(self, prefix, mirrors=None):
         self._cs = cs.UrlContentSource
+        if mirrors is None:
+            mirrors = []
+        self.mirrors = mirrors
         self.prefix = prefix
 
     def reader(self, path):
-        return self._cs(self.prefix + path)
+        mirrors = [m + path for m in self.mirrors]
+        return self._cs(self.prefix + path, mirrors=mirrors)
 
 
 class ObjectStoreMirrorReader(MirrorReader):

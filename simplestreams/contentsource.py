@@ -41,9 +41,15 @@ class ContentSource(object):
 
 class UrlContentSource(ContentSource):
     fd = None
-    _opener = None
 
-    def __init__(self, url):
+    def __init__(self, url, mirrors=None):
+        if mirrors is None:
+            mirrors = []
+        self.mirrors = mirrors
+        self.input_url = url
+        self.url = url
+
+    def _urlinfo(self, url):
         parsed = urlparse.urlparse(url)
         if not parsed.scheme:
             if url.startswith("/"):
@@ -52,22 +58,28 @@ class UrlContentSource(ContentSource):
                 url = "file://%s/%s" % (os.getcwd(), url)
             parsed = urlparse.urlparse(url)
 
-        self.url = url
         if parsed.scheme == "file":
-            path = parsed.path
-
-            def opener():
-                return open(path, "r")
-
-            self._opener = opener
+            return (url, open, (parsed.path,))
         else:
-            def opener():
-                return URL_READER(self.url)
+            return (url, URL_READER, (url,))
 
-        self._opener = opener
+    def _open(self):
+        for url in [self.input_url] + self.mirrors:
+            try:
+                (normurl, opener, oargs) = self._urlinfo(url)
+                self.url = normurl
+                return opener(*oargs)
+            except IOError as e:
+                if e.errno != errno.ENOENT:
+                    raise
+                continue
+        myerr = IOError("Unable to open %s. mirrors=%s" %
+                        (self.input_url, self.mirrors))
+        myerr.errno = errno.ENOENT
+        raise myerr
 
     def open(self):
-        self.fd = self._opener()
+        self.fd = self._open()
         self.read = self._read
 
     def read(self, size=-1):
@@ -83,6 +95,7 @@ class UrlContentSource(ContentSource):
         if self.fd:
             self.fd.close()
             self.fd = None
+            self.open = self._open
 
 
 class FdContentSource(ContentSource):

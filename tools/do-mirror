@@ -1,11 +1,5 @@
 #!/usr/bin/python
-#
-# Example of syncing/mirroring:
-#
-# rm -Rf exdata/images.fake
-# make exdata/images.fake
-# rm -Rf my-data # optional, it should reasonably resume
-# PYTHONPATH=$PWD ./tools/do-mirror ./doc/example/unsigned/images.yaml my-data
+import argparse
 import sys
 
 from simplestreams import objectstores
@@ -13,22 +7,30 @@ from simplestreams import mirrors
 
 
 def main():
-    src = sys.argv[1]
-    target_d = sys.argv[2]
+    parser = argparse.ArgumentParser()
 
-    if len(sys.argv) < 4:
-        data_file = "streams/v1/index.sjs"
-    else:
-        data_file = sys.argv[3]
+    parser.add_argument('--keep', action='store_true', default=False,
+                        help='keep items in target up to MAX items '
+                             'even after they have fallen out of the source')
+    parser.add_argument('--max', type=int, default=None,
+                        help='store at most MAX items in the target')
+    parser.add_argument('--mirror', action='append', default=[],
+                        dest="mirrors",
+                        help='additional mirrors to find referenced files')
 
-    mirror_config = {'max': None, 'keep': None}
+    parser.add_argument('source_mirror')
+    parser.add_argument('output_d')
+    parser.add_argument('path', nargs='?', default="streams/v1/index.sjs")
+    args = parser.parse_args()
 
-    smirror = mirrors.UrlMirrorReader(src)
-    tstore = objectstores.FileStore(target_d)
+    mirror_config = {'max': args.max, 'keep': args.keep}
+
+    smirror = mirrors.UrlMirrorReader(args.source_mirror, mirrors=args.mirrors)
+    tstore = objectstores.FileStore(args.output_d)
     tmirror = mirrors.ObjectStoreMirrorWriter(config=mirror_config,
                                               objectstore=tstore)
 
-    tmirror.sync(smirror.reader, data_file)
+    tmirror.sync(smirror.reader, args.path)
 
 
 if __name__ == '__main__':
