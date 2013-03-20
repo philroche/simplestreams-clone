@@ -2,3 +2,5 @@ gnupg
 .gnupg
 exdata
 exdata-query
+examples/**/*.sjs
+examples/**/*.gpg
