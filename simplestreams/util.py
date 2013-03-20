@@ -277,7 +277,6 @@ def condense_products(ptree):
 
     walk_products(ptree, cb_version=call_move_dups)
     walk_products(ptree, cb_product=call_move_dups)
-    move_dups(ptree.get('products', {}), ptree)
 
 
 def read_url(url):
