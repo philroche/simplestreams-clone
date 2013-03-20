@@ -38,4 +38,7 @@ gnupg/README: $(PUBKEY) $(SECKEY)
 	    echo "$${fp}:6:" | $(TENV) gpg --import-ownertrust
 	@echo "this is used by $(TENV) as the gpg directory" > gnupg/README
 
-.PHONY: exdata/fake exdata/data exdata-query
+examples-sign:
+	$(TENV) js2signed examples/cirros examples/foocloud
+
+.PHONY: exdata/fake exdata/data exdata-query examples-sign
