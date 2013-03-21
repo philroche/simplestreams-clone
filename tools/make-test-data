@@ -107,7 +107,6 @@ def get_url_len(url):
 
     sys.stderr.write("getting size for %s\n" % url)
     request = requests.head(url)
-    save_cache()
     return int(request.headers.get('content-length', 0))
 
 
@@ -126,6 +125,7 @@ def get_cloud_images_file_size(path):
     if not size:
         raise error
     store_cache_data(path, 'size', size)
+    save_cache()
     return size
 
 
