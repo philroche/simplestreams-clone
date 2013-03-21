@@ -155,6 +155,30 @@ def load_query_ec2(path, builds=None, rels=None, max_dailies=NUM_DAILIES):
     return results
 
 
+def get_sign_cmd(path, output=None, clearsign=False, armor=True):
+    cmd = ['gpg']
+    defkey = os.environ.get('SS_GPG_DEFAULT_KEY')
+    if defkey:
+        cmd.extend(['--default-key', defkey])
+
+    batch = os.environ.get('SS_GPG_BATCH', "1").lower()
+    if batch not in ("0", "false"):
+        cmd.append('--batch')
+
+    if output:
+        cmd.extend(['--output', output])
+
+    if clearsign:
+        cmd.append('--clearsign')
+    else:
+        if armor:
+            cmd.append('--armor')
+        cmd.append('--sign')
+
+    cmd.extend([path])
+    return cmd
+
+
 def signfile(path, output=None):
     if output is None:
         output = path + ".gpg"
@@ -162,8 +186,7 @@ def signfile(path, output=None):
     if os.path.exists(output):
         os.unlink(output)
 
-    subprocess.check_output(["gpg", "--batch", "--output", output,
-                             "--armor", "--sign", path])
+    subprocess.check_output(get_sign_cmd(path, output))
 
 
 def signfile_inline(path, output=None):
@@ -178,8 +201,8 @@ def signfile_inline(path, output=None):
     elif os.path.exists(output):
         os.unlink(output)
 
-    subprocess.check_output(["gpg", "--batch", "--output", output,
-                             "--clearsign", infile])
+    subprocess.check_output(get_sign_cmd(infile, output, clearsign=True))
+
     if tmpfile:
         os.unlink(tmpfile)
 
