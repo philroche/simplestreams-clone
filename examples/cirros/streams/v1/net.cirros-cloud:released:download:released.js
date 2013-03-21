@@ -68,8 +68,8 @@
       "disk.img": {
        "ftype": "disk.img", 
        "path": "0.3.0/cirros-0.3.0-x86_64-disk.img", 
-       "sha256": "23f3f2e5369394d6e2403895320c16a877229ff77f6e995112c5658ce7b1b7bb", 
-       "md5": "4b188eef967a030e88801c51d07f0bda", 
+       "sha256": "648782e9287288630250d07531fed9944ecc3986764a6664f0bf6c050ec06afd", 
+       "md5": "50bdc35edb03a38d91b1b071afb20a3c", 
        "size": 10682368
       }, 
       "uec.tar.gz": {
