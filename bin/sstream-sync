@@ -72,8 +72,8 @@ def main():
         cfg[cfgname] = val
 
     cfg['item_skip_download'] = args.item_skip_download
-    cfg['max'] = args.max
-    cfg['keep'] = args.keep
+    cfg['max_items'] = args.max
+    cfg['keep_items'] = args.keep
 
     smirror = mirrors.UrlMirrorReader(args.mirror_ref)
     tmirror = command_hook_mirror.CommandHookMirror(config=cfg)
