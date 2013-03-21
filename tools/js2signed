@@ -17,7 +17,7 @@ def main():
             if not path.endswith(".js"):
                 sys.stderr.write("file must end with .js\n")
                 sys.exit(1)
-            toolutil.signjs_file(fname)
+            toolutil.signjs_file(path)
         elif os.path.isdir(path):
             for root, dirs, files in os.walk(path):
                 for f in [f for f in files if f.endswith(".js")]:
