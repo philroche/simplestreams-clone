@@ -4,7 +4,7 @@ import argparse
 import json
 import os
 import os.path
-import requests
+import urllib2
 import sys
 from simplestreams import util
 
@@ -79,7 +79,7 @@ def get_cloud_images_file_hash(path):
                 sys.stderr.write("reading %s\n" % url)
                 content = util.read_url(url)
                 break
-            except requests.HTTPError as error:
+            except Exception as error:
                 pass
 
         if not content:
@@ -105,9 +105,12 @@ def get_url_len(url):
     if os.path.exists(url):
         return os.stat(url).st_size
 
+    # http://stackoverflow.com/questions/4421170/python-head-request-with-urllib2
     sys.stderr.write("getting size for %s\n" % url)
-    request = requests.head(url)
-    return int(request.headers.get('content-length', 0))
+    request = urllib2.Request(url)
+    request.get_method = lambda : 'HEAD'
+    response = urllib2.urlopen(request)
+    return int(response.headers.get('content-length', 0))
 
 
 def get_cloud_images_file_size(path):
@@ -119,7 +122,7 @@ def get_cloud_images_file_size(path):
         try:
             size = int(get_url_len(burl + path))
             break
-        except requests.HTTPError as error:
+        except Exception as error:
             pass
 
     if not size:
