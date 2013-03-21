@@ -268,12 +268,24 @@ class BasicMirrorWriter(MirrorWriter):
         self.insert_products(path, tproducts, content)
 
 
+# ObjectStoreMirrorWriter stores data in <prefix>/.data/<content_id>
 class ObjectStoreMirrorWriter(BasicMirrorWriter):
     def __init__(self, config, objectstore):
         super(ObjectStoreMirrorWriter, self).__init__(config=config)
         self.store = objectstore
 
+    def products_data_path(self, content_id):
+        return ".data/%s" % content_id
+
     def load_products(self, path=None, content_id=None):
+        if content_id:
+            try:
+                dpath = self.products_data_path(content_id)
+                return util.load_content(self.reader(dpath).read())
+            except IOError as e:
+                if e.errno != errno.ENOENT:
+                    raise
+
         if path:
             try:
                 (payload, _sig) = util.read_possibly_signed(path, self.reader)
@@ -301,6 +313,8 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
         self.store.insert(epath, cs, checksums=util.item_checksums(content))
 
     def insert_products(self, path, products, content):
+        dpath = self.products_data_path(products['content_id'])
+        self.store.insert_content(dpath, util.dump_data(products))
         if not path:
             return
         if not content:
