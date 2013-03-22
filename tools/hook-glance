@@ -83,7 +83,15 @@ insert_item() {
     local xname="${pubname:-${name}}"
     local id="${content_id}/${product_name}/${version_name}/${item_name}"
 
-    [ -z "$pubname" ] && xname="$id"
+    if [ -n "${xname}" ]; then
+        # if xname does not contain 'ftype' then append it.
+        # this covers the case where 'pubname' or 'name' is
+        # not specific to the item.
+        [ -n "${ftype}" -a "${xname#*${ftype}}" = "${xname}" ] &&
+            xname="${xname}-${ftype}"
+    else
+        xname="$id"
+    fi
 
     local p="" propargs="" architecture="$arch"
     propargs=()
