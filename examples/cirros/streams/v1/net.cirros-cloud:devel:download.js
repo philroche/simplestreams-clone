@@ -1,10 +1,11 @@
 {
  "datatype": "image-downloads", 
- "updated": "Fri, 22 Mar 2013 02:49:31 +0000", 
- "content_id": "net.cirros-cloud:released:download:devel", 
+ "updated": "Fri, 22 Mar 2013 15:43:05 +0000", 
+ "content_id": "net.cirros-cloud:devel:download", 
  "products": {
   "cirros:0.3:i386": {
    "arch": "i386", 
+   "stream": "devel", 
    "versions": {
     "20130111": {
      "items": {
@@ -30,8 +31,8 @@
        "size": 3192308
       }
      }, 
-     "version": "0.3.1~pre4", 
-     "pubname": "cirros-0.3.1~pre4-i386"
+     "pubname": "cirros-0.3.1~pre4-i386", 
+     "version": "0.3.1~pre4"
     }, 
     "20120611": {
      "items": {
@@ -57,8 +58,8 @@
        "size": 3158748
       }
      }, 
-     "version": "0.3.1~pre1", 
-     "pubname": "cirros-0.3.1~pre1-i386"
+     "pubname": "cirros-0.3.1~pre1-i386", 
+     "version": "0.3.1~pre1"
     }, 
     "20120827": {
      "items": {
@@ -84,13 +85,14 @@
        "size": 3186156
       }
      }, 
-     "version": "0.3.1~pre3", 
-     "pubname": "cirros-0.3.1~pre3-i386"
+     "pubname": "cirros-0.3.1~pre3-i386", 
+     "version": "0.3.1~pre3"
     }
    }
   }, 
   "cirros:0.3:x86_64": {
    "arch": "x86_64", 
+   "stream": "devel", 
    "versions": {
     "20130111": {
      "items": {
@@ -116,8 +118,8 @@
        "size": 3534613
       }
      }, 
-     "version": "0.3.1~pre4", 
-     "pubname": "cirros-0.3.1~pre4-x86_64"
+     "pubname": "cirros-0.3.1~pre4-x86_64", 
+     "version": "0.3.1~pre4"
     }, 
     "20120611": {
      "items": {
@@ -143,8 +145,8 @@
        "size": 3497630
       }
      }, 
-     "version": "0.3.1~pre1", 
-     "pubname": "cirros-0.3.1~pre1-x86_64"
+     "pubname": "cirros-0.3.1~pre1-x86_64", 
+     "version": "0.3.1~pre1"
     }, 
     "20120827": {
      "items": {
@@ -170,13 +172,14 @@
        "size": 3527698
       }
      }, 
-     "version": "0.3.1~pre3", 
-     "pubname": "cirros-0.3.1~pre3-x86_64"
+     "pubname": "cirros-0.3.1~pre3-x86_64", 
+     "version": "0.3.1~pre3"
     }
    }
   }, 
   "cirros:0.3:arm": {
    "arch": "arm", 
+   "stream": "devel", 
    "versions": {
     "20130111": {
      "items": {
@@ -195,8 +198,8 @@
        "size": 3466163
       }
      }, 
-     "version": "0.3.1~pre4", 
-     "pubname": "cirros-0.3.1~pre4-arm"
+     "pubname": "cirros-0.3.1~pre4-arm", 
+     "version": "0.3.1~pre4"
     }, 
     "20120611": {
      "items": {
@@ -215,8 +218,8 @@
        "size": 3428595
       }
      }, 
-     "version": "0.3.1~pre1", 
-     "pubname": "cirros-0.3.1~pre1-arm"
+     "pubname": "cirros-0.3.1~pre1-arm", 
+     "version": "0.3.1~pre1"
     }, 
     "20120827": {
      "items": {
@@ -235,8 +238,8 @@
        "size": 3456925
       }
      }, 
-     "version": "0.3.1~pre3", 
-     "pubname": "cirros-0.3.1~pre3-arm"
+     "pubname": "cirros-0.3.1~pre3-arm", 
+     "version": "0.3.1~pre3"
     }
    }
   }

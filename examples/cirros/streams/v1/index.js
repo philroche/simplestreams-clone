@@ -1,9 +1,9 @@
 {
  "index": {
-  "net.cirros-cloud:released:download:devel": {
+  "net.cirros-cloud:devel:download": {
    "datatype": "image-downloads", 
-   "path": "streams/v1/net.cirros-cloud:released:download:devel.js", 
-   "updated": "Fri, 22 Mar 2013 02:49:31 +0000", 
+   "path": "streams/v1/net.cirros-cloud:devel:download.js", 
+   "updated": "Fri, 22 Mar 2013 15:43:05 +0000", 
    "products": [
     "cirros:0.3:i386", 
     "cirros:0.3:x86_64", 
@@ -11,10 +11,10 @@
    ], 
    "format": "products:1.0"
   }, 
-  "net.cirros-cloud:released:download:released": {
+  "net.cirros-cloud:released:download": {
    "datatype": "image-downloads", 
-   "path": "streams/v1/net.cirros-cloud:released:download:released.js", 
-   "updated": "Fri, 22 Mar 2013 02:49:31 +0000", 
+   "path": "streams/v1/net.cirros-cloud:released:download.js", 
+   "updated": "Fri, 22 Mar 2013 15:43:05 +0000", 
    "products": [
     "cirros:0.3:i386", 
     "cirros:0.3:x86_64", 
@@ -23,6 +23,6 @@
    "format": "products:1.0"
   }
  }, 
- "updated": "Fri, 22 Mar 2013 02:49:31 +0000", 
+ "updated": "Fri, 22 Mar 2013 15:43:05 +0000", 
  "format": "index:1.0"
 }
