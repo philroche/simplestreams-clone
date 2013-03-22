@@ -2,8 +2,8 @@
 #
 # client showing use of command_hook_mirror
 
-from simplestreams import command_hook_mirror
 from simplestreams import mirrors
+from simplestreams.mirrors import command_hook
 
 import argparse
 import logging
@@ -36,8 +36,8 @@ def main():
     parser = argparse.ArgumentParser()
 
     hooks = [("--hook-%s" % hook.replace("_", "-"), hook, False)
-             for hook in command_hook_mirror.HOOK_NAMES]
-    hooks.append(('--hook', command_hook_mirror.DEFAULT_HOOK_NAME, True,))
+             for hook in command_hook.HOOK_NAMES]
+    hooks.append(('--hook', command_hook.DEFAULT_HOOK_NAME, True,))
     
     parser.add_argument('--config', '-c',
                         help='read config file',
@@ -76,7 +76,7 @@ def main():
     cfg['keep_items'] = args.keep
 
     smirror = mirrors.UrlMirrorReader(args.mirror_ref)
-    tmirror = command_hook_mirror.CommandHookMirror(config=cfg)
+    tmirror = command_hook.CommandHookMirror(config=cfg)
     tmirror.sync(smirror.reader, args.path)
 
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
 from unittest import TestCase
-import simplestreams.command_hook_mirror as chm
+import simplestreams.mirrors.command_hook as chm
 from tests.testutil import get_mirror_reader
 
 class TestCommandHookMirror(TestCase):
