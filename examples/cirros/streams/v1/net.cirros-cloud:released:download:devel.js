@@ -1,6 +1,6 @@
 {
  "datatype": "image-downloads", 
- "updated": "Wed, 20 Mar 2013 16:11:26 +0000", 
+ "updated": "Fri, 22 Mar 2013 02:49:31 +0000", 
  "content_id": "net.cirros-cloud:released:download:devel", 
  "products": {
   "cirros:0.3:i386": {
@@ -30,7 +30,8 @@
        "size": 3192308
       }
      }, 
-     "version": "0.3.1~pre4"
+     "version": "0.3.1~pre4", 
+     "pubname": "cirros-0.3.1~pre4-i386"
     }, 
     "20120611": {
      "items": {
@@ -56,7 +57,8 @@
        "size": 3158748
       }
      }, 
-     "version": "0.3.1~pre1"
+     "version": "0.3.1~pre1", 
+     "pubname": "cirros-0.3.1~pre1-i386"
     }, 
     "20120827": {
      "items": {
@@ -82,7 +84,8 @@
        "size": 3186156
       }
      }, 
-     "version": "0.3.1~pre3"
+     "version": "0.3.1~pre3", 
+     "pubname": "cirros-0.3.1~pre3-i386"
     }
    }
   }, 
@@ -113,7 +116,8 @@
        "size": 3534613
       }
      }, 
-     "version": "0.3.1~pre4"
+     "version": "0.3.1~pre4", 
+     "pubname": "cirros-0.3.1~pre4-x86_64"
     }, 
     "20120611": {
      "items": {
@@ -139,7 +143,8 @@
        "size": 3497630
       }
      }, 
-     "version": "0.3.1~pre1"
+     "version": "0.3.1~pre1", 
+     "pubname": "cirros-0.3.1~pre1-x86_64"
     }, 
     "20120827": {
      "items": {
@@ -165,7 +170,8 @@
        "size": 3527698
       }
      }, 
-     "version": "0.3.1~pre3"
+     "version": "0.3.1~pre3", 
+     "pubname": "cirros-0.3.1~pre3-x86_64"
     }
    }
   }, 
@@ -189,7 +195,8 @@
        "size": 3466163
       }
      }, 
-     "version": "0.3.1~pre4"
+     "version": "0.3.1~pre4", 
+     "pubname": "cirros-0.3.1~pre4-arm"
     }, 
     "20120611": {
      "items": {
@@ -208,7 +215,8 @@
        "size": 3428595
       }
      }, 
-     "version": "0.3.1~pre1"
+     "version": "0.3.1~pre1", 
+     "pubname": "cirros-0.3.1~pre1-arm"
     }, 
     "20120827": {
      "items": {
@@ -227,7 +235,8 @@
        "size": 3456925
       }
      }, 
-     "version": "0.3.1~pre3"
+     "version": "0.3.1~pre3", 
+     "pubname": "cirros-0.3.1~pre3-arm"
     }
    }
   }
