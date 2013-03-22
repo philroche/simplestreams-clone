@@ -251,10 +251,10 @@ def load_product_output(output, content_id, fmt="serial_list"):
         # "line" format just is a list of serials that are present
         working = {'content_id': content_id, 'products': {}}
         for line in output.splitlines():
-            (product_id, version) = line.split(maxsplit=1)
+            (product_id, version) = line.split(None, 1)
             if product_id not in working['products']:
-                working['products'][content_id] = {'versions': {}}
-            working['products'][content_id]['versions'][version] = {}
+                working['products'][product_id] = {'versions': {}}
+            working['products'][product_id]['versions'][version] = {}
         return working
 
     elif fmt == "yaml":

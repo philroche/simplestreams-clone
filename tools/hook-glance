@@ -43,7 +43,7 @@ run() {
     debug 1 "$@"
     "$@"
     ret=$?
-    error "failed:" "$@"
+    [ $ret -eq 0 ] || error "failed:" "$@"
     return $ret
 }
 
@@ -57,13 +57,13 @@ load_products() {
     for id in $ids; do
         out=$(run glance image-show "$id") || fail "failed to show image $id"
         prod=$(echo "$out" |
-            awk '$2 == "Property" && $3 == sname { print $5 }'
+            awk '$2 == "Property" && $3 == sname { print $5 }' \
                 sname="'product_name'")
         [ -n "$prod" ] ||
             fail "image-id '$id' had no 'product_name' tag"
 
         ver=$(echo "$out" |
-            awk '$2 == "Property" && $3 == sname { print $5 }'
+            awk '$2 == "Property" && $3 == sname { print $5 }' \
                 sname="'version_name'")
         [ -n "$ver" ] ||
             fail "image-id '$id' had no 'version_name' tag"
@@ -85,10 +85,10 @@ insert_item() {
 
     [ -z "$pubname" ] && xname="$id"
 
-    local p="" props="" architecture="$arch"
+    local p="" propargs="" architecture="$arch"
     propargs=()
     for p in content_id product_name version_name item_name architecture; do
-        props[${#props[@]}]="--property=$p=${!p}"
+        propargs[${#propargs[@]}]="--property=$p=${!p}"
     done
 
     run glance image-create \
@@ -123,7 +123,7 @@ remove_version() {
 
 filter_item() {
     case "${ftype:-unknown}" in
-        unknown|disk1.img) return "${RC_FILTER_INCLUDE}";;
+        unknown|disk1.img|disk.img) return "${RC_FILTER_INCLUDE}";;
         *) return "${RC_FILTER_EXCLUDE}"
     esac
 }
@@ -139,7 +139,7 @@ filter_product() {
 
 filter_index_entry() {
     case "${content_id}" in
-       *:download) return "${RC_FILTER_INCLUDE}";;
+       *:download:*) return "${RC_FILTER_INCLUDE}";;
        *) return "${RC_FILTER_EXCLUDE}";;
     esac
 }
