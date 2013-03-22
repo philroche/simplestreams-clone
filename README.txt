@@ -27,7 +27,16 @@ the latest file from each product.
 To use the "command hooks mirror" for invoking commands to synchronize, between
 one source and another, see bin/sstream-sync.
 
-   ./tools/tenv sstream-sync examples/foocloud/ --hook=hook-debug
+For an example, the following runs the debug hook against the example 'foocloud'
+data:
+   ./tools/tenv sstream-sync --hook=hook-debug \
+       examples/foocloud/ streams/v1/index.js
+
+You can also run it with cloud-images.ubuntu.com data like this:
+
+  ./tools/tenv sstream-sync \
+     --item-skip-download --hook=./tools/hook-debug \
+     http://cloud-images.ubuntu.com/eightprotons/ streams/v1/index.sjs
 
 The 'hook-debug' program simply outputs the data it is invoked with.  It does
 not actually mirror anything.
