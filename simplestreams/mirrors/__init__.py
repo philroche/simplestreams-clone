@@ -303,6 +303,8 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
     def insert_item(self, cs, itemname, item, products, pedigree):
         if 'path' not in item:
             return
+        if not self.config.get('item_download', True):
+            return
         self.store.insert(item['path'], cs,
                           checksums=util.item_checksums(item), mutable=False)
 

@@ -14,6 +14,8 @@ def main():
                              'even after they have fallen out of the source')
     parser.add_argument('--max', type=int, default=None,
                         help='store at most MAX items in the target')
+    parser.add_argument('--no-item-download', action='store_true', default=False,
+                        help='do not download items with a "path"')
     parser.add_argument('--mirror', action='append', default=[],
                         dest="mirrors",
                         help='additional mirrors to find referenced files')
@@ -23,7 +25,8 @@ def main():
     parser.add_argument('path', nargs='?', default="streams/v1/index.sjs")
     args = parser.parse_args()
 
-    mirror_config = {'max_items': args.max, 'keep_items': args.keep}
+    mirror_config = {'max_items': args.max, 'keep_items': args.keep,
+                     'item_download': not args.no_item_download}
 
     smirror = mirrors.UrlMirrorReader(args.source_mirror, mirrors=args.mirrors)
     tstore = objectstores.FileStore(args.output_d)
