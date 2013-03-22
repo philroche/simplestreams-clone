@@ -241,7 +241,6 @@ def move_dups(src, target):
         try:
             everything.update(entry)
         except Exception as e:
-            import ipdb; ipdb.set_trace()
             raise
 
     remain = stringitems(everything)
