@@ -1,0 +1,85 @@
+#!/bin/bash
+set -f
+
+RC_FILTER_INCLUDE=0
+RC_FILTER_EXCLUDE=1
+RC_FAIL=2
+VERBOSITY=${VERBOSITY:-0}
+
+MAP=(
+ ARCH:arch RELEASE:release REGION:cloud VIRT:virt STORE:root_store
+)
+
+error() { echo "$@" 1>&2; }
+fail() { [ $# -eq 0 ] || error "$@"; exit "$RC_FAIL"; }
+debug() {
+    [ "${VERBOSITY}" -lt "$1" ] && return
+    shift
+    error "$@"
+}
+
+Usage() {
+   cat <<EOF
+Usage: ${0##*/}
+  This program is expected to be called by sstream-sync.
+
+  sstream-sync "--hook=$0" \\
+     http://cloud-images.ubuntu.com/eightprotons/ streams/v1/index.js
+
+  It filters output based on environment variables:
+$(for m in ${MAP[@]}; do echo "   ${m}"; done)
+
+  Example:
+   * VIRT=hvm REGION=us-east-1 ./tools/tenv sstream-sync --max=1 \\
+      "--hook=$0" http://cloud-images.ubuntu.com/eightprotons/ \\
+      streams/v1/index.js
+EOF
+}
+
+is_excluded() {
+    local ename iname pair
+    for pair in "${MAP[@]}"; do
+        ename=${pair%:*}
+        iname=${pair#*:}
+        [ -n "${!ename}" -a -n "${!iname}" -a "${!ename}" != "${!iname}" ] &&
+            return 0
+    done
+    return 1
+}
+
+noop() {
+    return 0;
+}
+
+
+main() {
+    [ "$1" = "--help" -o "$1" = "-h" -o "$1" = "usage" ] &&
+        { Usage; exit 0; }
+
+    [ $# -eq 0 ] || fail "Unexpected arguments.  See --help" 
+
+    [ -n "$HOOK" ] ||
+        { Usage 1>&2; fail "HOOK not available in environment"; }
+   
+    # we only operate on
+    case "$HOOK" in
+        filter_item|filter_product)
+            is_excluded && return "${RC_FILTER_EXCLUDE}"
+            return "${RC_FILTER_INCLUDE}"
+            ;;
+        filter_index_entry)
+            case "${content_id}" in
+                *:aws) return "${RC_FILTER_INCLUDE}";;
+                *) return "${RC_FILTER_EXCLUDE}";;
+            esac
+            ;;
+        insert_item)
+            echo "$cloud ${id} ${root_store}/${virt}/${pubname}";;
+        filter_*) return "${RC_FILTER_INCLUDE}";;
+        *) noop;;
+    esac
+}
+main "$@"
+exit $?
+
+# vi: ts=4 expandtab

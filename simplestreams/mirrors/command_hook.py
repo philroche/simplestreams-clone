@@ -183,7 +183,6 @@ class CommandHookMirror(mirrors.BasicMirrorWriter):
         if isinstance(command, str):
             command = ['sh', '-c', command]
 
-        print "calling hook: %s" % hookname
         fdata = util.stringitems(data)
 
         content_file = None
