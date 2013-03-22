@@ -62,4 +62,8 @@ class TestStreamResolveWork(TestCase):
         self.tryit(src=[1,2,3,4,5], target=[1], max=None, keep=False,
                    filter=lambda a: a < 3, add=[2], remove=[])
 
+    def test_max_and_target_has_newest(self):
+        self.tryit(src=[1,2,3,4], target=[4], max=1, keep=False,
+                   add=[], remove=[])
+
 # vi: ts=4 expandtab
