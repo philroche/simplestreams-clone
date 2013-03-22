@@ -6,7 +6,7 @@ Usage: ${0##*/}
   This program is an example 'hook' for use with bin/sstream-sync.
   PYTHONPATH=$PWD ./bin/sstream-sync --item-skip-download \\
      --hook=./tools/hook-debug \\
-     http://cloud-images.ubuntu.com/eightprotons/images/ streams/v1/streams.sjs
+     http://cloud-images.ubuntu.com/eightprotons/ streams/v1/index.sjs
 EOF
 fi
 
