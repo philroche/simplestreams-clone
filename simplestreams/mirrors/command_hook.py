@@ -6,8 +6,6 @@ import subprocess
 import tempfile
 import yaml
 
-READ_SIZE = (1024 * 50)
-
 REQUIRED_FIELDS = ("load_products",)
 HOOK_NAMES = (
     "filter_index_entry",
@@ -149,7 +147,7 @@ class CommandHookMirror(mirrors.BasicMirrorWriter):
             extra.update({'item_url': contentsource.url})
             if not self.config.get('item_skip_download', False):
                 try:
-                    (tmp_path, tmp_del) = get_local_copy(contentsource.read)
+                    (tmp_path, tmp_del) = util.get_local_copy(contentsource.read)
                     extra['path_local'] = tmp_path
                 finally:
                     contentsource.close()
@@ -281,21 +279,5 @@ def run_command(cmd, env=None, capture=False, rcs=None):
     if out is None:
         out = ''
     return (rc, out)
-
-
-def get_local_copy(read, read_size=READ_SIZE):
-    (tfd, tpath) = tempfile.mkstemp()
-    tfile = os.fdopen(tfd, "w")
-    try:
-        while True:
-            buf = read(read_size)
-            tfile.write(buf)
-            if len(buf) != read_size:
-                break
-        return (tpath, True)
-
-    except Exception as e:
-        os.unlink(tpath)
-        raise e
 
 # vi: ts=4 expandtab syntax=python

@@ -2,6 +2,7 @@ import errno
 import hashlib
 import os
 import subprocess
+import tempfile
 import time
 import urlparse
 import json
@@ -16,6 +17,8 @@ PGP_SIGNATURE_FOOTER = "-----END PGP SIGNATURE-----"
 
 _UNSET = object()
 CHECKSUMS = ("md5", "sha256", "sha512")
+
+READ_SIZE = (1024 * 50)
 
 
 def stringitems(data):
@@ -287,4 +290,20 @@ def mkdir_p(path):
         if exc.errno != errno.EEXIST:
             raise
     return
+
+
+def get_local_copy(read, read_size=READ_SIZE):
+    (tfd, tpath) = tempfile.mkstemp()
+    tfile = os.fdopen(tfd, "w")
+    try:
+        while True:
+            buf = read(read_size)
+            tfile.write(buf)
+            if len(buf) != read_size:
+                break
+        return (tpath, True)
+
+    except Exception as e:
+        os.unlink(tpath)
+        raise e
 # vi: ts=4 expandtab
