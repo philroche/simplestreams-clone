@@ -94,56 +94,52 @@ class CommandHookMirror(mirrors.BasicMirrorWriter):
                                      fmt=fmt)
         return loaded
 
-    def filter_index_entry(self, content_id, content, tree, pedigree):
-        data = util.stringitems(tree)
-        data['content_id'] = content_id
-        data.update(util.stringitems(content))
+    def filter_index_entry(self, data, src, pedigree):
+        mdata = util.stringitems(src)
+        mdata['content_id'] = pedigree[0]
+        mdata.update(util.stringitems(data))
 
-        (ret, _output) = self.call_hook('filter_index_entry', data=data,
+        (ret, _output) = self.call_hook('filter_index_entry', data=mdata,
                                         rcs=[0, 1])
         return ret == 0
 
-    def filter_product(self, product_id, product, tree, pedigree):
-        return self._call_filter('filter_product', tree, pedigree)
+    def filter_product(self, data, src, target, pedigree):
+        return self._call_filter('filter_product', src, pedigree)
 
-    def filter_version(self, version_id, version, tree, pedigree):
-        return self._call_filter('filter_version', tree, pedigree)
+    def filter_version(self, data, src, target, pedigree):
+        return self._call_filter('filter_version', src, pedigree)
 
-    def filter_item(self, item_id, item, tree, pedigree):
-        return self._call_filter('filter_item', tree, pedigree)
+    def filter_item(self, data, src, target, pedigree):
+        return self._call_filter('filter_item', src, pedigree)
 
-    def _call_filter(self, name, tree, pedigree):
-        data = util.products_exdata(tree, pedigree)
+    def _call_filter(self, name, src, pedigree):
+        data = util.products_exdata(src, pedigree)
         (ret, _output) = self.call_hook(name, data=data, rcs=[0, 1])
         return ret == 0
 
-    def insert_index(self, path, index, content):
-        return self.call_hook('insert_index', data=index, content=content,
+    def insert_index(self, path, src, content):
+        return self.call_hook('insert_index', data=src, content=content,
                               extra={'path': path})
 
-    def insert_index_entry(self, contentsource, content_id, content, tree,
-                           pedigree):
-        pass
-
-    def insert_products(self, path, products, content):
-        return self.call_hook('insert_products', data=products,
+    def insert_products(self, path, target, content):
+        return self.call_hook('insert_products', data=target,
                               content=content, extra={'path': path})
 
-    def insert_product(self, product_id, product, tree, pedigree):
+    def insert_product(self, data, src, target, pedigree):
         return self.call_hook('insert_product',
-                              data=util.products_exdata(tree, pedigree))
+                              data=util.products_exdata(src, pedigree))
 
-    def insert_version(self, version_id, version, tree, pedigree):
+    def insert_version(self, data, src, target, pedigree):
         return self.call_hook('insert_version',
-                              data=util.products_exdata(tree, pedigree))
+                              data=util.products_exdata(src, pedigree))
 
-    def insert_item(self, contentsource, item_id, item, tree, pedigree):
-        data = util.products_exdata(tree, pedigree)
+    def insert_item(self, data, src, target, pedigree, contentsource):
+        mdata = util.products_exdata(src, pedigree)
 
         tmp_path = None
         tmp_del = None
         extra = {}
-        if 'path' in item:
+        if 'path' in data:
             extra.update({'item_url': contentsource.url})
             if not self.config.get('item_skip_download', False):
                 try:
@@ -153,23 +149,23 @@ class CommandHookMirror(mirrors.BasicMirrorWriter):
                     contentsource.close()
 
         try:
-            ret = self.call_hook('insert_item', data=data, extra=extra)
+            ret = self.call_hook('insert_item', data=mdata, extra=extra)
         finally:
             if tmp_del and os.path.exists(tmp_path):
                 os.unlink(tmp_path)
         return ret
 
-    def remove_product(self, product_id, product, tree, pedigree):
+    def remove_product(self, data, src, target, pedigree):
         return self.call_hook('remove_product',
-                              data=util.products_exdata(tree, pedigree))
+                              data=util.products_exdata(src, pedigree))
 
-    def remove_version(self, version_id, version, tree, pedigree):
+    def remove_version(self, data, src, target, pedigree):
         return self.call_hook('remove_version',
-                              data=util.products_exdata(tree, pedigree))
+                              data=util.products_exdata(src, pedigree))
 
-    def remove_item(self, item_id, item, tree, pedigree):
+    def remove_item(self, data, src, target, pedigree):
         return self.call_hook('remove_item',
-                              data=util.products_exdata(tree, pedigree))
+                              data=util.products_exdata(target, pedigree))
 
     def call_hook(self, hookname, data, capture=False, rcs=None, extra=None,
                   content=None):

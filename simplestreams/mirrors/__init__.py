@@ -17,8 +17,7 @@ class MirrorWriter(object):
     def load_products(self, path=None, content_id=None):
         raise NotImplementedError()
 
-    def sync_products(self, reader, path=None, products=None,
-                      content=None):
+    def sync_products(self, reader, path=None, products=None, content=None):
         # reader:   a Reader for opening files referenced in products
         # path:     the path of where to store this.
         #           if path is None, do not store the products file itself
@@ -33,12 +32,12 @@ class MirrorWriter(object):
         #  * if products is None, it will be loaded from content
         raise NotImplementedError()
 
-    def sync_index(self, reader, path=None, index=None, content=None):
+    def sync_index(self, reader, path=None, src=None, content=None):
         # reader:   a Reader for opening files referenced in index or products
         #           files
         # path:     the path of where to store this.
         #           if path is None, do not store the index file itself
-        # products: a products file in products:1.0 format
+        # src:      a dictionary in index:1.0 format
         # content:  a rendered products tree, allowing you to store
         #           externally signed content.
         #
@@ -61,44 +60,74 @@ class MirrorWriter(object):
         else:
             raise TypeError("Unknown format '%s' in '%s'" % (fmt, path))
 
-    def filter_index_entry(self, content_id, content, tree, pedigree):
+    ## Index Operations ##
+    def filter_index_entry(self, data, src, pedigree):
+        # src is source index tree.
+        # data is src['index'][ped[0]]
         return True
 
-    def filter_product(self, product_id, product, tree, pedigree):
+    def insert_index(self, path, src, content):
+        # src is the source index tree
+        # content is None or a json rendering (possibly signed) of src
+        pass
+
+    def insert_index_entry(self, data, src, pedigree, contentsource):
+        # src is the top level index (index:1.0 format)
+        # data is src['index'][pedigree[0]]
+        # contentsource is a ContentSource if 'path' exists in data or None
+        pass
+
+    ## Products Operations ##
+    def filter_product(self, data, src, target, pedigree):
+        # src and target are top level products:1.0
+        # data is src['products'][ped[0]]
         return True
 
-    def filter_version(self, version_id, version, tree, pedigree):
+    def filter_version(self, data, src, target, pedigree):
+        # src and target are top level products:1.0
+        # data is src['products'][ped[0]]['versions'][ped[1]]
         return True
 
-    def filter_item(self, item_id, item, tree, pedigree):
+    def filter_item(self, data, src, target, pedigree):
+        # src and target are top level products:1.0
+        # data is src['products'][ped[0]]['versions'][ped[1]]['items'][ped[2]]
         return True
 
-    def insert_index(self, path, index, content):
+    def insert_products(self, path, target, content):
+        # path is the path to store data (where it came from on source mirror)
+        # target is the target products:1.0 tree
+        # content is None or a json rendering (possibly signed) of src
         pass
 
-    def insert_index_entry(self, contentsource, content_id, content, tree,
-                           pedigree):
+    def insert_product(self, data, src, target, pedigree):
+        # src and target are top level products:1.0
+        # data is src['products'][ped[0]]
         pass
 
-    def insert_products(self, path, products, content):
+    def insert_version(self, data, src, target, pedigree):
+        # src and target are top level products:1.0
+        # data is src['products'][ped[0]]['versions'][ped[1]]
         pass
 
-    def insert_product(self, product_id, product, tree, pedigree):
+    def insert_item(self, data, src, target, pedigree, contentsource):
+        # src and target are top level products:1.0
+        # data is src['products'][ped[0]]['versions'][ped[1]]['items'][ped[2]]
+        # contentsource is a ContentSource if 'path' exists in data or None
         pass
 
-    def insert_version(self, version_id, version, tree, pedigree):
+    def remove_product(self, data, src, target, pedigree):
+        # src and target are top level products:1.0
+        # data is src['products'][ped[0]]
         pass
 
-    def insert_item(self, contentsource, item_id, item, tree, pedigree):
+    def remove_version(self, data, src, target, pedigree):
+        # src and target are top level products:1.0
+        # data is src['products'][ped[0]]['versions'][ped[1]]
         pass
 
-    def remove_product(self, product_id, product, tree, pedigree):
-        pass
-
-    def remove_version(self, version_id, version, tree, pedigree):
-        pass
-
-    def remove_item(self, item_id, item, tree, pedigree):
+    def remove_item(self, data, src, target, pedigree):
+        # src and target are top level products:1.0
+        # data is src['products'][ped[0]]['versions'][ped[1]]['items'][ped[2]]
         pass
 
 
@@ -130,66 +159,61 @@ class BasicMirrorWriter(MirrorWriter):
             config = {}
         self.config = config
 
-    def sync_index(self, reader, path=None, index=None, content=None):
-        (index, content) = _get_data_content(path, index, content, reader)
+    def sync_index(self, reader, path=None, src=None, content=None):
+        (src, content) = _get_data_content(path, src, content, reader)
 
-        util.expand_tree(index)
+        util.expand_tree(src)
 
-        itree = index.get('index')
+        itree = src.get('index')
         for content_id, index_entry in itree.iteritems():
-            if not self.filter_index_entry(content_id, index_entry, index,
-                                           (content_id)):
+            if not self.filter_index_entry(index_entry, src, (content_id,)):
                 continue
             epath = index_entry.get('path', None)
-            epath_cs = None
+            cs = None
             if epath:
                 if index_entry.get('format') in ("index:1.0", "products:1.0"):
                     self.sync(reader, path=epath)
-                epath_cs = reader(epath)
+                cs = reader(epath)
 
-            self.insert_index_entry(epath_cs, content_id, index_entry, index,
-                                    (content_id,))
+            self.insert_index_entry(index_entry, src, (content_id,), cs)
 
-        self.insert_index(path, index, content)
+        self.insert_index(path, src, content)
 
-    def sync_products(self, reader, path=None, products=None, content=None):
-        (products, content) = _get_data_content(path, products, content,
-                                                reader)
+    def sync_products(self, reader, path=None, src=None, content=None):
+        (src, content) = _get_data_content(path, src, content, reader)
 
-        util.expand_tree(products)
+        util.expand_tree(src)
 
-        content_id = products['content_id']
-        tproducts = self.load_products(path, content_id)
-        if not tproducts:
-            tproducts = util.stringitems(products)
+        content_id = src['content_id']
+        target = self.load_products(path, content_id)
+        if not target:
+            target = util.stringitems(src)
 
-        util.expand_tree(tproducts)
+        util.expand_tree(target)
 
-        stree = products.get('products', {})
-        if 'products' not in tproducts:
-            tproducts['products'] = {}
+        stree = src.get('products', {})
+        if 'products' not in target:
+            target['products'] = {}
 
-        ttree = tproducts['products']
+        tproducts = target['products']
 
         filtered_products = []
         for prodname, product in stree.iteritems():
-            if not self.filter_product(prodname, product, products,
-                                       (prodname,)):
+            if not self.filter_product(product, src, target, (prodname,)):
                 filtered_products.append(prodname)
                 continue
 
-            if prodname not in ttree:
-                ttree[prodname] = util.stringitems(product)
-            tproduct = ttree[prodname]
+            if prodname not in tproducts:
+                tproducts[prodname] = util.stringitems(product)
+            tproduct = tproducts[prodname]
             if 'versions' not in tproduct:
                 tproduct['versions'] = {}
 
             src_filtered_items = []
 
             def _filter(itemkey):
-                ret = self.filter_version(itemkey,
-                                          product['versions'][itemkey],
-                                          products, (prodname, itemkey))
+                ret = self.filter_version(product['versions'][itemkey],
+                                          src, target, (prodname, itemkey))
                 if not ret:
                     src_filtered_items.append(itemkey)
                 return ret
@@ -213,19 +237,18 @@ class BasicMirrorWriter(MirrorWriter):
                 added = {}
                 for itemname, item in version.get('items', {}).iteritems():
                     pgree = (prodname, vername, itemname)
-                    if not self.filter_item(itemname, item, products, pgree):
+                    if not self.filter_item(item, src, target, pgree):
                         continue
 
                     ipath = item.get('path', None)
                     ipath_cs = None
                     if ipath:
                         ipath_cs = reader(ipath)
-                    self.insert_item(ipath_cs, itemname, item, products, pgree)
+                    self.insert_item(item, src, target, pgree, ipath_cs)
 
                     added[itemname] = item
 
-                self.insert_version(vername, version, products,
-                                    (prodname, vername))
+                self.insert_version(version, src, target, (prodname, vername))
 
                 tversions[vername]['items'] = added
 
@@ -237,15 +260,14 @@ class BasicMirrorWriter(MirrorWriter):
             for vername in to_remove:
                 tversion = tversions[vername]
                 for itemname in tversion.get('items', {}).keys():
-                    self.remove_item(itemname, tversion['items'][itemname],
-                                     tproducts, (prodname, vername, itemname))
+                    self.remove_item(tversion['items'][itemname], src, target,
+                                     (prodname, vername, itemname))
                     del tversion['items'][itemname]
 
-                self.remove_version(vername, tversion, tproducts,
-                                    (prodname, vername))
+                self.remove_version(tversion, src, target, (prodname, vername))
                 del tversions[vername]
 
-            self.insert_product(prodname, tproduct, tproducts, (prodname,))
+            self.insert_product(tproduct, src, target, (prodname,))
 
         ## FIXME: below will remove products if they're in target
         ## (result of load_products) but not in the source products.
@@ -261,11 +283,10 @@ class BasicMirrorWriter(MirrorWriter):
         for prodname in del_products:
             ## FIXME: we remove a product here, but unless that acts
             ## recursively, nothing will remove the items in that product
-            self.remove_product(prodname, ttree[prodname], tproducts,
-                                (prodname,))
+            self.remove_product(ttree[prodname], src, target, (prodname,))
             del ttree[prodname]
 
-        self.insert_products(path, tproducts, content)
+        self.insert_products(path, target, content)
 
 
 # ObjectStoreMirrorWriter stores data in <prefix>/.data/<content_id>
@@ -300,40 +321,41 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
     def reader(self, path):
         return self.store.reader(path)
 
-    def insert_item(self, cs, itemname, item, products, pedigree):
-        if 'path' not in item:
+    def insert_item(self, data, src, target, pedigree, contentsource):
+        if 'path' not in data:
             return
         if not self.config.get('item_download', True):
             return
-        self.store.insert(item['path'], cs,
-                          checksums=util.item_checksums(item), mutable=False)
+        self.store.insert(data['path'], contentsource,
+                          checksums=util.item_checksums(data), mutable=False)
 
-    def insert_index_entry(self, cs, content_id, content, tree, pedigree):
-        epath = content.get('path', None)
+    def insert_index_entry(self, data, src, pedigree, contentsource):
+        epath = data.get('path', None)
         if not epath:
             return
-        self.store.insert(epath, cs, checksums=util.item_checksums(content))
+        self.store.insert(epath, contentsource,
+                          checksums=util.item_checksums(data))
 
-    def insert_products(self, path, products, content):
-        dpath = self.products_data_path(products['content_id'])
-        self.store.insert_content(dpath, util.dump_data(products))
+    def insert_products(self, path, target, content):
+        dpath = self.products_data_path(target['content_id'])
+        self.store.insert_content(dpath, util.dump_data(target))
         if not path:
             return
         if not content:
-            content = util.dump_data(products)
+            content = util.dump_data(target)
         self.store.insert_content(path, content)
 
-    def insert_index(self, path, index, content):
+    def insert_index(self, path, src, content):
         if not path:
             return
         if not content:
-            content = util.dump_data(index)
+            content = util.dump_data(src)
         self.store.insert_content(path, content)
 
-    def remove_item(self, item_id, item, tree, pedigree):
-        if 'path' not in item:
+    def remove_item(self, data, src, target, pedigree):
+        if 'path' not in data:
             return
-        self.store.remove(item['path'])
+        self.store.remove(data['path'])
 
 
 def _get_data_content(path, data, content, reader):
