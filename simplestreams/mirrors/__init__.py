@@ -246,11 +246,7 @@ class BasicMirrorWriter(MirrorWriter):
                         ipath_cs = reader(ipath)
                     self.insert_item(item, src, target, pgree, ipath_cs)
 
-                    added[itemname] = item
-
                 self.insert_version(version, src, target, (prodname, vername))
-
-                tversions[vername]['items'] = added
 
             if self.config.get('delete_filtered_items', False):
                 for v in src_filtered_items:
@@ -262,7 +258,6 @@ class BasicMirrorWriter(MirrorWriter):
                 for itemname in tversion.get('items', {}).keys():
                     self.remove_item(tversion['items'][itemname], src, target,
                                      (prodname, vername, itemname))
-                    del tversion['items'][itemname]
 
                 self.remove_version(tversion, src, target, (prodname, vername))
                 del tversions[vername]
@@ -322,6 +317,7 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
         return self.store.reader(path)
 
     def insert_item(self, data, src, target, pedigree, contentsource):
+        util.product_set(target, data, pedigree)
         if 'path' not in data:
             return
         if not self.config.get('item_download', True):
@@ -353,6 +349,7 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
         self.store.insert_content(path, content)
 
     def remove_item(self, data, src, target, pedigree):
+        util.products_del(target, pedigree)
         if 'path' not in data:
             return
         self.store.remove(data['path'])

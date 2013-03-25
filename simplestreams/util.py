@@ -20,6 +20,12 @@ CHECKSUMS = ("md5", "sha256", "sha512")
 
 READ_SIZE = (1024 * 50)
 
+PRODUCTS_TREE_DATA = (
+   ("products", "product_name"),
+   ("versions", "version_name"),
+   ("items", "item_name"),
+)
+PRODUCTS_TREE_HIERARCHY = [k[0] for k in PRODUCTS_TREE_DATA]
 
 def stringitems(data):
     return {k:v for k,v in data.iteritems() if
@@ -27,9 +33,7 @@ def stringitems(data):
 
 
 def products_exdata(tree, pedigree):
-    harchy = (("products", "product_name"),
-              ("versions", "version_name"),
-              ("items", "item_name"))
+    harchy = PRODUCTS_TREE_DATA
 
     exdata = {}
     if tree:
@@ -41,6 +45,43 @@ def products_exdata(tree, pedigree):
         exdata.update(stringitems(clevel))
         exdata[fieldname] = key
     return exdata
+
+
+def products_set(tree, data, pedigree):
+    harchy = PRODUCTS_TREE_HIERARCHY
+
+    cur = tree
+
+    for n in range(0, len(pedigree)):
+        if harchy[n] not in cur:
+            cur[harchy[n]] = {}
+        cur = cur[harchy[n]]
+        if n != (len(pedigree) - 1):
+            if pedigree[n] not in cur:
+                cur[pedigree[n]] = {}
+            cur = cur[pedigree[n]]
+
+    cur[pedigree[-1]] = data
+        
+
+def products_del(tree, pedigree):
+    harchy = PRODUCTS_TREE_HIERARCHY
+    cur = tree
+    for n in range(0, len(pedigree)):
+        if harchy[n] not in cur:
+            return
+        cur = cur[harchy[n]]
+
+        if n == (len(pedigree) - 1):
+            break
+
+        if pedigree[n] not in cur:
+            return
+
+        cur = cur[pedigree[n]]
+
+    if pedigree[-1] in cur:
+        del cur[pedigree[-1]]
 
 
 def walk_products(tree, cb_product=None, cb_version=None, cb_item=None,
