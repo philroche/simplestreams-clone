@@ -24,7 +24,7 @@ HOOK_NAMES = (
     "remove_version",
 )
 
-DEFAULT_HOOK_NAME = "command"
+DEFAULT_HOOK_NAME = "hook"
 ENV_HOOK_NAME = "HOOK"
 ENV_FIELDS_NAME = "FIELDS"
 

@@ -9,6 +9,7 @@ import argparse
 import logging
 import sys
 import os
+import yaml
 
 LOG = logging.getLogger('sstream-sync')
 LOG.setLevel(logging.ERROR)
@@ -32,19 +33,24 @@ def which(program):
     return None
 
 
+def warn(msg):
+    sys.stderr.write("WARN: %s" % msg)
+
+
 def main():
     parser = argparse.ArgumentParser()
+    defhook = command_hook.DEFAULT_HOOK_NAME
 
     hooks = [("--hook-%s" % hook.replace("_", "-"), hook, False)
              for hook in command_hook.HOOK_NAMES]
-    hooks.append(('--hook', command_hook.DEFAULT_HOOK_NAME, True,))
+    hooks.append(('--hook', defhook, False,))
     
     parser.add_argument('--config', '-c',
                         help='read config file',
                         type=argparse.FileType('rb'))
 
     for (argname, cfgname, required) in hooks:
-        parser.add_argument(argname, dest=cfgname, required=required)
+        parser.add_argument(argname, dest=cfgname, required=False)
 
     parser.add_argument('--keep', action='store_true', default=False,
                         help='keep items in target up to MAX items '
@@ -55,29 +61,58 @@ def main():
                         default=False,
                         help='Do not download items that are to be inserted.')
 
-    parser.add_argument('mirror_ref')
+    parser.add_argument('mirror_url', nargs='?', default=None)
     parser.add_argument('path', nargs='?', default="streams/v1/index.sjs")
-    args = parser.parse_args()
+    cmdargs = parser.parse_args()
+
+    known_cfg = [('--item-skip-download', 'item_skip_download', False),
+                 ('--max', 'max', False),
+                 ('--keep', 'keep', False),
+                 ('mirror_url', 'mirror_url', True),
+                 ('path', 'path', True)]
+    known_cfg.extend(hooks)
 
     cfg = {}
-    for (argname, cfgname, required) in hooks:
-        val = getattr(args, cfgname)
-        if not val:
-            continue
-        if which(val) is None:
-            msg = "invalid input for %s. '%s' is not executable\n"
-            sys.stderr.write(msg % (argname, val))
-            sys.exit(1)
-            
-        cfg[cfgname] = val
+    if cmdargs.config:
+        cfg = yaml.safe_load(cmdargs.config)
+        if not cfg:
+            cfg = {}
 
-    cfg['item_skip_download'] = args.item_skip_download
-    cfg['max_items'] = args.max
-    cfg['keep_items'] = args.keep
+    known_names = [i[1] for i in known_cfg]
+    unknown = [key for key in cfg if key not in known_names]
+    if unknown:
+        warn("unknown keys in config: %s\n" % str(unknown))
 
-    smirror = mirrors.UrlMirrorReader(args.mirror_ref)
+    missing = []
+    fallback = cfg.get(defhook, getattr(cmdargs, defhook, None))
+
+    for (argname, cfgname, required) in known_cfg:
+        val = getattr(cmdargs, cfgname)
+        if val is not None:
+            cfg[cfgname] = val
+        if val == "":
+            cfg[cfgname] = None
+
+        if cfgname in command_hook.HOOK_NAMES and cfg.get(cfgname) is not None:
+            if which(cfg[cfgname]) is None:
+                msg = "invalid input for %s. '%s' is not executable\n"
+                sys.stderr.write(msg % (argname, val))
+                sys.exit(1)
+
+        if (cfgname in command_hook.REQUIRED_FIELDS and
+            cfg.get(cfgname) is None and not fallback):
+            missing.append((argname, cfgname,))
+
+    if missing:
+        sys.stderr.write("must provide input for (--hook/%s for default):\n"
+                         % defhook)
+        for (flag, cfg) in missing:
+            sys.stderr.write("  cmdline '%s' or cfgname '%s'\n" % (flag, cfg))
+        sys.exit(1)
+
+    smirror = mirrors.UrlMirrorReader(cfg['mirror_url'])
     tmirror = command_hook.CommandHookMirror(config=cfg)
-    tmirror.sync(smirror.reader, args.path)
+    tmirror.sync(smirror.reader, cfg['path'])
 
 if __name__ == '__main__':
     main()
