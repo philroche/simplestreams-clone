@@ -1,0 +1,13 @@
+Source: python-simplestreams
+Section: misc
+Priority: extra
+Standards-Version: 3.9.3
+Maintainer: Scott Moser <scott.moser@canonical.com>
+Build-Depends: python-all, python-setuptools, debhelper (>= 7)
+
+Package: python-simplestreams
+Architecture: all
+Section: misc
+Priority: extra
+Depends: ${python:Depends}, ${misc:Depends}
+Description: Library and tools for using Simple Streams data

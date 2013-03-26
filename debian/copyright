@@ -1,0 +1,20 @@
+Format-Specification: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Name: simplestreams
+Maintainer: Scott Moser <scott.moser@canonical.com>
+Source: https://launchpad.net/simplestreams
+
+This package was debianized by Scott Moser <smoser@ubuntu.com> on
+Mon, 25 Mar 2013 21:13:43 -0400.
+
+Files: *
+Copyright: 2013, Canonical Ltd.
+License: AGPLv3
+ GNU AFFERO GENERAL PUBLIC LICENSE
+ Version 3, 19 November 2007
+ .
+ Copyright (C) 2007 Free Software Foundation, Inc. <http://fsf.org/>
+ Everyone is permitted to copy and distribute verbatim copies
+ of this license document, but changing it is not allowed.
+ .
+ The complete text of the AGPL version 3 can be seen in
+ http://www.gnu.org/licenses/agpl-3.0.html
