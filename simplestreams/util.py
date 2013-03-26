@@ -320,6 +320,23 @@ def condense_products(ptree):
     walk_products(ptree, cb_product=call_move_dups)
 
 
+def assert_safe_path(path):
+    if path == "" or path is None:
+        return
+    if not isinstance(path, (unicode, str)):
+        raise TypeError("Path '%s' is not a string or unicode" % path)
+    if os.path.isabs(path):
+        raise TypeError("Path '%s' is absolute path" % path)
+    bad = (".." + os.path.sep, "..." + os.path.sep)
+    for tok in bad:
+        if path.startswith(tok):
+            raise TypeError("Path '%s' starts with %s" % (path, tok))
+    bad = (os.path.sep + ".." + os.path.sep, os.path.sep + "..." + os.path.sep)
+    for tok in bad:
+        if tok in path:
+            raise TypeError("Path '%s' contains with %s" % (path, tok))
+
+
 def read_url(url):
     return cs.UrlContentSource(url).read()
 

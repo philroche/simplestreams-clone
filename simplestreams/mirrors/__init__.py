@@ -164,6 +164,8 @@ class BasicMirrorWriter(MirrorWriter):
 
         util.expand_tree(src)
 
+        check_tree_paths(src)
+
         itree = src.get('index')
         for content_id, index_entry in itree.iteritems():
             if not self.filter_index_entry(index_entry, src, (content_id,)):
@@ -183,6 +185,8 @@ class BasicMirrorWriter(MirrorWriter):
         (src, content) = _get_data_content(path, src, content, reader)
 
         util.expand_tree(src)
+
+        check_tree_paths(src)
 
         content_id = src['content_id']
         target = self.load_products(path, content_id)
@@ -317,7 +321,7 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
         return self.store.reader(path)
 
     def insert_item(self, data, src, target, pedigree, contentsource):
-        util.product_set(target, data, pedigree)
+        util.products_set(target, data, pedigree)
         if 'path' not in data:
             return
         if not self.config.get('item_download', True):
@@ -365,6 +369,19 @@ def _get_data_content(path, data, content, reader):
         raise ValueError("Data could not be loaded. "
                          "Path or content is required")
     return (data, content)
+
+
+def check_tree_paths(tree, fmt=None):
+    if fmt is None:
+        fmt = tree.get('format')
+    if fmt == "products:1.0":
+        def check_path(item, tree, pedigree):
+            util.assert_safe_path(item.get('path'))
+        util.walk_products(tree, cb_item=check_path)
+    elif fmt == "index:1.0":
+        index = tree.get('index')
+        for content_id in index:
+            util.assert_safe_path(index[content_id].get('path'))
 
 
 # vi: ts=4 expandtab
