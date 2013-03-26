@@ -273,7 +273,7 @@ def ec2_load_query(path):
             'id': iid,
             'root_store': store,
             'virt': vtype,
-            'cloud': region,
+            'crsn': region,
         }
     return tree
 
@@ -336,13 +336,13 @@ def create_aws_data(query_tree, out_d, streamdir):
         regions = set()
 
         def findregions(item, tree, pedigree):
-            regions.add(item['cloud'])
+            regions.add(item['crsn'])
 
         util.walk_products(tree[stream], cb_item=findregions)
 
-        tree[stream]['_aliases'] = {'cloud': {}}
+        tree[stream]['_aliases'] = {'crsn': {}}
         for region in regions:
-            tree[stream]['_aliases']['cloud'][region] = {
+            tree[stream]['_aliases']['crsn'][region] = {
                 'endpoint': 'http://ec2.%s.amazonaws.com' % region,
                 'region': region}
 
@@ -382,7 +382,7 @@ def main():
         index = {"index": {}, 'format': 'index:1.0',
                  'updated': util.timestamp()}
 
-        clouds = aws_tree[streamname]['_aliases']['cloud'].values()
+        clouds = aws_tree[streamname]['_aliases']['crsn'].values()
         index['index'][aws_tree[streamname]['content_id']] = {
             'updated': aws_tree[streamname]['updated'],
             'datatype': 'image-ids',
