@@ -30,37 +30,38 @@ start_d=$PWD
 top_d=$(cd "$(dirname "${0}")"/.. && pwd)
 
 # grab the first line in the changelog
-line1=$(head -n 1 ${top_d}/debian/changelog)
 # hopefully this pulls the version info there
-# resulting in something like: 0.25~trunk~bzrREVNO-1
-clogver_o=$(echo "$line1" | sed 's,.*(\([^)]*\)).*,\1,')
+# resulting in something like: 0.1.0~bzrREVNO-1~trunk1
+clogver_o=$(sed -n '1s,.*(\([^)]*\)).*,\1,p' debian/changelog)
 
 revno=$(bzr revno) || fail "failed to get revno"
-clogver=$(echo "$clogver_o" | sed "s,REVNO,$revno,")
+clogver_upstream=${clogver_o%%-*}
+clogver_debian=${clogver_o#*-}
 
-# upstream ver takes off the '-1' which is debian ver
-uver=${clogver%-[0-9]}
+uver=$(echo "${clogver_upstream}" | sed "s,REVNO,$revno,")
+clogver_new="${uver}-${clogver_debian}"
 
 TEMP_D=$(mktemp -d "${TMPDIR:-/tmp}/${bname}.XXXXXX")
 
 trap cleanup EXIT
 
-echo "building upstream version $uver, debian ver=${clogver##*-}"
+echo "building upstream version $uver, debian ver=${clogver_debian}"
 
 dir="${sourcename}-$uver"
 tarball="${sourcename}_$uver.orig.tar.gz"
 
-bzr export --format=tgz --root="$dir" --revision="${revno}" "${TEMP_D}/$tarball"
+bzr export --format=tgz --root="$dir" --revision="${revno}" \
+   "${TEMP_D}/$tarball" ||
+   fail "failed to bzr export tarball $tarball"
 echo "created ${tarball}"
 
-cd "$TEMP_D"
-tar -xzf $tarball ||
-   fail "failed to extract '$tarball'"
+cd ${TEMP_D}
+tar xzf "$tarball" || fail "failed extract tarball"
+cd "$dir" || fail "fialed cd $dir"
 
-sed -i "s,REVNO,$revno," "$dir/debian/changelog" ||
-   fail "failed to replace REVNO in debian/changelog"
-
-cd "$dir"
+sed -i "1s,${clogver_o},${clogver_new}," debian/changelog ||
+   fail "failed to change replace REVNO in debian/changelog"
+bash
 debuild "$@" || fail "debuild failed"
 
 cd "$TEMP_D"
