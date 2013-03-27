@@ -1,13 +1,14 @@
 Source: python-simplestreams
-Section: misc
+Section: python
 Priority: extra
-Standards-Version: 3.9.3
+Standards-Version: 3.9.4
 Maintainer: Scott Moser <scott.moser@canonical.com>
 Build-Depends: python-all, python-setuptools, debhelper (>= 7)
 
 Package: python-simplestreams
 Architecture: all
-Section: misc
 Priority: extra
 Depends: ${python:Depends}, ${misc:Depends}
 Description: Library and tools for using Simple Streams data
+ This package provides a library and client for interacting with simple
+ streams data as is produced to describe Ubuntu's cloud images.

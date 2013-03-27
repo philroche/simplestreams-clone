@@ -1,10 +1,7 @@
-Format-Specification: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Name: simplestreams
-Maintainer: Scott Moser <scott.moser@canonical.com>
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: simplestreams
+Upstream-Contact: Scott Moser <scott.moser@canonical.com>
 Source: https://launchpad.net/simplestreams
-
-This package was debianized by Scott Moser <smoser@ubuntu.com> on
-Mon, 25 Mar 2013 21:13:43 -0400.
 
 Files: *
 Copyright: 2013, Canonical Ltd.
