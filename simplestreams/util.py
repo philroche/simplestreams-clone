@@ -327,7 +327,7 @@ def move_dups(src, target):
     target.update(remain)
 
 
-def condense_products(ptree):
+def products_condense(ptree):
     # walk a products tree, copying up item keys as far as they'll go
 
     def call_move_dups(cur, tree, pedigree):
