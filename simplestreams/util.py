@@ -113,7 +113,7 @@ def walk_products(tree, cb_product=None, cb_version=None, cb_item=None,
             if ret_finished != _UNSET and ret == ret_finished:
                 return
 
-        if not cb_version and not cb_item:
+        if (not cb_version and not cb_item) or 'versions' not in proddata:
             continue
 
         for vername, verdata in proddata['versions'].iteritems():
@@ -122,7 +122,7 @@ def walk_products(tree, cb_product=None, cb_version=None, cb_item=None,
                 if ret_finished != _UNSET and ret == ret_finished:
                     return
 
-            if not cb_item:
+            if not cb_item or 'items' not in verdata:
                 continue
 
             for itemname, itemdata in verdata['items'].iteritems():
