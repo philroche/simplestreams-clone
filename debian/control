@@ -2,7 +2,7 @@ Source: python-simplestreams
 Section: python
 Priority: extra
 Standards-Version: 3.9.4
-Maintainer: Scott Moser <scott.moser@canonical.com>
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
 Build-Depends: debhelper (>= 7), python-all, python-setuptools
 
 Package: python-simplestreams
