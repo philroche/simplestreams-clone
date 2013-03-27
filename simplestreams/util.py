@@ -84,6 +84,25 @@ def products_del(tree, pedigree):
         del cur[pedigree[-1]]
 
 
+def products_prune(tree):
+    for prodname in tree.get('products', {}).keys():
+        for vername in tree['products'][prodname].get('versions', {}).keys():
+            vtree = tree['products'][prodname]['versions'][vername]
+            for itemname in vtree.get('items', {}).keys():
+                if not vtree['items'][itemname]:
+                    del vtree['items'][itemname]
+
+            if 'items' not in vtree or not vtree['items']:
+                del tree['products'][prodname]['versions'][vername]
+
+        if ('versions' not in tree['products'][prodname] or
+            not tree['products'][prodname]['versions']):
+            del tree['products'][prodname]
+
+    if 'products' in tree and not tree['products']:
+        del tree['products']
+
+
 def walk_products(tree, cb_product=None, cb_version=None, cb_item=None,
                   ret_finished=_UNSET):
     # walk a product tree. callbacks are called with (item, tree, (pedigree))

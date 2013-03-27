@@ -3,6 +3,7 @@ from simplestreams import util
 from copy import deepcopy
 from unittest import TestCase
 
+
 class TestProductsSet(TestCase):
     def test_product_exists(self):
         tree = {'products': {'P1': {"F1": "V1"}}}
@@ -109,6 +110,33 @@ class TestProductsDel(TestCase):
         }}
         tree = deepcopy(otree)
         util.products_del(tree, ('P2', 'VER1', 'ITEM2'))
+        self.assertEqual(tree, otree)
+
+
+class TestProductsPrune(TestCase):
+    def test_products_empty(self):
+        tree = {'products': {}}
+        util.products_prune(tree)
+        self.assertEqual(tree, {})
+
+    def test_products_not_empty(self):
+        tree = {'products': {'fooproduct': {'a': 'b'}}}
+        util.products_prune(tree)
+        self.assertEqual(tree, {})
+
+    def test_has_item(self):
+        otree = {'products': {'P1': {'versions':
+                                     {'V1': {'items': {'I1': 'I'}}}}}}
+        tree = deepcopy(otree)
+        util.products_prune(tree)
+        self.assertEqual(tree, otree)
+
+    def test_deletes_one_version_leaves_one(self):
+        versions = {'V1': {'items': {}}, 'V2': {'items': {'I1': 'I'}}}
+        otree = {'products': {'P1': {'versions': versions}}}
+        tree = deepcopy(otree)
+        util.products_prune(tree)
+        del otree['products']['P1']['versions']['V1']
         self.assertEqual(tree, otree)
 
 # vi: ts=4 expandtab
