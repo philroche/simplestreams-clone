@@ -61,15 +61,16 @@ def main():
                         default=False,
                         help='Do not download items that are to be inserted.')
 
-    parser.add_argument('mirror_url', nargs='?', default=None)
-    parser.add_argument('path', nargs='?', default="streams/v1/index.sjs")
+    parser.add_argument('--path', default="streams/v1/index.sjs",
+                        help='sync from index or products file in mirror')
+    parser.add_argument('mirror_url')
     cmdargs = parser.parse_args()
 
     known_cfg = [('--item-skip-download', 'item_skip_download', False),
                  ('--max', 'max', False),
                  ('--keep', 'keep', False),
                  ('mirror_url', 'mirror_url', True),
-                 ('path', 'path', True)]
+                 ('--path', 'path', True)]
     known_cfg.extend(hooks)
 
     cfg = {}
@@ -92,8 +93,10 @@ def main():
             cfg[cfgname] = val
         if val == "":
             cfg[cfgname] = None
+        print cfgname, val
 
-        if cfgname in command_hook.HOOK_NAMES and cfg.get(cfgname) is not None:
+        if ((cfgname in command_hook.HOOK_NAMES or cfgname == defhook)
+            and cfg.get(cfgname) is not None):
             if which(cfg[cfgname]) is None:
                 msg = "invalid input for %s. '%s' is not executable\n"
                 sys.stderr.write(msg % (argname, val))
