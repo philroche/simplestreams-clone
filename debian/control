@@ -8,7 +8,7 @@ Build-Depends: debhelper (>= 7), python-all, python-setuptools
 Package: python-simplestreams
 Architecture: all
 Priority: extra
-Depends: ${misc:Depends}, ${python:Depends}
+Depends: gnupg, python-requests (>= 0.8.2), ${misc:Depends}, ${python:Depends}
 Description: Library and tools for using Simple Streams data
  This package provides a library and client for interacting with simple
  streams data as is produced to describe Ubuntu's cloud images.
