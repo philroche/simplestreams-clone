@@ -1,5 +1,5 @@
 {
- "datatype": "image-downloads", 
+ "datatype": "image-ids", 
  "updated": "Wed, 20 Mar 2013 17:56:57 +0000", 
  "content_id": "com.example.foovendor:released:aws", 
  "products": {

@@ -1,7 +1,7 @@
 {
  "index": {
   "com.example.foovendor:released:aws": {
-   "datatype": "image-downloads", 
+   "datatype": "image-ids", 
    "path": "streams/v1/com.example.foovendor:released:aws.js", 
    "updated": "Wed, 20 Mar 2013 17:56:57 +0000", 
    "products": [
