@@ -61,7 +61,6 @@ cd "$dir" || fail "fialed cd $dir"
 
 sed -i "1s,${clogver_o},${clogver_new}," debian/changelog ||
    fail "failed to change replace REVNO in debian/changelog"
-bash
 debuild "$@" || fail "debuild failed"
 
 cd "$TEMP_D"
