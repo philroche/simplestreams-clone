@@ -192,10 +192,10 @@ def resolve_work(src, target, max=None, keep=False, filter=None,
     if max is not None and len(mtarget) > max:
         for item in mtarget[max:]:
             if item in target:
-                remove.append(target.pop())
+                remove.append(mtarget.pop())
             else:
                 add.pop()
-
+    remove = sorted(remove, reverse=bool(not reverse))
     return(add, remove)
 
 
