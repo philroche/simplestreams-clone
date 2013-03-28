@@ -98,7 +98,6 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             util.products_set(glance_t, item_data,
                 (product, version, item,))
 
-        print util.dump_data(glance_t)
         return glance_t 
 
     def filter_item(self, data, src, target, pedigree):
@@ -155,6 +154,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
     def remove_item(self, data, src, target, pedigree):
         util.products_del(target, pedigree)
         if 'id' in data:
+            print "removing %s: %s" % (data['id'], data['name'])
             self.gclient.images.delete(data['id'])
 
     def filter_index_entry(self, data, src, pedigree):

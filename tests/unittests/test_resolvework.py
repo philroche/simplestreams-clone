@@ -17,7 +17,7 @@ class TestStreamResolveWork(TestCase):
     def test_full_replace(self):
         src = [10, 9, 8]
         target = [7, 6, 5]
-        self.tryit(src=src, target=target, add=src, remove=target)
+        self.tryit(src=src, target=target, add=src, remove=[5, 6, 7])
 
     def test_only_new_with_max(self):
         self.tryit(src=[10, 9, 8], target=[7, 6, 5],
@@ -28,7 +28,7 @@ class TestStreamResolveWork(TestCase):
                    add=[10, 9, 8], remove=[5, 6], max=4, keep=True)
 
     def test_only_remove(self):
-        self.tryit(src=[3], target=[3, 2, 1], add=[], remove=[2, 1])
+        self.tryit(src=[3], target=[3, 2, 1], add=[], remove=[1, 2])
 
     def test_only_remove_with_keep(self):
         self.tryit(src=[3], target=[3, 2, 1],
