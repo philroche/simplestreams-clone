@@ -139,4 +139,15 @@ class TestProductsPrune(TestCase):
         del otree['products']['P1']['versions']['V1']
         self.assertEqual(tree, otree)
 
+
+class TestProductsCondense(TestCase):
+    def test_condense_1(self):
+        tree = {'products': {'P1': {'versions': {'1': {'A':'B'},
+                                                 '2': {'A': 'B'}}}}}
+        exp = {'products': {'P1': {'versions': {'1': {}, '2': {}},
+                                   'A': 'B'}}}
+
+        util.products_condense(tree)
+        self.assertEqual(tree, exp)
+
 # vi: ts=4 expandtab

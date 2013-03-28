@@ -32,18 +32,19 @@ def stringitems(data):
             isinstance(v, (unicode, str))}
 
 
-def products_exdata(tree, pedigree):
+def products_exdata(tree, pedigree, include_top=True, insert_fieldnames=True):
     harchy = PRODUCTS_TREE_DATA
 
     exdata = {}
-    if tree:
+    if include_top and tree:
         exdata.update(stringitems(tree))
     clevel = tree
     for (n, key) in enumerate(pedigree):
         dictname, fieldname = harchy[n]
         clevel = clevel.get(dictname, {}).get(key, {})
         exdata.update(stringitems(clevel))
-        exdata[fieldname] = key
+        if insert_fieldnames:
+            exdata[fieldname] = key
     return exdata
 
 
@@ -191,10 +192,10 @@ def resolve_work(src, target, max=None, keep=False, filter=None,
     if max is not None and len(mtarget) > max:
         for item in mtarget[max:]:
             if item in target:
-                remove.append(target.pop())
+                remove.append(mtarget.pop())
             else:
                 add.pop()
-
+    remove = sorted(remove, reverse=bool(not reverse))
     return(add, remove)
 
 
@@ -293,16 +294,18 @@ class checksummer(object):
         return (self.expected is None or self.expected == self.hexdigest())
 
 
-def move_dups(src, target):
-    # given dict1 = {e1: {a:a, b:c}, e2: {a:a, b:d, e:f}}
-    # update dict2 with {a:a}, and delete 'a' from entries in dict1
-    # if a key exists in dict2, it will not be copied or deleted.
+def move_dups(src, target, sticky=None):
+    # given src = {e1: {a:a, b:c}, e2: {a:a, b:d, e:f}}
+    # update target with {a:a}, and delete 'a' from entries in dict1
+    # if a key exists in target, it will not be copied or deleted.
+    if sticky == None:
+        sticky = []
 
     everything = {}
     # first walk through and just get all keys
     for entry in src.values():
         try:
-            everything.update(entry)
+            everything.update({k: entry[k] for k in entry if k not in sticky})
         except Exception as e:
             raise
 
@@ -310,7 +313,7 @@ def move_dups(src, target):
 
     # if the target had this entry, skip it
     for k in [k for k in target if k in remain]:
-        del remain[entry]
+        del remain[k]
 
     # then remove anything that isn't present in every entry or differs.
     for entry in src.values():
@@ -327,13 +330,13 @@ def move_dups(src, target):
     target.update(remain)
 
 
-def products_condense(ptree):
+def products_condense(ptree, sticky=None):
     # walk a products tree, copying up item keys as far as they'll go
 
     def call_move_dups(cur, tree, pedigree):
         (mtype, stname) = (("product", "versions"),
                            ("version", "items"))[len(pedigree) - 1]
-        move_dups(cur.get(stname, {}), cur)
+        move_dups(cur.get(stname, {}), cur, sticky=sticky)
 
     walk_products(ptree, cb_version=call_move_dups)
     walk_products(ptree, cb_product=call_move_dups)

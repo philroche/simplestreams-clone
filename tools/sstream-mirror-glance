@@ -1,0 +1,56 @@
+#!/usr/bin/python
+import argparse
+import sys
+
+from simplestreams import objectstores
+from simplestreams import mirrors
+from simplestreams.mirrors import glance
+
+def error(msg):
+    sys.stderr.write(msg)
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--keep', action='store_true', default=False,
+                        help='keep items in target up to MAX items '
+                             'even after they have fallen out of the source')
+    parser.add_argument('--max', type=int, default=None,
+                        help='store at most MAX items in the target')
+    parser.add_argument('--mirror', action='append', default=[],
+                        dest="mirrors",
+                        help='additional mirrors to find referenced files')
+    parser.add_argument('--output-dir', metavar="DIR", default=False,
+                        help='write image data to storage in dir')
+    parser.add_argument('--output-swift', metavar="prefix", default=False,
+                        help='write image data to swift under prefix')
+
+    parser.add_argument('source_mirror')
+    parser.add_argument('path', nargs='?', default="streams/v1/index.sjs")
+    args = parser.parse_args()
+
+    mirror_config = {'max_items': args.max, 'keep_items': args.keep}
+
+    smirror = mirrors.UrlMirrorReader(args.source_mirror, mirrors=args.mirrors)
+    if args.output_dir and args.output_swift:
+        sys.stderr.write("--output-dir and --output-swift "
+                         "are mutually exclusive\n")
+        sys.exit(1)
+
+    if args.output_dir:
+        tstore = objectstores.FileStore(args.output_dir)
+    elif args.output_swift:
+        tstore = objectstores.swift.SwiftObjectStore(args.output_swift)
+    else:
+        sys.stderr.write("not writing data anywhere\n")
+        tstore=None
+
+    tmirror = glance.GlanceMirror(config=mirror_config, objectstore=tstore)
+
+    tmirror.sync(smirror.reader, args.path)
+
+
+if __name__ == '__main__':
+    main()
+
+# vi: ts=4 expandtab syntax=python
