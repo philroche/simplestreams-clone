@@ -32,11 +32,11 @@ def stringitems(data):
             isinstance(v, (unicode, str))}
 
 
-def products_exdata(tree, pedigree):
+def products_exdata(tree, pedigree, include_top=True):
     harchy = PRODUCTS_TREE_DATA
 
     exdata = {}
-    if tree:
+    if include_top and tree:
         exdata.update(stringitems(tree))
     clevel = tree
     for (n, key) in enumerate(pedigree):
@@ -310,7 +310,7 @@ def move_dups(src, target):
 
     # if the target had this entry, skip it
     for k in [k for k in target if k in remain]:
-        del remain[entry]
+        del remain[k]
 
     # then remove anything that isn't present in every entry or differs.
     for entry in src.values():

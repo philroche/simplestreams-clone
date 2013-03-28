@@ -31,29 +31,6 @@
      }, 
      "label": "release"
     }, 
-    "20120328": {
-     "items": {
-      "tar.gz": {
-       "name": "foovendor-pinky-6.1-beta2-amd64-server-20120328.tar.gz", 
-       "path": "files/beta-2/foovendor-6.1-beta2-server-cloudimg-amd64.tar.gz", 
-       "md5": "c245123c1a7c16dd43962b71c604c5ee",
-       "ftype": "tar.gz"
-      }, 
-      "disk1.img": {
-       "name": "foovendor-pinky-6.1-beta2-amd64-server-20120328-disk1.img", 
-       "path": "files/beta-2/foovendor-6.1-beta2-server-cloudimg-amd64-disk1.img", 
-       "md5": "34cec541a18352783e736ba280a12201",
-       "ftype": "disk1.img"
-      }, 
-      "root.tar.gz": {
-       "name": "foovendor-pinky-6.1-beta2-amd64-server-20120328-root.tar.gz", 
-       "path": "files/beta-2/foovendor-6.1-beta2-server-cloudimg-amd64-root.tar.gz", 
-       "md5": "55686ef088f7baf0ebea9349055daa85",
-       "ftype": "root.tar.gz"
-      }
-     }, 
-     "label": "beta2"
-    }, 
     "20121001": {
      "items": {
       "tar.gz": {

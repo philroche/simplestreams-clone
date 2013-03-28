@@ -4,6 +4,8 @@ import simplestreams.mirrors as mirrors
 import simplestreams.util as util
 import simplestreams.openstack as openstack
 
+import copy
+import errno
 import glanceclient
 import os
 import re
@@ -49,16 +51,20 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
     def load_products(self, path=None, content_id=None):
         my_cid = translate_dl_content_id(content_id, self.cloudname)
 
+        # glance is the definitive store.  Any data loaded from the store
+        # is secondary.  
+        store_t = None
         if self.store:
             try:
                 path = self._cidpath(my_cid)
-                return util.load_content(self.store.reader(path))
+                store_t = util.load_content(self.store.reader(path).read())
             except IOError as e:
                 if e.errno != errno.ENOENT:
                     raise
-            return empty_iid_products(my_cid)
+        if not store_t:
+            store_t = empty_iid_products(my_cid)
 
-        working = empty_iid_products(my_cid)
+        glance_t = empty_iid_products(my_cid)
 
         images = self.gclient.images.list()
         for image in images:
@@ -68,7 +74,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
                 continue
 
             props = image['properties']
-            if props.get('content_id') != content_id:
+            if props.get('content_id') != my_cid:
                 continue
 
             product = props.get('product_name')
@@ -77,17 +83,27 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             if not (version and product and item):
                 continue
 
-            util.products_set(working,
-                {'name': image['name'], 'id': image['id']},
+            # get data from the datastore for this item, if it exists
+            # and then update that with glance data (just in case different)
+            try:
+                item_data = (store_t['products'][product]['versions']
+                             [version]['items'][item]).copy()
+            except KeyError:
+                item_data = {}
+
+            item_data.update({'name': image['name'], 'id': image['id']})
+
+            util.products_set(glance_t, item_data,
                 (product, version, item,))
 
-        return working
+        print util.dump_data(glance_t)
+        return glance_t 
 
     def filter_item(self, data, src, target, pedigree):
         return data.get('ftype') in ('disk1.img', 'disk.img')
 
     def insert_item(self, data, src, target, pedigree, contentsource):
-        flat = util.products_exdata(src, pedigree)
+        flat = util.products_exdata(src, pedigree, include_top=False)
 
         tmp_path = None
         tmp_del = None
@@ -100,8 +116,8 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         if 'path' in t_item:
             del t_item['path']
         
-        props = {}
-        for n in ('content_id', 'product_name', 'version_name', 'item_name'):
+        props = {'content_id': target['content_id']}
+        for n in ('product_name', 'version_name', 'item_name'):
             props[n] = flat[n]
             del t_item[n]
 
@@ -126,6 +142,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             create_kwargs['data'] = open(tmp_path, 'rb')
             ret = self.gclient.images.create(**create_kwargs)
             t_item['id'] = ret.id
+            print "created %s: %s" % (ret.id, name)
 
         finally:
             if tmp_del and os.path.exists(tmp_path):
@@ -143,6 +160,9 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
     def insert_products(self, path, target, content):
         if self.store:
-            util.products_prune(target)
-            dpath = self._cidpath(target['content_id'])
-            self.store.insert_content(dpath, util.dump_data(target))
+            tree = copy.deepcopy(target)
+            util.products_prune(tree)
+            #util.products_condense(tree)
+            
+            dpath = self._cidpath(tree['content_id'])
+            self.store.insert_content(dpath, util.dump_data(tree))
