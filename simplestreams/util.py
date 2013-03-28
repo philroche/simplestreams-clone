@@ -32,7 +32,7 @@ def stringitems(data):
             isinstance(v, (unicode, str))}
 
 
-def products_exdata(tree, pedigree, include_top=True):
+def products_exdata(tree, pedigree, include_top=True, insert_fieldnames=True):
     harchy = PRODUCTS_TREE_DATA
 
     exdata = {}
@@ -43,7 +43,8 @@ def products_exdata(tree, pedigree, include_top=True):
         dictname, fieldname = harchy[n]
         clevel = clevel.get(dictname, {}).get(key, {})
         exdata.update(stringitems(clevel))
-        exdata[fieldname] = key
+        if insert_fieldnames:
+            exdata[fieldname] = key
     return exdata
 
 

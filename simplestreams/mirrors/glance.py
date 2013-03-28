@@ -86,8 +86,10 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             # get data from the datastore for this item, if it exists
             # and then update that with glance data (just in case different)
             try:
-                item_data = (store_t['products'][product]['versions']
-                             [version]['items'][item]).copy()
+                item_data = util.products_exdata(store_t,
+                                                 (product, version, item,),
+                                                 include_top=False,
+                                                 insert_fieldnames=False)
             except KeyError:
                 item_data = {}
 
