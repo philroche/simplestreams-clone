@@ -164,7 +164,9 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         if self.store:
             tree = copy.deepcopy(target)
             util.products_prune(tree)
-            #util.products_condense(tree)
+            # stop these items from copying up when we call condense
+            sticky = ['ftype', 'md5', 'sha256', 'size', 'name', 'id']
+            util.products_condense(tree, sticky=sticky)
             
             dpath = self._cidpath(tree['content_id'])
             self.store.insert_content(dpath, util.dump_data(tree))
