@@ -30,13 +30,13 @@ one source and another, see bin/sstream-sync.
 For an example, the following runs the debug hook against the example 'foocloud'
 data:
    ./tools/tenv sstream-sync --hook=hook-debug \
-       examples/foocloud/ streams/v1/index.js
+       --path=streams/v1/index.js examples/foocloud/
 
 You can also run it with cloud-images.ubuntu.com data like this:
 
   ./tools/tenv sstream-sync \
      --item-skip-download --hook=./tools/hook-debug \
-     http://cloud-images.ubuntu.com/eightprotons/ streams/v1/index.sjs
+     --path=streams/v1/index.sjs http://cloud-images.ubuntu.com/eightprotons/
 
 The 'hook-debug' program simply outputs the data it is invoked with.  It does
 not actually mirror anything.
