@@ -94,7 +94,6 @@ def main():
             cfg[cfgname] = val
         if val == "":
             cfg[cfgname] = None
-        print cfgname, val
 
         if ((cfgname in command_hook.HOOK_NAMES or cfgname == defhook)
             and cfg.get(cfgname) is not None):
