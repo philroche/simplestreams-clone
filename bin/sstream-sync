@@ -53,9 +53,10 @@ def main():
         parser.add_argument(argname, dest=cfgname, required=False)
 
     parser.add_argument('--keep', action='store_true', default=False,
+                        dest='keep_items',
                         help='keep items in target up to MAX items '
                              'even after they have fallen out of the source')
-    parser.add_argument('--max', type=int, default=None,
+    parser.add_argument('--max', type=int, default=None, dest='max_items',
                         help='store at most MAX items in the target')
     parser.add_argument('--item-skip-download', action='store_true',
                         default=False,
@@ -67,8 +68,8 @@ def main():
     cmdargs = parser.parse_args()
 
     known_cfg = [('--item-skip-download', 'item_skip_download', False),
-                 ('--max', 'max', False),
-                 ('--keep', 'keep', False),
+                 ('--max', 'max_items', False),
+                 ('--keep', 'keep_items', False),
                  ('mirror_url', 'mirror_url', True),
                  ('--path', 'path', True)]
     known_cfg.extend(hooks)
