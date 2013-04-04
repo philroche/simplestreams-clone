@@ -68,10 +68,14 @@ class TestStreamResolveWork(TestCase):
         self.tryit(src=[1, 2, 3, 4], target=[4], max=1, keep=False,
                    add=[], remove=[])
 
-    def test_unordered_input(self):
+    def test_unordered_target_input(self):
         self.tryit(src=[u'20121026.1', u'20120328', u'20121001'],
                    target=[u'20121001', u'20120328', u'20121026.1'], max=2,
                    keep=False, add=[], remove=[u'20120328'])
 
+    def test_reduced_max(self):
+        self.tryit(src=[9, 5, 8, 4, 7, 3, 6, 2, 1],
+                   target=[9, 8, 7, 6, 5], max=4, keep=False,
+                   add=[], remove=[5])
 
 # vi: ts=4 expandtab
