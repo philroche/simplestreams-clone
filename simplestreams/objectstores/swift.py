@@ -2,6 +2,7 @@ import simplestreams.objectstores as objectstores
 import simplestreams.contentsource as cs
 import simplestreams.openstack as openstack
 
+import errno
 import hashlib
 from swiftclient import Connection, ClientException
 
@@ -46,7 +47,6 @@ class SwiftObjectStore(objectstores.ObjectStore):
         self.swiftclient.put_container(self.container,
             headers={'X-Container-Read': '.r:*,.rlistings'})
 
-
     def insert(self, path, reader, checksums=None, mutable=True):
         #store content from reader.read() into path, expecting result checksum
         self._insert(path=path, contents=reader, checksums=checksums,
@@ -62,7 +62,7 @@ class SwiftObjectStore(objectstores.ObjectStore):
 
     def reader(self, path):
         def itgen():
-            (headers, iterator) = self.swiftclient.get_object(
+            (_headers, iterator) = self.swiftclient.get_object(
                 container=self.container, obj=self.path_prefix + path,
                 resp_chunk_size=self.read_size)
             return iterator
@@ -105,7 +105,7 @@ class SwiftObjectStore(objectstores.ObjectStore):
         elif isinstance(contents, (unicode, str)):
             insargs['etag'] = hashlib.md5(contents).hexdigest()
 
-        etag = self.swiftclient.put_object(**insargs)
+        self.swiftclient.put_object(**insargs)
 
 
 def headers_match_checksums(headers, checksums):
