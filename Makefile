@@ -1,6 +1,7 @@
 TENV := ./tools/tenv
 
 PUBKEY := examples/keys/example.pub
+PUBKEYS := $(PUBKEY)
 SECKEY := examples/keys/example.sec
 
 EXDATA_SIGN ?= 1
@@ -28,14 +29,16 @@ $(PUBKEY) $(SECKEY):
 
 gnupg: gnupg/README
 
-gnupg/README: $(PUBKEY) $(SECKEY)
+gnupg/README: $(PUBKEYS) $(SECKEY)
 	rm -Rf gnupg
 	@umask 077 && mkdir -p gnupg
 	$(TENV) gpg --import $(SECKEY) >/dev/null 2>&1
-	$(TENV) gpg --import $(PUBKEY) >/dev/null 2>&1
-	fp=$$($(TENV) gpg --with-fingerprint --with-colons $(PUBKEY) \
+	for pubkey in $(PUBKEYS); do \
+	  $(TENV) gpg --import $$pubkey >/dev/null 2>&1; \
+	  fp=$$($(TENV) gpg --with-fingerprint --with-colons $$pubkey \
 	    | awk -F: '$$1 == "fpr" {print $$10}') && \
-	    echo "$${fp}:6:" | $(TENV) gpg --import-ownertrust
+	    echo "$${fp}:6:" | $(TENV) gpg --import-ownertrust ; \
+	done
 	@echo "this is used by $(TENV) as the gpg directory" > gnupg/README
 
 examples-sign:
