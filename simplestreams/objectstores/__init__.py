@@ -20,8 +20,9 @@ class ObjectStore(object):
         #store content from reader.read() into path, expecting result checksum
         raise NotImplementedError()
 
-    def insert_content(self, path, content, checksums=None):
-        self.insert(path, cs.MemoryContentSource(content=content), checksums)
+    def insert_content(self, path, content, checksums=None, mutable=True):
+        self.insert(path=path, reader=cs.MemoryContentSource(content=content),
+                    checksums=checksums, mutable=mutable)
 
     def remove(self, path):
         #remove path from store

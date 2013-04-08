@@ -110,6 +110,71 @@ class FdContentSource(ContentSource):
         self.fd.close()
 
 
+class IteratorContentSource(ContentSource):
+    def __init__(self, itgen, url=None):
+        self.itgen = itgen
+        self.url = url
+        self.r_iter = None
+        self.leftover = bytes()
+        self.consumed = False
+
+    def open(self):
+        if self.r_iter:
+            return
+
+        try:
+            self.r_iter = self.itgen()
+        except Exception as exc:
+            if self.is_enoent(exc):
+                enoent = IOError(exc)
+                enoent.errno = errno.ENOENT
+                raise enoent
+            raise exc
+
+    def is_enoent(self, exc):
+        return (isinstance(exc, IOError) and exc.errno == errno.ENOENT)
+
+    def read(self, size=None):
+        self.open()
+
+        if self.consumed:
+            return bytes()
+
+        if (size is None or size < 0):
+            # read everything
+            ret = self.leftover
+            self.leftover = bytes()
+            for buf in self.r_iter:
+                ret += buf
+            self.consumed = True
+            return ret
+
+        ret = bytes()
+
+        if self.leftover:
+            if len(self.leftover) > size:
+                ret = self.leftover[0:size]
+                self.leftover = self.leftover[size:]
+                return ret
+            ret = self.leftover
+            self.leftover = bytes()
+
+        while True:
+            try:
+                ret += self.r_iter.next()
+                if len(ret) >= size:
+                    self.leftover = ret[size:]
+                    ret = ret[0:size]
+                    break
+            except StopIteration:
+                self.consumed = True
+                break
+        return ret
+
+    def close():
+        pass
+
+
 class MemoryContentSource(FdContentSource):
     def __init__(self, url=None, content=""):
         fd = StringIO.StringIO(content)
@@ -131,7 +196,7 @@ class UrlReader(object):
 
 class Urllib2UrlReader(UrlReader):
     def __init__(self, url):
-	self.url = url
+        self.url = url
         try:
             self.req = urllib2.urlopen(url)
         except urllib2.HTTPError as e:
@@ -140,7 +205,7 @@ class Urllib2UrlReader(UrlReader):
                 myerr.errno = errno.ENOENT
                 raise myerr
             raise e
- 
+
     def read(self, size=-1):
         return self.req.read(size)
 
