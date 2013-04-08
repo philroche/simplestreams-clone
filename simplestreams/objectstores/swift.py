@@ -42,6 +42,11 @@ class SwiftObjectStore(objectstores.ObjectStore):
                                                     **self.keystone_creds)
         self.swiftclient = get_swiftclient(**conn_info)
 
+        # http://docs.openstack.org/developer/swift/misc.html#acls
+        self.swiftclient.put_container(self.container,
+            headers={'X-Container-Read': '.r:*,.rlistings'})
+
+
     def insert(self, path, reader, checksums=None, mutable=True):
         #store content from reader.read() into path, expecting result checksum
         self._insert(path=path, contents=reader, checksums=checksums,
