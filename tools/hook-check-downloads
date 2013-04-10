@@ -1,0 +1,96 @@
+#!/bin/sh
+RC_FILTER_INCLUDE=0
+RC_FILTER_EXCLUDE=1
+RC_FAIL=2
+BAD_URL="BAD_URL:"
+TMPF=""
+
+error() { echo "$@" 1>&2; }
+debug() { error "$@"; }
+fail() { echo "FAIL:" "$@" 1>&2; exit $RC_FAIL; }
+badurl() { echo "$BAD_URL" "$@"; exit 0; }
+
+cleanup() { [ -z "$TMPF" ] || rm -f "$TMPF"; }
+
+do_check() {
+    local self="${0}"
+    local ret="" count=""
+    TMPF=$(mktemp ${TMPDIR:-/tmp}/${0##*/}.XXXXXX) ||
+        fail "failed to make tempfile"
+    trap cleanup EXIT
+    ( sstream-sync ${2:+"--path=${2}"} "$1" \
+        "--hook-load-products=${self}" "--hook-filter-index-entry=${self}" \
+        "--hook-insert-item=${self}" --item-skip-download; echo $? ) |
+        tee "$TMPF"
+    ret=$(tail -n -1 "$TMPF")
+    [ $ret -eq 0 ] ||
+        fail "odd failure [$ret]"
+    count=$(grep -c "^$BAD_URL" "$TMPF")
+    if [ "$count" != "0" ]; then
+        fail "found '$count' bad urls"
+    fi
+    exit 0
+}
+
+Usage() {
+    cat <<EOF
+Usage: ${0##*/} base_url path
+   Check the image-download urls under base_url/path
+
+   Example:
+    * check the 'path' of all image-download items described by
+      simple stream at
+      http://cloud-images.ubuntu.com/eightprotons/v1/streams/index.js
+
+      ${0##*/} http://cloud-images.ubuntu.com/eightprotons/
+EOF
+}
+
+staturl() {
+    case "$1" in
+        file://*) [ -f "$1" ];;
+        http://*|https://*) curl --silent --fail --head "$1" >/dev/null;;
+        */*) [ -f "$1" ];;
+        *) error "unknown protocol: ${item_url}"; return 2;;
+   esac
+}
+
+case "$HOOK" in
+    filter_index_entry)
+        # skip streams or groups are not download
+        if [ "$datatype" = "image-downloads" ]; then
+            debug "== including $content_id: $datatype =="
+            rc=$RC_FILTER_INCLUDE
+        else
+            debug "== skipping $content_id: $datatype =="
+            rc=$RC_FILTER_EXCLUDE;
+        fi
+        exit $rc
+        ;;
+    load_products)
+        debug "== load_products: $content_id (no-op) =="
+        exit 0;;
+    insert_item)
+        info="${content_id}/${product_name}/${version_name}/${item_name}"
+        if [ -z "$item_url" ]; then
+            echo "FAILED: ${info}: empty item url!";
+            exit "${RC_FAIL}"
+        fi
+        if staturl "${item_url}"; then
+            debug "$info: ${item_url}"
+        else
+            badurl "$info: ${item_url}"
+        fi
+        exit 0;;
+    *)
+        if [ -n "$HOOK" ]; then
+            fail "unsupported hook '$HOOK'"
+        else
+            [ "$1" = "-h" -o "$1" = "--help" ] && { Usage; exit 0; }
+            [ "$#" -eq 0 -o "$#" -gt 2 ] && { Usage 1>&2; exit 1; }
+            do_check "$@"
+        fi
+        ;;
+esac
+
+# vi: ts=4 expandtab
