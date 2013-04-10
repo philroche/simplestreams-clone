@@ -32,15 +32,19 @@ def empty_iid_products(content_id):
 # glance mirror 'image-downloads' content into glance
 # if provided an object store, it will produce a 'image-ids' mirror
 class GlanceMirror(mirrors.BasicMirrorWriter):
-    def __init__(self, config, objectstore=None):
+    def __init__(self, config, objectstore=None, region=None):
         super(GlanceMirror, self).__init__(config=config)
 
         self.loaded_content = {}
         self.store = objectstore
 
         self.keystone_creds = openstack.load_keystone_creds()
+
+        if region is not None:
+            self.keystone_creds['region_name'] = region
+
         conn_info = openstack.get_service_conn_info('image',
-		                                    **self.keystone_creds)
+                                                    **self.keystone_creds)
         self.gclient = get_glanceclient(**conn_info)
         self.tenant_id = conn_info['tenant_id']
 
@@ -54,7 +58,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         my_cid = translate_dl_content_id(content_id, self.cloudname)
 
         # glance is the definitive store.  Any data loaded from the store
-        # is secondary.  
+        # is secondary.
         store_t = None
         if self.store:
             try:
@@ -101,7 +105,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             util.products_set(glance_t, item_data,
                 (product, version, item,))
 
-        return glance_t 
+        return glance_t
 
     def filter_item(self, data, src, target, pedigree):
         return data.get('ftype') in ('disk1.img', 'disk.img')
@@ -119,7 +123,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         t_item = flat.copy()
         if 'path' in t_item:
             del t_item['path']
-        
+
         props = {'content_id': target['content_id']}
         for n in ('product_name', 'version_name', 'item_name'):
             props[n] = flat[n]
@@ -136,7 +140,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         if 'md5' in data:
             create_kwargs['checksum'] = data.get('md5')
-        
+
         try:
             try:
                 (tmp_path, tmp_del) = util.get_local_copy(contentsource.read)
@@ -170,7 +174,9 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             # stop these items from copying up when we call condense
             sticky = ['ftype', 'md5', 'sha256', 'size', 'name', 'id']
             util.products_condense(tree, sticky=sticky)
-            
+
             dpath = self._cidpath(tree['content_id'])
             print "writing data: %s" % dpath
             self.store.insert_content(dpath, util.dump_data(tree))
+
+# vi: ts=4 expandtab syntax=python

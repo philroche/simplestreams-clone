@@ -26,7 +26,7 @@ class SwiftContentSource(cs.IteratorContentSource):
 
 class SwiftObjectStore(objectstores.ObjectStore):
 
-    def __init__(self, prefix):
+    def __init__(self, prefix, region=None):
         # expect 'swift://bucket/path_prefix'
         self.prefix = prefix
         if prefix.startswith("swift://"):
@@ -39,6 +39,9 @@ class SwiftObjectStore(objectstores.ObjectStore):
         super(SwiftObjectStore, self).__init__()
 
         self.keystone_creds = openstack.load_keystone_creds()
+        if region is not None:
+            self.keystone_creds['region_name'] = region
+        
         conn_info = openstack.get_service_conn_info('object-store',
                                                     **self.keystone_creds)
         self.swiftclient = get_swiftclient(**conn_info)
