@@ -4,11 +4,14 @@ import sys
 
 from simplestreams import objectstores
 from simplestreams.objectstores import swift
+from simplestreams import log
 from simplestreams import mirrors
 from simplestreams.mirrors import glance
 
+
 def error(msg):
     sys.stderr.write(msg)
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -29,6 +32,10 @@ def main():
     parser.add_argument('--cloud-name', metavar="name", default=None,
                         required=True, help='unique name for this cloud')
 
+    parser.add_argument('--verbose', '-v', action='count', default=0)
+    parser.add_argument('--log-file', default=sys.stderr,
+                        type=argparse.FileType('w'))
+
     parser.add_argument('source_mirror')
     parser.add_argument('path', nargs='?', default="streams/v1/index.sjs")
     args = parser.parse_args()
@@ -38,9 +45,11 @@ def main():
 
     smirror = mirrors.UrlMirrorReader(args.source_mirror, mirrors=args.mirrors)
     if args.output_dir and args.output_swift:
-        sys.stderr.write("--output-dir and --output-swift "
-                         "are mutually exclusive\n")
+        error("--output-dir and --output-swift are mutually exclusive\n")
         sys.exit(1)
+
+    level = (log.ERROR, log.INFO, log.DEBUG)[min(args.verbose, 2)]
+    log.basicConfig(stream=args.log_file, level=level)
 
     if args.output_dir:
         tstore = objectstores.FileStore(args.output_dir)
@@ -48,7 +57,7 @@ def main():
         tstore = swift.SwiftObjectStore(args.output_swift)
     else:
         sys.stderr.write("not writing data anywhere\n")
-        tstore=None
+        tstore = None
 
     tmirror = glance.GlanceMirror(config=mirror_config, objectstore=tstore)
 
