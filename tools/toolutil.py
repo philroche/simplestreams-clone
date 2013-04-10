@@ -3,9 +3,7 @@
 import json
 import os
 import os.path
-from simplestreams.util import read_possibly_signed
 import subprocess
-import urlparse
 
 
 REL2VER = {
@@ -147,7 +145,7 @@ def load_query_ec2(path, builds=None, rels=None, max_dailies=NUM_DAILIES):
                     if serial != last_serial:
                         serials_seen += 1
                     last_serial = serial
-                    if serials_seen > NUM_DAILIES:
+                    if serials_seen > max_dailies:
                         break
 
                 results.append(ret)
@@ -227,7 +225,7 @@ def signjs_file(fname, status_cb=None):
     elif fmt == "index:1.0":
         status_cb(fname, fmt)
         signfile(fname)
-        for content_id, content in data.get('index').iteritems():
+        for _content_id, content in data.get('index').iteritems():
             path = content.get('path')
             if path.endswith(".js"):
                 content['path'] = path[0:-len(".js")] + ".sjs"
