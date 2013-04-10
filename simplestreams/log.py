@@ -31,14 +31,14 @@ def basicConfig(**kwargs):
     logger.setLevel(level)
     logger.addHandler(handler)
 
-    print "HI"
-
 
 def _getLogger(name='sstreams'):
     return logging.getLogger(name)
 
 
-logging.basicConfig()
+if not logging.getLogger().handlers:
+    logging.getLogger().addHandler(NullHandler())
+
 LOG = _getLogger()
 
 # vi: ts=4 expandtab syntax=python
