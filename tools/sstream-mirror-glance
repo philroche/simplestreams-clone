@@ -3,6 +3,7 @@ import argparse
 import sys
 
 from simplestreams import objectstores
+from simplestreams.objectstores import swift
 from simplestreams import mirrors
 from simplestreams.mirrors import glance
 
@@ -25,11 +26,15 @@ def main():
     parser.add_argument('--output-swift', metavar="prefix", default=False,
                         help='write image data to swift under prefix')
 
+    parser.add_argument('--cloud-name', metavar="name", default=None,
+                        required=True, help='unique name for this cloud')
+
     parser.add_argument('source_mirror')
     parser.add_argument('path', nargs='?', default="streams/v1/index.sjs")
     args = parser.parse_args()
 
-    mirror_config = {'max_items': args.max, 'keep_items': args.keep}
+    mirror_config = {'max_items': args.max, 'keep_items': args.keep,
+                     'cloud_name': args.cloud_name}
 
     smirror = mirrors.UrlMirrorReader(args.source_mirror, mirrors=args.mirrors)
     if args.output_dir and args.output_swift:
@@ -40,7 +45,7 @@ def main():
     if args.output_dir:
         tstore = objectstores.FileStore(args.output_dir)
     elif args.output_swift:
-        tstore = objectstores.swift.SwiftObjectStore(args.output_swift)
+        tstore = swift.SwiftObjectStore(args.output_swift)
     else:
         sys.stderr.write("not writing data anywhere\n")
         tstore=None

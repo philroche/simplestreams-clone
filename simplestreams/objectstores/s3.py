@@ -51,7 +51,7 @@ class S3ObjectStore(objectstores.ObjectStore):
         finally:
             tfile.close()
 
-    def insert_content(self, path, content, checksums=None):
+    def insert_content(self, path, content, checksums=None, mutable=True):
         with closing(self.bucket.new_key(self.path_prefix + path)) as key:
             key.set_contents_from_string(content)
 

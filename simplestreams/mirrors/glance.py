@@ -43,7 +43,9 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 		                                    **self.keystone_creds)
         self.gclient = get_glanceclient(**conn_info)
         self.tenant_id = conn_info['tenant_id']
-        self.cloudname = "foocloud"
+
+        region = self.keystone_creds.get('region_name', 'nullregion')
+        self.cloudname = config.get("cloud_name", "nullcloud") + "-" + region
 
     def _cidpath(self, content_id):
         return "streams/v1/%s.js" % content_id
@@ -94,6 +96,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
                 item_data = {}
 
             item_data.update({'name': image['name'], 'id': image['id']})
+            item_data['is_public'] = True
 
             util.products_set(glance_t, item_data,
                 (product, version, item,))
@@ -169,4 +172,5 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             util.products_condense(tree, sticky=sticky)
             
             dpath = self._cidpath(tree['content_id'])
+            print "writing data: %s" % dpath
             self.store.insert_content(dpath, util.dump_data(tree))

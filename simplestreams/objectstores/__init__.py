@@ -1,16 +1,12 @@
 import errno
-import logging
 import hashlib
 import os
 
 import simplestreams.contentsource as cs
 import simplestreams.util as util
+from simplestreams.log import LOG
 
 READ_BUFFER_SIZE = 1024 * 50
-
-LOG = logging.getLogger('simplestreams')
-LOG.setLevel(logging.ERROR)
-LOG.addHandler(logging.StreamHandler())
 
 
 class ObjectStore(object):
@@ -20,8 +16,9 @@ class ObjectStore(object):
         #store content from reader.read() into path, expecting result checksum
         raise NotImplementedError()
 
-    def insert_content(self, path, content, checksums=None):
-        self.insert(path, cs.MemoryContentSource(content=content), checksums)
+    def insert_content(self, path, content, checksums=None, mutable=True):
+        self.insert(path=path, reader=cs.MemoryContentSource(content=content),
+                    checksums=checksums, mutable=mutable)
 
     def remove(self, path):
         #remove path from store
