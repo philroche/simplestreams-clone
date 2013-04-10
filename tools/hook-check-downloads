@@ -15,6 +15,12 @@ cleanup() { [ -z "$TMPF" ] || rm -f "$TMPF"; }
 do_check() {
     local self="${0}"
     local ret="" count=""
+    local print_only=false
+    if [ "$1" = "--print-only" ]; then
+        print_only=true
+        export _PRINT_ONLY=1
+        shift
+    fi
     TMPF=$(mktemp ${TMPDIR:-/tmp}/${0##*/}.XXXXXX) ||
         fail "failed to make tempfile"
     trap cleanup EXIT
@@ -75,10 +81,14 @@ case "$HOOK" in
         if [ -z "$item_url" ]; then
             fail "${info}: empty item url!"
         fi
-        if staturl "${item_url}"; then
-            debug "$info: ${item_url}"
+        if [ "${_PRINT_ONLY:-0}" != "0" ]; then
+            debug "$info ${item_url}"
         else
-            badurl "$info: ${item_url}"
+            if staturl "${item_url}"; then
+                debug "$info: ${item_url}"
+            else
+                badurl "$info: ${item_url}"
+            fi
         fi
         exit 0;;
     *)
