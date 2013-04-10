@@ -3,6 +3,7 @@
 import simplestreams.mirrors as mirrors
 import simplestreams.util as util
 import simplestreams.openstack as openstack
+from simplestreams.log import LOG
 
 import copy
 import errno
@@ -26,7 +27,7 @@ def translate_dl_content_id(content_id, cloudname):
 
 def empty_iid_products(content_id):
     return {'content_id': content_id, 'products': {},
-            'datatype': 'image-ids'}
+            'datatype': 'image-ids', 'format': 'products:1.0'}
 
 
 # glance mirror 'image-downloads' content into glance
@@ -48,14 +49,16 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         self.gclient = get_glanceclient(**conn_info)
         self.tenant_id = conn_info['tenant_id']
 
-        region = self.keystone_creds.get('region_name', 'nullregion')
-        self.cloudname = config.get("cloud_name", "nullcloud") + "-" + region
+        self.region = self.keystone_creds.get('region_name', 'nullregion')
+        self.cloudname = config.get("cloud_name", 'nullcloud')
+        self.crsn = '-'.join((self.cloudname, self.region,))
+        self.auth_url = self.keystone_creds['auth_url']
 
     def _cidpath(self, content_id):
         return "streams/v1/%s.js" % content_id
 
     def load_products(self, path=None, content_id=None):
-        my_cid = translate_dl_content_id(content_id, self.cloudname)
+        my_cid = translate_dl_content_id(content_id, self.crsn)
 
         # glance is the definitive store.  Any data loaded from the store
         # is secondary.
@@ -104,6 +107,10 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
             util.products_set(glance_t, item_data,
                 (product, version, item,))
+
+        for product in glance_t['products']:
+            glance_t['products'][product]['region'] = self.region
+            glance_t['products'][product]['endpoint'] = self.auth_url
 
         return glance_t
 
@@ -168,15 +175,42 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         return data.get('datatype') in ("image-downloads", None)
 
     def insert_products(self, path, target, content):
-        if self.store:
-            tree = copy.deepcopy(target)
-            util.products_prune(tree)
-            # stop these items from copying up when we call condense
-            sticky = ['ftype', 'md5', 'sha256', 'size', 'name', 'id']
-            util.products_condense(tree, sticky=sticky)
+        if not self.store:
+            return
 
-            dpath = self._cidpath(tree['content_id'])
-            print "writing data: %s" % dpath
-            self.store.insert_content(dpath, util.dump_data(tree))
+        tree = copy.deepcopy(target)
+        util.products_prune(tree)
+        # stop these items from copying up when we call condense
+        sticky = ['ftype', 'md5', 'sha256', 'size', 'name', 'id']
+        util.products_condense(tree, sticky=sticky)
+
+        tsnow = util.timestamp()
+        tree['updated'] = tsnow
+
+        dpath = self._cidpath(tree['content_id'])
+        LOG.info("writing data: %s", dpath)
+        self.store.insert_content(dpath, util.dump_data(tree))
+
+        # now insert or update an index
+        ipath = "streams/v1/index.js"
+        try:
+            index = util.load_content(self.store.reader(ipath).read())
+        except IOError as exc:
+            if exc.errno != errno.ENOENT:
+                raise
+            index = {"index": {}, 'format': 'index:1.0',
+                     'updated': util.timestamp()}
+
+        index['index'][tree['content_id']] = {
+            'updated': tsnow,
+            'datatype': 'image-ids',
+            'clouds': [{'region': self.region, 'endpoint': self.auth_url}],
+            'cloudname': self.cloudname,
+            'path': dpath,
+            'products': tree['products'].keys(),
+            'format': tree['format'],
+        }
+        LOG.info("writing data: %s", ipath)
+        self.store.insert_content(ipath, util.dump_data(index))
 
 # vi: ts=4 expandtab syntax=python

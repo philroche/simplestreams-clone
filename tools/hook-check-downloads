@@ -73,8 +73,7 @@ case "$HOOK" in
     insert_item)
         info="${content_id}/${product_name}/${version_name}/${item_name}"
         if [ -z "$item_url" ]; then
-            echo "FAILED: ${info}: empty item url!";
-            exit "${RC_FAIL}"
+            fail "${info}: empty item url!"
         fi
         if staturl "${item_url}"; then
             debug "$info: ${item_url}"
