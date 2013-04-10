@@ -45,6 +45,28 @@ def load_keystone_creds(**kwargs):
     return ret
 
 
+def get_regions(client=None, services=None, kscreds=None):
+    # if kscreds had 'region_name', then return that
+    if kscreds and kscreds.get('region_name'):
+        return [kscreds.get('region_name')]
+
+    if client is None:
+        creds = kscreds
+        if creds is None:
+            creds = load_keystone_creds()
+        client = get_ksclient(**creds)
+
+    endpoints = client.service_catalog.get_endpoints()
+    if services is None:
+        services = endpoints.keys()
+    regions = set()
+    for service in services:
+       [regions.add(r['region']) for r in endpoints.get(service, {}) 
+           if r.get('region')]
+
+    return list(regions)
+
+
 def get_ksclient(**kwargs):
     pt = ('username', 'password', 'tenant_id', 'tenant_name', 'auth_url',
           'cacert', 'insecure')
