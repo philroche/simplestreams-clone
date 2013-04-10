@@ -2,8 +2,9 @@
 import argparse
 import sys
 
-from simplestreams import objectstores
+from simplestreams import log
 from simplestreams import mirrors
+from simplestreams import objectstores
 
 
 def main():
@@ -14,11 +15,16 @@ def main():
                              'even after they have fallen out of the source')
     parser.add_argument('--max', type=int, default=None,
                         help='store at most MAX items in the target')
-    parser.add_argument('--no-item-download', action='store_true', default=False,
+    parser.add_argument('--no-item-download', action='store_true',
+                        default=False,
                         help='do not download items with a "path"')
     parser.add_argument('--mirror', action='append', default=[],
                         dest="mirrors",
                         help='additional mirrors to find referenced files')
+
+    parser.add_argument('--verbose', '-v', action='count', default=0)
+    parser.add_argument('--log-file', default=sys.stderr,
+                        type=argparse.FileType('w'))
 
     parser.add_argument('source_mirror')
     parser.add_argument('output_d')
@@ -27,6 +33,9 @@ def main():
 
     mirror_config = {'max_items': args.max, 'keep_items': args.keep,
                      'item_download': not args.no_item_download}
+
+    level = (log.ERROR, log.INFO, log.DEBUG)[min(args.verbose, 2)]
+    log.basicConfig(stream=args.log_file, level=level)
 
     smirror = mirrors.UrlMirrorReader(args.source_mirror, mirrors=args.mirrors)
     tstore = objectstores.FileStore(args.output_d)
