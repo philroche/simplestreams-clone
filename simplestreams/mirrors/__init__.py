@@ -2,6 +2,7 @@ import errno
 
 import simplestreams.util as util
 import simplestreams.contentsource as cs
+from simplestreams.log import LOG
 
 
 class MirrorReader(object):
@@ -228,8 +229,8 @@ class BasicMirrorWriter(MirrorWriter):
                 max=self.config.get('max_items'),
                 keep=self.config.get('keep_items'), filter=_filter)
 
-            #print "%s/%s: to_add=%s to_remove=%s" % (content_id, prodname,
-            #   to_add, to_remove)
+            LOG.info("%s/%s: to_add=%s to_remove=%s", content_id, prodname,
+                     to_add, to_remove)
 
             tversions = tproduct['versions']
             for vername in to_add:

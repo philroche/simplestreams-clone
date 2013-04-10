@@ -1,16 +1,12 @@
 import errno
-import logging
 import hashlib
 import os
 
 import simplestreams.contentsource as cs
 import simplestreams.util as util
+from simplestreams.log import LOG
 
 READ_BUFFER_SIZE = 1024 * 50
-
-LOG = logging.getLogger('simplestreams')
-LOG.setLevel(logging.ERROR)
-LOG.addHandler(logging.StreamHandler())
 
 
 class ObjectStore(object):

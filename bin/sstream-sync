@@ -4,16 +4,13 @@
 
 from simplestreams import mirrors
 from simplestreams.mirrors import command_hook
+from simplestreams import log
 
 import argparse
-import logging
 import sys
 import os
 import yaml
 
-LOG = logging.getLogger('sstream-sync')
-LOG.setLevel(logging.ERROR)
-LOG.addHandler(logging.StreamHandler())
 
 def which(program):
     def is_exe(fpath):
@@ -44,12 +41,12 @@ def main():
     hooks = [("--hook-%s" % hook.replace("_", "-"), hook, False)
              for hook in command_hook.HOOK_NAMES]
     hooks.append(('--hook', defhook, False,))
-    
+
     parser.add_argument('--config', '-c',
                         help='read config file',
                         type=argparse.FileType('rb'))
 
-    for (argname, cfgname, required) in hooks:
+    for (argname, cfgname, _required) in hooks:
         parser.add_argument(argname, dest=cfgname, required=False)
 
     parser.add_argument('--keep', action='store_true', default=False,
@@ -64,6 +61,11 @@ def main():
 
     parser.add_argument('--path', default="streams/v1/index.sjs",
                         help='sync from index or products file in mirror')
+
+    parser.add_argument('--verbose', '-v', action='count', default=0)
+    parser.add_argument('--log-file', default=sys.stderr,
+                        type=argparse.FileType('w'))
+
     parser.add_argument('mirror_url')
     cmdargs = parser.parse_args()
 
@@ -88,7 +90,7 @@ def main():
     missing = []
     fallback = cfg.get(defhook, getattr(cmdargs, defhook, None))
 
-    for (argname, cfgname, required) in known_cfg:
+    for (argname, cfgname, _required) in known_cfg:
         val = getattr(cmdargs, cfgname)
         if val is not None:
             cfg[cfgname] = val
@@ -113,9 +115,14 @@ def main():
             sys.stderr.write("  cmdline '%s' or cfgname '%s'\n" % (flag, cfg))
         sys.exit(1)
 
+    level = (log.ERROR, log.INFO, log.DEBUG)[min(cmdargs.verbose, 2)]
+    log.basicConfig(stream=cmdargs.log_file, level=level)
+
     smirror = mirrors.UrlMirrorReader(cfg['mirror_url'])
     tmirror = command_hook.CommandHookMirror(config=cfg)
     tmirror.sync(smirror.reader, cfg['path'])
 
 if __name__ == '__main__':
     main()
+
+# vi: ts=4 expandtab syntax=python
