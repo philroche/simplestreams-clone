@@ -143,7 +143,7 @@ class CommandHookMirror(mirrors.BasicMirrorWriter):
             extra.update({'item_url': contentsource.url})
             if not self.config.get('item_skip_download', False):
                 try:
-                    (tmp_path, tmp_del) = util.get_local_copy(contentsource.read)
+                    (tmp_path, tmp_del) = util.get_local_copy(contentsource)
                     extra['path_local'] = tmp_path
                 finally:
                     contentsource.close()

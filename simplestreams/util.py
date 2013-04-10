@@ -8,6 +8,7 @@ import urlparse
 import json
 
 import simplestreams.contentsource as cs
+from simplestreams.log import LOG
 
 ALIASNAME = "_aliases"
 
@@ -372,12 +373,13 @@ def mkdir_p(path):
     return
 
 
-def get_local_copy(read, read_size=READ_SIZE):
+def get_local_copy(contentsource, read_size=READ_SIZE):
     (tfd, tpath) = tempfile.mkstemp()
     tfile = os.fdopen(tfd, "w")
     try:
+        LOG.debug("getting local copy of %s", contentsource.url)
         while True:
-            buf = read(read_size)
+            buf = contentsource.read(read_size)
             tfile.write(buf)
             if len(buf) != read_size:
                 break

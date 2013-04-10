@@ -103,7 +103,6 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
                 item_data = {}
 
             item_data.update({'name': image['name'], 'id': image['id']})
-            item_data['is_public'] = True
 
             util.products_set(glance_t, item_data,
                 (product, version, item,))
@@ -141,6 +140,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             'properties': props,
             'disk_format': 'qcow2',
             'container_format': 'bare',
+            'is_public': True,
         }
         if 'size' in data:
             create_kwargs['size'] = data.get('size')
@@ -150,7 +150,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         try:
             try:
-                (tmp_path, tmp_del) = util.get_local_copy(contentsource.read)
+                (tmp_path, tmp_del) = util.get_local_copy(contentsource)
             finally:
                 contentsource.close()
 
