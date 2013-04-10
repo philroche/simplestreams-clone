@@ -21,6 +21,11 @@ def main():
                              'even after they have fallen out of the source')
     parser.add_argument('--max', type=int, default=None,
                         help='store at most MAX items in the target')
+
+    parser.add_argument('--region', action='append', default=None,
+                        help='operate on specified region '
+                             '[useable multiple times]')
+
     parser.add_argument('--mirror', action='append', default=[],
                         dest="mirrors",
                         help='additional mirrors to find referenced files')
@@ -41,7 +46,7 @@ def main():
     args = parser.parse_args()
 
     mirror_config = {'max_items': args.max, 'keep_items': args.keep,
-                     'cloud_name': args.cloud_name}
+                     'cloud_name': args.cloud_name, 'regions': args.region}
 
     smirror = mirrors.UrlMirrorReader(args.source_mirror, mirrors=args.mirrors)
     if args.output_dir and args.output_swift:
@@ -51,6 +56,8 @@ def main():
     level = (log.ERROR, log.INFO, log.DEBUG)[min(args.verbose, 2)]
     log.basicConfig(stream=args.log_file, level=level)
 
+    log.LOG.error("config=%s" % mirror_config)
+    return
     if args.output_dir:
         tstore = objectstores.FileStore(args.output_dir)
     elif args.output_swift:
