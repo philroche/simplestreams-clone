@@ -327,6 +327,7 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
             return
         if not self.config.get('item_download', True):
             return
+        LOG.debug("inserting %s to %s", contentsource.url, data['path'])
         self.store.insert(data['path'], contentsource,
                           checksums=util.item_checksums(data), mutable=False)
 
