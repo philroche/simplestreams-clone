@@ -116,7 +116,9 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         return glance_t
 
     def filter_item(self, data, src, target, pedigree):
-        return data.get('ftype') in ('disk1.img', 'disk.img')
+        flat = util.products_exdata(src, pedigree, include_top=False)
+        return (flat.get('ftype') in ('disk1.img', 'disk.img') and
+                flat.get('arch') in ('x86_64', 'amd64', 'i386'))
 
     def insert_item(self, data, src, target, pedigree, contentsource):
         flat = util.products_exdata(src, pedigree, include_top=False)
@@ -136,6 +138,12 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         for n in ('product_name', 'version_name', 'item_name'):
             props[n] = flat[n]
             del t_item[n]
+
+        arch = flat.get('arch')
+        if arch == "amd64":
+            arch = "x86_64"
+        if arch:
+            props['architecture'] = arch
 
         create_kwargs = {
             'name': self.name_prefix + name,
