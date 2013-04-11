@@ -41,3 +41,13 @@ You can also run it with cloud-images.ubuntu.com data like this:
 The 'hook-debug' program simply outputs the data it is invoked with.  It does
 not actually mirror anything.
 
+
+== Glance ==
+Example mirror of a download image source to glance with swift serving
+a localized image-id format:
+
+./tools/sstream-mirror-glance --cloud-name=mycloud --region=region1 \
+    --output-swift=smoser/ubuntu/ -vv \
+    http://cloud-images.ubuntu.com/eightprotons/ streams/v1/index.js --max=1 \
+    --name-prefix="smtest/"
+
