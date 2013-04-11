@@ -37,6 +37,8 @@ def main():
     parser.add_argument('--output-swift', metavar="prefix", default=False,
                         help='write image data to swift under prefix')
 
+    parser.add_argument('--name-prefix', metavar="prefix", default=None,
+                        help='prefix for each published image name')
     parser.add_argument('--cloud-name', metavar="name", default=None,
                         required=True, help='unique name for this cloud')
 
@@ -74,7 +76,8 @@ def main():
             tstore = None
 
         tmirror = glance.GlanceMirror(config=mirror_config,
-                                      objectstore=tstore, region=region)
+                                      objectstore=tstore, region=region,
+                                      name_prefix=args.name_prefix)
         tmirror.sync(smirror.reader, args.path)
 
 

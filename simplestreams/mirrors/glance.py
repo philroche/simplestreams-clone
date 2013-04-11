@@ -33,7 +33,8 @@ def empty_iid_products(content_id):
 # glance mirror 'image-downloads' content into glance
 # if provided an object store, it will produce a 'image-ids' mirror
 class GlanceMirror(mirrors.BasicMirrorWriter):
-    def __init__(self, config, objectstore=None, region=None):
+    def __init__(self, config, objectstore=None, region=None,
+                 name_prefix=None):
         super(GlanceMirror, self).__init__(config=config)
 
         self.loaded_content = {}
@@ -41,6 +42,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         self.keystone_creds = openstack.load_keystone_creds()
 
+        self.name_prefix = name_prefix or ""
         if region is not None:
             self.keystone_creds['region_name'] = region
 
@@ -136,7 +138,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             del t_item[n]
 
         create_kwargs = {
-            'name': name,
+            'name': self.name_prefix + name,
             'properties': props,
             'disk_format': 'qcow2',
             'container_format': 'bare',
