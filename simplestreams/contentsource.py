@@ -196,9 +196,18 @@ class UrlReader(object):
 
 class Urllib2UrlReader(UrlReader):
     def __init__(self, url):
+        (url, username, password) = parse_url_auth(url)
         self.url = url
+        if username is None:
+            opener = urllib2.urlopen
+        else:
+            mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
+            mgr.add_password(None, url, username, password)
+            handler = urllib2.HTTPBasicAuthHandler(mgr)
+            opener = urllib2.build_opener(handler).open
+
         try:
-            self.req = urllib2.urlopen(url)
+            self.req = opener(url)
         except urllib2.HTTPError as e:
             if e.code == 404:
                 myerr = IOError("Unable to open %s" % url)
@@ -221,7 +230,8 @@ class RequestsUrlReader(UrlReader):
     # r.close()
     def __init__(self, url, buflen=None):
         self.url = url
-        self.req = requests.get(url, stream=True)
+        (url, user, password) = parse_url_auth(url)
+        self.req = requests.get(url, stream=True, auth=(user, password))
         self.r_iter = None
         if buflen is None:
             buflen = 1024 * 50
@@ -289,6 +299,14 @@ class RequestsUrlReader(UrlReader):
 
     def close(self):
         self.req.close()
+
+
+def parse_url_auth(url):
+    parsed = urlparse.urlparse(url)
+    authtok = "%s:%s@" % (parsed.username, parsed.password)
+    if parsed.netloc.startswith(authtok):
+        url = url.replace(authtok, "", 1)
+    return (url, parsed.username, parsed.password)
 
 
 if URL_READER_CLASSNAME == "RequestsUrlReader":
