@@ -1,6 +1,6 @@
 {
  "datatype": "image-downloads", 
- "updated": "Fri, 12 Apr 2013 17:07:49 +0000", 
+ "updated": "Fri, 12 Apr 2013 19:44:12 +0000", 
  "content_id": "net.cirros-cloud:released:download", 
  "products": {
   "net.cirros-cloud:standard:0.3:i386": {

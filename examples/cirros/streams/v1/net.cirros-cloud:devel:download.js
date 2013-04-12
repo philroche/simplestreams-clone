@@ -1,9 +1,75 @@
 {
  "datatype": "image-downloads", 
- "updated": "Fri, 12 Apr 2013 17:07:49 +0000", 
+ "updated": "Fri, 12 Apr 2013 19:44:12 +0000", 
  "content_id": "net.cirros-cloud:devel:download", 
  "products": {
-  "net.cirros-cloud:standard:0.3:i386": {
+  "net.cirros-cloud.devel:standard:0.3:arm": {
+   "arch": "arm", 
+   "stream": "devel", 
+   "versions": {
+    "20130111": {
+     "items": {
+      "uec.tar.gz": {
+       "ftype": "uec.tar.gz", 
+       "path": "0.3.1~pre4/cirros-0.3.1~pre4-arm-uec.tar.gz", 
+       "sha256": "2b77d7c4225793b7271f550310f6e0827b64434b88fec589dd97e98e8828d254", 
+       "md5": "797e2d488c799eab0a8eb09a9c1ff4a3", 
+       "size": 7314153
+      }, 
+      "lxc.tar.gz": {
+       "ftype": "lxc.tar.gz", 
+       "path": "0.3.1~pre4/cirros-0.3.1~pre4-arm-lxc.tar.gz", 
+       "sha256": "a9225fed02b071d0cf9a60cb3d17578d19714b9de3fe4083e34eb3c1110f3f83", 
+       "md5": "55b092bde364aad125a1db57c932f1d0", 
+       "size": 3466163
+      }
+     }, 
+     "pubname": "cirros-0.3.1~pre4-arm", 
+     "version": "0.3.1~pre4"
+    }, 
+    "20120611": {
+     "items": {
+      "uec.tar.gz": {
+       "ftype": "uec.tar.gz", 
+       "path": "0.3.1~pre1/cirros-0.3.1~pre1-arm-uec.tar.gz", 
+       "sha256": "679823406624c380a1d3c5af659a41aab25ff42007b0eb0a7afd4b58142e738e", 
+       "md5": "22bb53be0daf975e35a4fbc856ae89c2", 
+       "size": 7173849
+      }, 
+      "lxc.tar.gz": {
+       "ftype": "lxc.tar.gz", 
+       "path": "0.3.1~pre1/cirros-0.3.1~pre1-arm-lxc.tar.gz", 
+       "sha256": "8e619113cfeb0a799b89dd570fd3c978ac83b5f78ea7b257a3b2e2a2bb2de30c", 
+       "md5": "b0a7d585b42d8cfff18e2a76c5115495", 
+       "size": 3428595
+      }
+     }, 
+     "pubname": "cirros-0.3.1~pre1-arm", 
+     "version": "0.3.1~pre1"
+    }, 
+    "20120827": {
+     "items": {
+      "uec.tar.gz": {
+       "ftype": "uec.tar.gz", 
+       "path": "0.3.1~pre3/cirros-0.3.1~pre3-arm-uec.tar.gz", 
+       "sha256": "cc5362c2c9e84547100aed3e6df0011e2b4d91c47243c85de2643d1d72ed3946", 
+       "md5": "d1703407ad1483e2bbf68d4d78987581", 
+       "size": 7302383
+      }, 
+      "lxc.tar.gz": {
+       "ftype": "lxc.tar.gz", 
+       "path": "0.3.1~pre3/cirros-0.3.1~pre3-arm-lxc.tar.gz", 
+       "sha256": "136e2d3a4a870eb6a4b3dcbde44209bcd050d36b3c20c2a1f21f4dd7f6e00004", 
+       "md5": "fbc83952ca51071c1aea8b0d82c51d1b", 
+       "size": 3456925
+      }
+     }, 
+     "pubname": "cirros-0.3.1~pre3-arm", 
+     "version": "0.3.1~pre3"
+    }
+   }
+  }, 
+  "net.cirros-cloud.devel:standard:0.3:i386": {
    "arch": "i386", 
    "stream": "devel", 
    "versions": {
@@ -90,7 +156,7 @@
     }
    }
   }, 
-  "net.cirros-cloud:standard:0.3:x86_64": {
+  "net.cirros-cloud.devel:standard:0.3:x86_64": {
    "arch": "x86_64", 
    "stream": "devel", 
    "versions": {
@@ -173,72 +239,6 @@
       }
      }, 
      "pubname": "cirros-0.3.1~pre3-x86_64", 
-     "version": "0.3.1~pre3"
-    }
-   }
-  }, 
-  "net.cirros-cloud:standard:0.3:arm": {
-   "arch": "arm", 
-   "stream": "devel", 
-   "versions": {
-    "20130111": {
-     "items": {
-      "uec.tar.gz": {
-       "ftype": "uec.tar.gz", 
-       "path": "0.3.1~pre4/cirros-0.3.1~pre4-arm-uec.tar.gz", 
-       "sha256": "2b77d7c4225793b7271f550310f6e0827b64434b88fec589dd97e98e8828d254", 
-       "md5": "797e2d488c799eab0a8eb09a9c1ff4a3", 
-       "size": 7314153
-      }, 
-      "lxc.tar.gz": {
-       "ftype": "lxc.tar.gz", 
-       "path": "0.3.1~pre4/cirros-0.3.1~pre4-arm-lxc.tar.gz", 
-       "sha256": "a9225fed02b071d0cf9a60cb3d17578d19714b9de3fe4083e34eb3c1110f3f83", 
-       "md5": "55b092bde364aad125a1db57c932f1d0", 
-       "size": 3466163
-      }
-     }, 
-     "pubname": "cirros-0.3.1~pre4-arm", 
-     "version": "0.3.1~pre4"
-    }, 
-    "20120611": {
-     "items": {
-      "uec.tar.gz": {
-       "ftype": "uec.tar.gz", 
-       "path": "0.3.1~pre1/cirros-0.3.1~pre1-arm-uec.tar.gz", 
-       "sha256": "679823406624c380a1d3c5af659a41aab25ff42007b0eb0a7afd4b58142e738e", 
-       "md5": "22bb53be0daf975e35a4fbc856ae89c2", 
-       "size": 7173849
-      }, 
-      "lxc.tar.gz": {
-       "ftype": "lxc.tar.gz", 
-       "path": "0.3.1~pre1/cirros-0.3.1~pre1-arm-lxc.tar.gz", 
-       "sha256": "8e619113cfeb0a799b89dd570fd3c978ac83b5f78ea7b257a3b2e2a2bb2de30c", 
-       "md5": "b0a7d585b42d8cfff18e2a76c5115495", 
-       "size": 3428595
-      }
-     }, 
-     "pubname": "cirros-0.3.1~pre1-arm", 
-     "version": "0.3.1~pre1"
-    }, 
-    "20120827": {
-     "items": {
-      "uec.tar.gz": {
-       "ftype": "uec.tar.gz", 
-       "path": "0.3.1~pre3/cirros-0.3.1~pre3-arm-uec.tar.gz", 
-       "sha256": "cc5362c2c9e84547100aed3e6df0011e2b4d91c47243c85de2643d1d72ed3946", 
-       "md5": "d1703407ad1483e2bbf68d4d78987581", 
-       "size": 7302383
-      }, 
-      "lxc.tar.gz": {
-       "ftype": "lxc.tar.gz", 
-       "path": "0.3.1~pre3/cirros-0.3.1~pre3-arm-lxc.tar.gz", 
-       "sha256": "136e2d3a4a870eb6a4b3dcbde44209bcd050d36b3c20c2a1f21f4dd7f6e00004", 
-       "md5": "fbc83952ca51071c1aea8b0d82c51d1b", 
-       "size": 3456925
-      }
-     }, 
-     "pubname": "cirros-0.3.1~pre3-arm", 
      "version": "0.3.1~pre3"
     }
    }
