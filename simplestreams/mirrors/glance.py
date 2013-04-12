@@ -56,11 +56,15 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         self.crsn = '-'.join((self.cloudname, self.region,))
         self.auth_url = self.keystone_creds['auth_url']
 
+        self.content_id = config.get("content_id")
+        if not self.content_id:
+            raise TypeError("content_id is required")
+
     def _cidpath(self, content_id):
         return "streams/v1/%s.js" % content_id
 
     def load_products(self, path=None, content_id=None):
-        my_cid = translate_dl_content_id(content_id, self.crsn)
+        my_cid = self.content_id
 
         # glance is the definitive store.  Any data loaded from the store
         # is secondary.
@@ -88,10 +92,13 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             if props.get('content_id') != my_cid:
                 continue
 
+            source_content_id = props.get('source_content_id')
+
             product = props.get('product_name')
             version = props.get('version_name')
             item = props.get('item_name')
-            if not (version and product and item):
+            if not (version and product and item and source_content_id):
+                LOG.warn("%s missing required fields" % image['id'])
                 continue
 
             # get data from the datastore for this item, if it exists
@@ -134,7 +141,8 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         if 'path' in t_item:
             del t_item['path']
 
-        props = {'content_id': target['content_id']}
+        props = {'content_id': target['content_id'],
+                 'source_content_id': src['content_id']}
         for n in ('product_name', 'version_name', 'item_name'):
             props[n] = flat[n]
             del t_item[n]

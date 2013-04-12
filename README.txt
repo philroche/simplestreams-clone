@@ -46,8 +46,7 @@ not actually mirror anything.
 Example mirror of a download image source to glance with swift serving
 a localized image-id format:
 
-./tools/sstream-mirror-glance --cloud-name=mycloud --region=region1 \
-    --output-swift=smoser/ubuntu/ -vv \
-    http://cloud-images.ubuntu.com/eightprotons/ streams/v1/index.js --max=1 \
-    --name-prefix="smtest/"
-
+./tools/sstream-mirror-glance --region=RegionOne \
+   --cloud-name=localcloud "--content-id=localcloud.%(region)s:partners" \
+   --output-swift=published/ --max=1 --name-prefix="ubuntu/" \
+   http://cloud-images.ubuntu.com/eightprotons/ streams/v1/index.js

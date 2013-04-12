@@ -41,6 +41,10 @@ def main():
                         help='prefix for each published image name')
     parser.add_argument('--cloud-name', metavar="name", default=None,
                         required=True, help='unique name for this cloud')
+    parser.add_argument('--content-id', metavar="name", default=None,
+                        required=True,
+                        help='content-id to use for published data.'
+                             '  may contain "%%(region)s"')
 
     parser.add_argument('--verbose', '-v', action='count', default=0)
     parser.add_argument('--log-file', default=sys.stderr,
@@ -74,6 +78,8 @@ def main():
         else:
             sys.stderr.write("not writing data anywhere\n")
             tstore = None
+
+        mirror_config['content_id'] = args.content_id % {'region': region}
 
         tmirror = glance.GlanceMirror(config=mirror_config,
                                       objectstore=tstore, region=region,
