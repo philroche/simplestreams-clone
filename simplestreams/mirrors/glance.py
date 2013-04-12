@@ -18,13 +18,6 @@ def get_glanceclient(version='1', **kwargs):
     return glanceclient.Client(version, **kskw)
 
 
-def translate_dl_content_id(content_id, cloudname):
-    # given content_id=com.ubuntu.cloud:released:download
-    # return "com.ubuntu.cloud:released:%s" % cloudname
-    toks = content_id.split(":")
-    return ":".join(toks[:-1]) + ":" + cloudname
-
-
 def empty_iid_products(content_id):
     return {'content_id': content_id, 'products': {},
             'datatype': 'image-ids', 'format': 'products:1.0'}
