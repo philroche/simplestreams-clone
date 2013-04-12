@@ -29,6 +29,8 @@ FAKE_DATA = {
         'sha256': 'f3cc103136423a57975750907ebc1d367e2985ac6338976d4d5a439f50323f4a'},
 }
 
+UBUNTU_RDNS = "com.ubuntu.cloud"
+
 REAL_DATA = os.environ.get("REAL_DATA", False)
 if REAL_DATA and REAL_DATA != "0":
     REAL_DATA = True
@@ -161,7 +163,7 @@ def dl_load_query(path):
             tree[stream] = {'products': {}}
         products = tree[stream]['products']
 
-        prodname = "%s:%s:%s" % (build, rel, arch)
+        prodname = ':'.join([UBUNTU_RDNS, build, rel, arch])
 
         if prodname not in products:
             products[prodname] = {
@@ -236,7 +238,7 @@ def ec2_load_query(path):
             tree[stream] = {'products': {}}
         products = tree[stream]['products']
 
-        prodname = "%s:%s:%s" % (build, rel, arch)
+        prodname = ':'.join([UBUNTU_RDNS, build, rel, arch])
 
         if prodname not in products:
             products[prodname] = {

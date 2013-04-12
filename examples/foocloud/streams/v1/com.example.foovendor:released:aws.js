@@ -3,7 +3,7 @@
  "updated": "Wed, 20 Mar 2013 17:56:57 +0000", 
  "content_id": "com.example.foovendor:released:aws", 
  "products": {
-  "pinky:server:amd64": {
+  "com.example.foovendor:pinky:server:amd64": {
    "endpoint": "https://ec2.us-east-1.amazonaws.com", 
    "stream": "released", 
    "versions": {
@@ -60,7 +60,7 @@
    "release": "pinky", 
    "arch": "amd64"
   }, 
-  "pinky:server:i386": {
+  "com.example.foovendor:pinky:server:i386": {
    "endpoint": "https://ec2.us-east-1.amazonaws.com", 
    "stream": "released", 
    "versions": {

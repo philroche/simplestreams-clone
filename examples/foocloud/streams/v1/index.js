@@ -5,8 +5,8 @@
    "path": "streams/v1/com.example.foovendor:released:aws.js", 
    "updated": "Wed, 20 Mar 2013 17:56:57 +0000", 
    "products": [
-    "pinky:server:amd64", 
-    "pinky:server:i386"
+    "com.example.foovendor:pinky:server:amd64", 
+    "com.example.foovendor:pinky:server:i386"
    ], 
    "format": "products:1.0"
   }, 
@@ -15,8 +15,8 @@
    "path": "streams/v1/com.example.foovendor:released:download.js", 
    "updated": "Wed, 20 Mar 2013 17:56:57 +0000", 
    "products": [
-    "pinky:server:amd64", 
-    "pinky:server:i386"
+    "com.example.foovendor:pinky:server:amd64", 
+    "com.example.foovendor:pinky:server:i386"
    ], 
    "format": "products:1.0"
   }

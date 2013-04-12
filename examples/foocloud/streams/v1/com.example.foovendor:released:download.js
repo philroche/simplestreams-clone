@@ -3,7 +3,7 @@
  "updated": "Wed, 20 Mar 2013 17:56:57 +0000", 
  "content_id": "com.example.foovendor:released:download", 
  "products": {
-  "pinky:server:amd64": {
+  "com.example.foovendor:pinky:server:amd64": {
    "version": "6.1", 
    "build": "server", 
    "stream": "released", 
@@ -81,7 +81,7 @@
    "release": "pinky", 
    "arch": "amd64"
   }, 
-  "pinky:server:i386": {
+  "com.example.foovendor:pinky:server:i386": {
    "version": "6.1", 
    "build": "server", 
    "stream": "released", 

@@ -1,9 +1,9 @@
 {
  "datatype": "image-downloads", 
- "updated": "Fri, 22 Mar 2013 15:43:05 +0000", 
+ "updated": "Fri, 12 Apr 2013 17:07:49 +0000", 
  "content_id": "net.cirros-cloud:released:download", 
  "products": {
-  "cirros:0.3:i386": {
+  "net.cirros-cloud:standard:0.3:i386": {
    "arch": "i386", 
    "stream": "released", 
    "versions": {
@@ -63,7 +63,7 @@
     }
    }
   }, 
-  "cirros:0.3:x86_64": {
+  "net.cirros-cloud:standard:0.3:x86_64": {
    "arch": "x86_64", 
    "stream": "released", 
    "versions": {
@@ -123,7 +123,7 @@
     }
    }
   }, 
-  "cirros:0.3:arm": {
+  "net.cirros-cloud:standard:0.3:arm": {
    "arch": "arm", 
    "stream": "released", 
    "versions": {
