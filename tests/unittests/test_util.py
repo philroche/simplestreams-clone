@@ -150,4 +150,25 @@ class TestProductsCondense(TestCase):
         util.products_condense(tree)
         self.assertEqual(tree, exp)
 
+    def test_repeats_removed(self):
+        tree = {'products': {'P1': {'A': 'B',
+                                    'versions': {'1': {'A':'B'},
+                                                 '2': {'A': 'B'}}}}}
+        exp = {'products': {'P1': {'versions': {'1': {}, '2': {}},
+                                   'A': 'B'}}}
+
+        util.products_condense(tree)
+        self.assertEqual(tree, exp)
+
+    def test_nonrepeats_stay(self):
+        tree = {'products': {'P1': {'A': 'C',
+                                    'versions': {'1': {'A':'B'},
+                                                 '2': {'A': 'B'}}}}}
+        exp = {'products': {'P1': {'A': 'C',
+                                    'versions': {'1': {'A':'B'},
+                                                 '2': {'A': 'B'}}}}}
+
+        util.products_condense(tree)
+        self.assertEqual(tree, exp)
+
 # vi: ts=4 expandtab

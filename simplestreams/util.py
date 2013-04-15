@@ -302,33 +302,33 @@ def move_dups(src, target, sticky=None):
     if sticky == None:
         sticky = []
 
-    everything = {}
-    # first walk through and just get all keys
-    for entry in src.values():
-        try:
-            everything.update({k: entry[k] for k in entry if k not in sticky})
-        except Exception as e:
-            raise
+    allkeys = set()
+    for entry in src:
+        allkeys.update(src[entry].keys())
 
-    remain = stringitems(everything)
+    candidates = allkeys.difference(sticky)
 
-    # if the target had this entry, skip it
-    for k in [k for k in target if k in remain]:
-        del remain[k]
-
-    # then remove anything that isn't present in every entry or differs.
-    for entry in src.values():
-        for k, v in stringitems(entry).iteritems():
-            if k not in remain:
+    updates = {}
+    for entry in src.keys():
+        for k, v in src[entry].iteritems():
+            if k not in candidates:
                 continue
-            if remain[k] != v:
-                del remain[k]
+            if k in updates:
+                if v != updates[k] or not isinstance(v, (str, unicode)):
+                    del updates[k]
+                    candidates.remove(k)
+            else:
+                if isinstance(v, (str, unicode)) and target.get(k, v) == v:
+                    updates[k] = v
+                else:
+                    candidates.remove(k)
 
-    for entry in src.values():
-        for k in remain:
-            del entry[k]
+    for entry in src.keys():
+        for k in src[entry].keys():
+            if k in updates:
+                del src[entry][k]
 
-    target.update(remain)
+    target.update(updates)
 
 
 def products_condense(ptree, sticky=None):
