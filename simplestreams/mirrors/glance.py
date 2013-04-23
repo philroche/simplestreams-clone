@@ -107,7 +107,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             item_data.update({'name': image['name'], 'id': image['id']})
 
             util.products_set(glance_t, item_data,
-                (product, version, item,))
+                              (product, version, item,))
 
         for product in glance_t['products']:
             glance_t['products'][product]['region'] = self.region
