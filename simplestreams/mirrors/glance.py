@@ -174,6 +174,8 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             if tmp_del and os.path.exists(tmp_path):
                 os.unlink(tmp_path)
 
+        t_item['region'] = self.region
+        t_item['endpoint'] = self.auth_url
         util.products_set(target, t_item, pedigree)
 
     def remove_item(self, data, src, target, pedigree):
