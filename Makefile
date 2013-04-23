@@ -34,11 +34,7 @@ gnupg/README: $(PUBKEYS) $(SECKEY)
 	@umask 077 && mkdir -p gnupg
 	$(TENV) gpg --import $(SECKEY) >/dev/null 2>&1
 	for pubkey in $(PUBKEYS); do \
-	  $(TENV) gpg --import $$pubkey >/dev/null 2>&1; \
-	  fp=$$($(TENV) gpg --with-fingerprint --with-colons $$pubkey \
-	    | awk -F: '$$1 == "fpr" {print $$10}') && \
-	    echo "$${fp}:6:" | $(TENV) gpg --import-ownertrust ; \
-	done
+	  $(TENV) gpg-trust-pubkey $$pubkey; done
 	@echo "this is used by $(TENV) as the gpg directory" > gnupg/README
 
 examples-sign:

@@ -1,0 +1,32 @@
+#!/bin/sh
+
+Usage() {
+    cat <<EOF
+Usage: ${0##*/} pubkey
+   Import and trust the key to gpg
+
+   Example:
+     $ ${0##*/} examples/keys/cloud-images.pub
+EOF
+}
+
+error() { echo "$@" 1>&2; }
+fail() { [ $# -eq 0 ] || error "$@"; exit 2; }
+
+[ "$1" = "-h" -o "$1" = "--help" ] && { Usage; exit; }
+[ $# -eq 1 ] || { Usage 1>&2; fail "must give only one arg"; }
+[ -f "$1" ] || fail "$1: not a file"
+
+pubkey="$1"
+fp=$(gpg --quiet --with-fingerprint --with-colons "$pubkey" 2>/dev/null |
+    awk -F: '$1 == "fpr" {print $10}') ||
+    fail "failed to read fingerprint of $pubkey"
+
+out=$(gpg --import "$pubkey" 2>&1) ||
+    { error "import of pubkey failed:"; error "$out"; fail; }
+
+out=$(echo "${fp}:6:" | gpg --import-ownertrust 2>&1) ||
+    { error "failed import-ownertrust for $fp"; fail "$out"; }
+
+echo "imported $pubkey. fingerprint=$fp"
+gpg  --quiet --list-key "$fp" 2>/dev/null
