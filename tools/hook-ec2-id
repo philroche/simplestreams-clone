@@ -7,7 +7,7 @@ RC_FAIL=2
 VERBOSITY=${VERBOSITY:-0}
 
 MAP=(
- ARCH:arch RELEASE:release REGION:cloud VIRT:virt STORE:root_store
+ ARCH:arch RELEASE:release REGION:crsn VIRT:virt STORE:root_store
 )
 
 error() { echo "$@" 1>&2; }
@@ -24,15 +24,15 @@ Usage: ${0##*/}
   This program is expected to be called by sstream-sync.
 
   sstream-sync "--hook=$0" \\
-     http://cloud-images.ubuntu.com/releases/ streams/v1/index.js
+     --path=streams/v1/index.js http://cloud-images.ubuntu.com/releases/ 
 
   It filters output based on environment variables:
 $(for m in ${MAP[@]}; do echo "   ${m}"; done)
 
   Example:
    * VIRT=hvm REGION=us-east-1 ./tools/tenv sstream-sync --max=1 \\
-      "--hook=$0" http://cloud-images.ubuntu.com/releases/ \\
-      streams/v1/index.js
+      "--hook=$0" --path=streams/v1/index.js \\
+      http://cloud-images.ubuntu.com/releases/
 EOF
 }
 
@@ -74,7 +74,7 @@ main() {
             esac
             ;;
         insert_item)
-            echo "$cloud ${id} ${root_store}/${virt}/${pubname}";;
+            echo "$crsn ${id} ${root_store}/${virt}/${pubname}";;
         filter_*) return "${RC_FILTER_INCLUDE}";;
         *) noop;;
     esac
