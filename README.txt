@@ -36,7 +36,7 @@ You can also run it with cloud-images.ubuntu.com data like this:
 
   ./tools/tenv sstream-sync \
      --item-skip-download --hook=./tools/hook-debug \
-     --path=streams/v1/index.sjs http://cloud-images.ubuntu.com/eightprotons/
+     --path=streams/v1/index.sjs http://cloud-images.ubuntu.com/releases/
 
 The 'hook-debug' program simply outputs the data it is invoked with.  It does
 not actually mirror anything.
@@ -49,4 +49,4 @@ a localized image-id format:
 ./tools/sstream-mirror-glance --region=RegionOne \
    --cloud-name=localcloud "--content-id=localcloud.%(region)s:partners" \
    --output-swift=published/ --max=1 --name-prefix="ubuntu/" \
-   http://cloud-images.ubuntu.com/eightprotons/ streams/v1/index.js
+   http://cloud-images.ubuntu.com/releases/ streams/v1/index.js

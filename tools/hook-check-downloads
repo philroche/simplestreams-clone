@@ -46,9 +46,9 @@ Usage: ${0##*/} base_url path
    Example:
     * check the 'path' of all image-download items described by
       simple stream at
-      http://cloud-images.ubuntu.com/eightprotons/v1/streams/index.js
+      http://cloud-images.ubuntu.com/releases/v1/streams/index.js
 
-      ${0##*/} http://cloud-images.ubuntu.com/eightprotons/
+      ${0##*/} http://cloud-images.ubuntu.com/releases/
 EOF
 }
 

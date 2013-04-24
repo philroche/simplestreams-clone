@@ -23,7 +23,7 @@ Usage: ${0##*/}
   with the a glance server.
 
   sstream-sync "--hook=$0" \\
-     http://cloud-images.ubuntu.com/eightprotons/ streams/v1/index.js
+     http://cloud-images.ubuntu.com/releases/ streams/v1/index.js
 EOF
 }
 
