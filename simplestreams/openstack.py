@@ -37,7 +37,7 @@ def load_keystone_creds(**kwargs):
         missing.append("(auth_token or password)")
         
     if not (ret.get('tenant_id') or ret.get('tenant_name')):
-        raise ValueErorr("(tenant_id or tenant_name)")
+        raise ValueError("(tenant_id or tenant_name)")
 
     if missing:
         raise ValueError("Need values for: %s" % missing)
