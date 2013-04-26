@@ -164,7 +164,12 @@ def dl_load_query(path):
         products = tree[stream]['products']
 
         version = toolutil.REL2VER[rel]['version']
-        prodname = ':'.join([UBUNTU_RDNS, build, version, arch])
+
+        prodname_rdns = UBUNTU_RDNS
+        if stream != "released":
+            prodname_rdns += "." + stream
+
+        prodname = ':'.join([prodname_rdns, build, version, arch])
 
         if prodname not in products:
             products[prodname] = {
@@ -240,7 +245,12 @@ def ec2_load_query(path):
         products = tree[stream]['products']
 
         version = toolutil.REL2VER[rel]['version']
-        prodname = ':'.join([UBUNTU_RDNS, build, version, arch])
+
+        prodname_rdns = UBUNTU_RDNS
+        if stream != "released":
+            prodname_rdns += "." + stream
+
+        prodname = ':'.join([prodname_rdns, build, version, arch])
 
         if prodname not in products:
             products[prodname] = {
