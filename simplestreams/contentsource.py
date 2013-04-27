@@ -231,7 +231,12 @@ class RequestsUrlReader(UrlReader):
     def __init__(self, url, buflen=None):
         self.url = url
         (url, user, password) = parse_url_auth(url)
-        self.req = requests.get(url, stream=True, auth=(user, password))
+        if user is None:
+            auth = None
+        else:
+            auth = (user, password)
+
+        self.req = requests.get(url, stream=True, auth=auth)
         self.r_iter = None
         if buflen is None:
             buflen = 1024 * 50
