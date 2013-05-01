@@ -85,7 +85,6 @@ call_sync() {
 
     if [ -z "$path" ] &&
         [ "${url%.js}" != "${url}" -o "${url%.sjs}" != "${url}" ]; then
-        echo "url=$url"
         # split up path if it looks like it could use it
         local ourl="$url"
         url="${ourl%/streams/v1/*}/"
