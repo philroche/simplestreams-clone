@@ -105,6 +105,8 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
                 item_data = {}
 
             item_data.update({'name': image['name'], 'id': image['id']})
+            if 'owner_id' not in item_data:
+                item_data['owner_id'] = self.tenant_id
 
             util.products_set(glance_t, item_data,
                               (product, version, item,))
@@ -176,6 +178,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         t_item['region'] = self.region
         t_item['endpoint'] = self.auth_url
+        t_item['owner_id'] = self.tenant_id
         util.products_set(target, t_item, pedigree)
 
     def remove_item(self, data, src, target, pedigree):
