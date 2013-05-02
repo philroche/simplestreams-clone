@@ -174,11 +174,12 @@ def resolve_work(src, target, max=None, keep=False, filter=None,
     if max is None and keep:
         raise TypeError("max(%s) cannot be None if keep is True" % max)
 
+    # Ensure that all source items are passed through filters
+    # In case the filters have changed from the last run
     for item in sorted(src, reverse=reverse):
-        if item in target:
-            continue
         if filter is None or filter(item):
-            add.append(item)
+            if item not in target:
+                add.append(item)
 
     for item in sorted(target, reverse=reverse):
         if item not in src:
