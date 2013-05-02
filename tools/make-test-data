@@ -328,6 +328,7 @@ def create_image_data(query_tree, out_d, streamdir):
         tree[stream]['format'] = "products:1.0"
         tree[stream]['updated'] = ts
         tree[stream]['content_id'] = cid
+        tree[stream]['datatype'] = 'image-downloads'
 
         outfile = os.path.join(out_d, stream, streamdir, cid + ".js")
         util.mkdir_p(os.path.dirname(outfile))
@@ -361,6 +362,7 @@ def create_aws_data(query_tree, out_d, streamdir):
                 'region': region}
 
         tree[stream]['format'] = "products:1.0"
+        tree[stream]['datatype'] = "image-ids"
         tree[stream]['updated'] = ts
         tree[stream]['content_id'] = cid
         outfile = os.path.join(out_d, stream, streamdir, cid + ".js")
@@ -399,7 +401,7 @@ def main():
         clouds = aws_tree[streamname]['_aliases']['crsn'].values()
         index['index'][aws_tree[streamname]['content_id']] = {
             'updated': aws_tree[streamname]['updated'],
-            'datatype': 'image-ids',
+            'datatype': aws_tree[streamname]['datatype'],
             'clouds': clouds,
             'cloudname': "aws",
             'path': '/'.join((streamdir,
@@ -409,7 +411,7 @@ def main():
         }
         index['index'][dltree[streamname]['content_id']] = {
             'updated': dltree[streamname]['updated'],
-            'datatype': 'image-downloads',
+            'datatype': dltree[streamname]['datatype'],
             'path': '/'.join((streamdir,
                              "%s.js" % dltree[streamname]['content_id'],)),
             'products': dltree[streamname]['products'].keys(),
