@@ -34,28 +34,39 @@ def path_from_mirror_url(mirror, path):
 
 class ItemFilter(object):
     def __init__(self, content, noneval=""):
-        rfilter_regex = '\w*[~].+'
-        if re.match(rfilter_regex, content):
-            (key, regex) = content.split("~", 1)
-            matches = re.compile(regex).search
-        else:
-            (key, value) = content.split("=", 1)
-            matches = value.__eq__
+        rparsefmt="(\w+)[ ]*([!]{0,1}[=~])[ ]*(.*)[ ]*$"
+        parsed = re.match(rparsefmt, content)
 
+        if not parsed:
+            raise ValueError("Unable to parse expression %s" % content)
+
+        (key, op, val) = parsed.groups()
+
+        if op in ("!=", "="):
+            self._matches = val.__eq__
+        elif op in ("!~", "~"):
+            self._matches = re.compile(val).search
+        else:
+            raise ValueError("Bad parsing of %s" % content)
+
+        self.negator = (op[0] != "!")
+        self.op = op
         self.key = key
-        self._matches = matches
+        self.value = val
         self.content = content
         self.noneval = noneval
 
 
     def __str__(self):
-        return "%s [noneval=%s]" % (self.content, self.noneval)
+        return "%s %s %s [none=%s]" % (self.key, self.op,
+                                       self.value, self.noneval)
 
     def __repr__(self):
         return self.__str__()
 
     def matches(self, item):
-        return bool(self._matches(str(item.get(self.key, self.noneval))))
+        val = str(item.get(self.key, self.noneval))
+        return (self.negator == bool(self._matches(val)))
 
 
 def get_filters(filters, noneval=""):
