@@ -12,12 +12,12 @@
       "usee1pe": {
        "name": "ebs/foovendor-pinky-12.04-amd64-server-20121026.1", 
        "root_store": "ebs", 
-       "image_id": "ami-e720ad8e"
+       "id": "ami-e720ad8e"
       }, 
       "usee1pi": {
        "name": "foovendor-pinky-12.04-amd64-server-20121026.1", 
        "root_store": "instance-store", 
-       "image_id": "ami-1f24a976"
+       "id": "ami-1f24a976"
       }
      }, 
      "label": "release"
@@ -27,12 +27,12 @@
       "usee1pe": {
        "name": "ebs/foovendor-pinky-12.04-amd64-server-20120929", 
        "root_store": "ebs", 
-       "image_id": "ami-3b4ff252"
+       "id": "ami-3b4ff252"
       }, 
       "usee1pi": {
        "name": "foovendor-pinky-12.04-amd64-server-20120929", 
        "root_store": "instance-store", 
-       "image_id": "ami-cd4cf1a4"
+       "id": "ami-cd4cf1a4"
       }
      }, 
      "label": "beta2"
@@ -42,12 +42,12 @@
       "usee1pe": {
        "name": "ebs/foovendor-pinky-12.04-amd64-server-20121001", 
        "root_store": "ebs", 
-       "image_id": "ami-9878c0f1"
+       "id": "ami-9878c0f1"
       }, 
       "usee1pi": {
        "name": "foovendor-pinky-12.04-amd64-server-20121001", 
        "root_store": "instance-store", 
-       "image_id": "ami-52863e3b"
+       "id": "ami-52863e3b"
       }
      }, 
      "label": "release"
@@ -69,12 +69,12 @@
       "usee1pe": {
        "name": "ebs/foovendor-pinky-12.04-i386-server-20121026.1", 
        "root_store": "ebs", 
-       "image_id": "ami-e720ad8e"
+       "id": "ami-e720ad8e"
       }, 
       "usee1pi": {
        "name": "foovendor-pinky-12.04-i386-server-20121026.1", 
        "root_store": "instance-store", 
-       "image_id": "ami-1f24a976"
+       "id": "ami-1f24a976"
       }
      }, 
      "label": "release"
@@ -84,12 +84,12 @@
       "usee1pe": {
        "name": "ebs/foovendor-pinky-12.04-i386-server-20120929", 
        "root_store": "ebs", 
-       "image_id": "ami-3b4ff252"
+       "id": "ami-3b4ff252"
       }, 
       "usee1pi": {
        "name": "foovendor-pinky-12.04-i386-server-20120929", 
        "root_store": "instance-store", 
-       "image_id": "ami-cd4cf1a4"
+       "id": "ami-cd4cf1a4"
       }
      }, 
      "label": "beta2"
@@ -99,12 +99,12 @@
       "usee1pe": {
        "name": "ebs/foovendor-pinky-12.04-i386-server-20121001", 
        "root_store": "ebs", 
-       "image_id": "ami-9878c0f1"
+       "id": "ami-9878c0f1"
       }, 
       "usee1pi": {
        "name": "foovendor-pinky-12.04-i386-server-20121001", 
        "root_store": "instance-store", 
-       "image_id": "ami-52863e3b"
+       "id": "ami-52863e3b"
       }
      }, 
      "label": "release"
