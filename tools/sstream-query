@@ -32,20 +32,36 @@ def path_from_mirror_url(mirror, path):
     return (mirror, path)
 
 
+class ItemFilter(object):
+    def __init__(self, content, noneval=""):
+        rfilter_regex = '\w*[~].+'
+        if re.match(rfilter_regex, content):
+            (key, regex) = content.split("~", 1)
+            matches = re.compile(regex).search
+        else:
+            (key, value) = content.split("=", 1)
+            matches = value.__eq__
+
+        self.key = key
+        self._matches = matches
+        self.content = content
+        self.noneval = noneval
+
+
+    def __str__(self):
+        return "%s [noneval=%s]" % (self.content, self.noneval)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def matches(self, item):
+        return bool(self._matches(str(item.get(self.key, self.noneval))))
+
+
 def get_filters(filters, noneval=""):
     flist = []
-    rfilter_regex = '\w*[~].+'
-    rfilter = re.compile(rfilter_regex)
-
     for f in filters:
-        if rfilter.match(f):
-            (key, regex) = f.split("~", 1)
-            match = re.compile(regex)
-            flist.append(lambda i: match.search(i.get(key, noneval)))
-        else:
-            (key, value) = f.split("=", 1)
-            flist.append(lambda i: i.get(key, noneval) == value)
-
+        flist.append(ItemFilter(f, noneval=noneval))
     return flist
 
 
@@ -56,7 +72,11 @@ class FilterMirror(mirrors.BasicMirrorWriter):
             config = {}
         self.config = config
         self.filters = config.get('filters', [])
-        self.output_format = config.get('output_format')
+        outfmt = config.get('output_format')
+        if not outfmt:
+            outfmt = "%s"
+        self.output_format = outfmt
+            
 
     def load_products(self, path=None, content_id=None):
         return {'content_id': content_id, 'products': {}}
@@ -66,7 +86,7 @@ class FilterMirror(mirrors.BasicMirrorWriter):
         # data is src['products'][ped[0]]['versions'][ped[1]]['items'][ped[2]]
         data = util.products_exdata(src, pedigree)
         for f in self.filters:
-            if not f(data):
+            if not f.matches(data):
                 return False
         return True
 
@@ -78,10 +98,11 @@ class FilterMirror(mirrors.BasicMirrorWriter):
         if 'path' in data:
             data.update({'item_url': contentsource.url})
 
-        if self.output_format is None:
-            print data
-        else:
-            print self.output_format % (data)
+        try:
+            print(self.output_format % (data))
+        except KeyError as e:
+            sys.stderr.write("output format failed. Missing %s\n" % e.args)
+            sys.stderr.write("item: %s\n" % data)
 
 
 def main():
