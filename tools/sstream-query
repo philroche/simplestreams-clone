@@ -1,0 +1,124 @@
+#!/usr/bin/python
+#
+# client showing use of command_hook_mirror
+
+from simplestreams import mirrors
+from simplestreams import log
+from simplestreams import util
+
+import argparse
+import os
+import re
+import sys
+import yaml
+
+
+def warn(msg):
+    sys.stderr.write("WARN: %s" % msg)
+
+
+def path_from_mirror_url(mirror, path):
+    if path is not None:
+        return (mirror, path)
+
+    path_regex = "streams/v1/.*[.](sjs|js)$"
+    result = re.search(path_regex, mirror)
+    if result:
+        path = mirror[result.start():]
+        mirror = mirror[:result.start()]
+    else:
+        path = "streams/v1/index.sjs"
+
+    return (mirror, path)
+
+
+def get_filters(filters, noneval=""):
+    flist = []
+    rfilter_regex = '\w*[~].+'
+    rfilter = re.compile(rfilter_regex)
+
+    for f in filters:
+        if rfilter.match(f):
+            (key, regex) = f.split("~", 1)
+            match = re.compile(regex)
+            flist.append(lambda i: match.search(i.get(key, noneval)))
+        else:
+            (key, value) = f.split("=", 1)
+            flist.append(lambda i: i.get(key, noneval) == value)
+
+    return flist
+
+
+class FilterMirror(mirrors.BasicMirrorWriter):
+    def __init__(self, config=None):
+        super(FilterMirror, self).__init__(config=config)
+        if config is None:
+            config = {}
+        self.config = config
+        self.filters = config.get('filters', [])
+        self.output_format = config.get('output_format')
+
+    def load_products(self, path=None, content_id=None):
+        return {'content_id': content_id, 'products': {}}
+
+    def filter_item(self, data, src, target, pedigree):
+        # src and target are top level products:1.0
+        # data is src['products'][ped[0]]['versions'][ped[1]]['items'][ped[2]]
+        data = util.products_exdata(src, pedigree)
+        for f in self.filters:
+            if not f(data):
+                return False
+        return True
+
+    def insert_item(self, data, src, target, pedigree, contentsource):
+        # src and target are top level products:1.0
+        # data is src['products'][ped[0]]['versions'][ped[1]]['items'][ped[2]]
+        # contentsource is a ContentSource if 'path' exists in data or None
+        data = util.products_exdata(src, pedigree)
+        if 'path' in data:
+            data.update({'item_url': contentsource.url})
+
+        if self.output_format is None:
+            print data
+        else:
+            print self.output_format % (data)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--max', type=int, default=None, dest='max_items',
+                        help='store at most MAX items in the target')
+
+    parser.add_argument('--path', default=None,
+                        help='sync from index or products file in mirror')
+
+    parser.add_argument('--output-format', '-o', action='store', default=None)
+    parser.add_argument('--verbose', '-v', action='count', default=0)
+    parser.add_argument('--log-file', default=sys.stderr,
+                        type=argparse.FileType('w'))
+
+    parser.add_argument('mirror_url')
+    parser.add_argument('filters', nargs='*', default=[])
+
+    cmdargs = parser.parse_args()
+
+    (mirror_url, path) = path_from_mirror_url(cmdargs.mirror_url, cmdargs.path)
+
+    level = (log.ERROR, log.INFO, log.DEBUG)[min(cmdargs.verbose, 2)]
+    log.basicConfig(stream=cmdargs.log_file, level=level)
+
+    smirror = mirrors.UrlMirrorReader(mirror_url)
+
+    filters = get_filters(cmdargs.filters)
+    cfg = {'max_items': cmdargs.max_items,
+           'filters': filters,
+           'output_format': cmdargs.output_format}
+
+    tmirror = FilterMirror(config=cfg)
+    tmirror.sync(smirror.reader, path)
+
+if __name__ == '__main__':
+    main()
+
+# vi: ts=4 expandtab syntax=python
