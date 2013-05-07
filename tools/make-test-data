@@ -330,7 +330,7 @@ def create_image_data(query_tree, out_d, streamdir):
         tree[stream]['content_id'] = cid
         tree[stream]['datatype'] = 'image-downloads'
 
-        outfile = os.path.join(out_d, stream, streamdir, cid + ".js")
+        outfile = os.path.join(out_d, stream, streamdir, cid + ".json")
         util.mkdir_p(os.path.dirname(outfile))
         with open(outfile, "w") as fp:
             sys.stderr.write("writing %s\n" % outfile)
@@ -365,7 +365,7 @@ def create_aws_data(query_tree, out_d, streamdir):
         tree[stream]['datatype'] = "image-ids"
         tree[stream]['updated'] = ts
         tree[stream]['content_id'] = cid
-        outfile = os.path.join(out_d, stream, streamdir, cid + ".js")
+        outfile = os.path.join(out_d, stream, streamdir, cid + ".json")
         util.mkdir_p(os.path.dirname(outfile))
         with open(outfile, "w") as fp:
             sys.stderr.write("writing %s\n" % outfile)
@@ -405,7 +405,7 @@ def main():
             'clouds': clouds,
             'cloudname': "aws",
             'path': '/'.join((streamdir,
-                             "%s.js" % aws_tree[streamname]['content_id'],)),
+                             "%s.json" % aws_tree[streamname]['content_id'],)),
             'products': aws_tree[streamname]['products'].keys(),
             'format': aws_tree[streamname]['format'],
         }
@@ -413,12 +413,12 @@ def main():
             'updated': dltree[streamname]['updated'],
             'datatype': dltree[streamname]['datatype'],
             'path': '/'.join((streamdir,
-                             "%s.js" % dltree[streamname]['content_id'],)),
+                             "%s.json" % dltree[streamname]['content_id'],)),
             'products': dltree[streamname]['products'].keys(),
             'format': dltree[streamname]['format']
         }
 
-        outfile = os.path.join(args.out_d, streamname, streamdir, 'index.js')
+        outfile = os.path.join(args.out_d, streamname, streamdir, 'index.json')
         util.mkdir_p(os.path.dirname(outfile))
         with open(outfile, "w") as fp:
             sys.stderr.write("writing %s\n" % outfile)
@@ -428,8 +428,8 @@ def main():
         def printstatus(name, fmt):
             sys.stderr.write("signing %s: %s\n" % (name, fmt))
         for root, dirs, files in os.walk(args.out_d):
-            for f in [f for f in files if f.endswith(".js")]:
-                toolutil.signjs_file(os.path.join(root, f),
+            for f in [f for f in files if f.endswith(".json")]:
+                toolutil.signjson_file(os.path.join(root, f),
                                      status_cb=printstatus)
 
     return

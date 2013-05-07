@@ -22,7 +22,7 @@ class TestCommandHookMirror(TestCase):
 
         try:
             chm.run_command = self._run_command
-            target.sync(src.reader, "streams/v1/index.js")
+            target.sync(src.reader, "streams/v1/index.json")
 
         finally:
             chm.run_command = oruncmd

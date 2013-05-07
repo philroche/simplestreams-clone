@@ -54,7 +54,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             raise TypeError("content_id is required")
 
     def _cidpath(self, content_id):
-        return "streams/v1/%s.js" % content_id
+        return "streams/v1/%s.json" % content_id
 
     def load_products(self, path=None, content_id=None):
         my_cid = self.content_id

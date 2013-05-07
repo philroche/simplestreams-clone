@@ -26,7 +26,7 @@ Usage: ${0##*/} [options] url [criteria]
 
   options passed through to sstream-sync:
     --max M      limit to most recent 'M' items matching
-    --path P     use path 'P'. default: streams/v1/index.sjs
+    --path P     use path 'P'. default: streams/v1/index.sjson
 
   Example:
    * ${0##*/} --max=1 http://cloud-images.ubuntu.com/releases/ \\
@@ -84,7 +84,7 @@ call_sync() {
     shift
 
     if [ -z "$path" ] &&
-        [ "${url%.js}" != "${url}" -o "${url%.sjs}" != "${url}" ]; then
+        [ "${url%.json}" != "${url}" -o "${url%.sjson}" != "${url}" ]; then
         # split up path if it looks like it could use it
         local ourl="$url"
         url="${ourl%/streams/v1/*}/"

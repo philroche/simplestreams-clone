@@ -206,13 +206,13 @@ def signfile_inline(path, output=None):
         os.unlink(tmpfile)
 
 
-def signjs_file(fname, status_cb=None):
+def signjson_file(fname, status_cb=None):
     content = ""
     with open(fname) as fp:
         content = fp.read()
     data = json.loads(content)
     fmt = data.get("format")
-    sjs = fname[0:-len(".js")] + ".sjs"
+    sjson = fname[0:-len(".json")] + ".sjs"
 
     if status_cb is None:
         def null_cb(fname, fmt):
@@ -222,17 +222,17 @@ def signjs_file(fname, status_cb=None):
     if fmt == "products:1.0":
         status_cb(fname, fmt)
         signfile(fname)
-        signfile_inline(fname, sjs)
+        signfile_inline(fname, sjson)
     elif fmt == "index:1.0":
         status_cb(fname, fmt)
         signfile(fname)
         for _content_id, content in data.get('index').iteritems():
             path = content.get('path')
-            if path.endswith(".js"):
-                content['path'] = path[0:-len(".js")] + ".sjs"
-        with open(sjs, "w") as fp:
+            if path.endswith(".json"):
+                content['path'] = path[0:-len(".json")] + ".sjs"
+        with open(sjson, "w") as fp:
             fp.write(json.dumps(data, indent=1))
-        signfile_inline(sjs)
+        signfile_inline(sjson)
         return
     else:
         status_cb(fname, fmt)

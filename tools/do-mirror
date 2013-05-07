@@ -28,7 +28,7 @@ def main():
 
     parser.add_argument('source_mirror')
     parser.add_argument('output_d')
-    parser.add_argument('path', nargs='?', default="streams/v1/index.sjs")
+    parser.add_argument('path', nargs='?', default="streams/v1/index.sjson")
     args = parser.parse_args()
 
     mirror_config = {'max_items': args.max, 'keep_items': args.keep,

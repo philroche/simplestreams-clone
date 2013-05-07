@@ -13,7 +13,7 @@ There are examples in examples/.
 = Mirroring ==
 To mirror one source (http or file) to a local directory, see tools/do-mirror.
 For example, to mirror the 'foocloud' example content, do:
-   ./tools/tenv do-mirror examples/foocloud/ my.out streams/v1/index.js
+   ./tools/tenv do-mirror examples/foocloud/ my.out streams/v1/index.json
 
 That will create a full mirror in my.out/.
 
@@ -30,13 +30,13 @@ one source and another, see bin/sstream-sync.
 For an example, the following runs the debug hook against the example 'foocloud'
 data:
    ./tools/tenv sstream-sync --hook=hook-debug \
-       --path=streams/v1/index.js examples/foocloud/
+       --path=streams/v1/index.json examples/foocloud/
 
 You can also run it with cloud-images.ubuntu.com data like this:
 
   ./tools/tenv sstream-sync \
      --item-skip-download --hook=./tools/hook-debug \
-     --path=streams/v1/index.sjs http://cloud-images.ubuntu.com/releases/
+     --path=streams/v1/index.sjson http://cloud-images.ubuntu.com/releases/
 
 The 'hook-debug' program simply outputs the data it is invoked with.  It does
 not actually mirror anything.
@@ -49,4 +49,4 @@ a localized image-id format:
 ./tools/sstream-mirror-glance --region=RegionOne \
    --cloud-name=localcloud "--content-id=localcloud.%(region)s:partners" \
    --output-swift=published/ --max=1 --name-prefix="ubuntu/" \
-   http://cloud-images.ubuntu.com/releases/ streams/v1/index.js
+   http://cloud-images.ubuntu.com/releases/ streams/v1/index.json

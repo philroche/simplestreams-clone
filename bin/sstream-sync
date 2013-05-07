@@ -59,7 +59,7 @@ def main():
                         default=False,
                         help='Do not download items that are to be inserted.')
 
-    parser.add_argument('--path', default="streams/v1/index.sjs",
+    parser.add_argument('--path', default="streams/v1/index.sjson",
                         help='sync from index or products file in mirror')
 
     parser.add_argument('--verbose', '-v', action='count', default=0)

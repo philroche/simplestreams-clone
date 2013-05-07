@@ -14,14 +14,14 @@ def status_cb(fname, fmt):
 def main():
     for path in sys.argv[1:]:
         if os.path.isfile(path):
-            if not path.endswith(".js"):
+            if not path.endswith(".json"):
                 sys.stderr.write("file must end with .js\n")
                 sys.exit(1)
-            toolutil.signjs_file(path)
+            toolutil.signjson_file(path)
         elif os.path.isdir(path):
             for root, dirs, files in os.walk(path):
-                for f in [f for f in files if f.endswith(".js")]:
-                    toolutil.signjs_file(os.path.join(root, f), status_cb=status_cb)
+                for f in [f for f in files if f.endswith(".json")]:
+                    toolutil.signjson_file(os.path.join(root, f), status_cb=status_cb)
         else:
             sys.stderr.write("input must be file or dir\n")
             sys.exit(1)

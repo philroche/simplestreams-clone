@@ -5,15 +5,15 @@ Simple Sync format consists of 2 different file formats.
 
 Files contain json formated data.
 Data can come in one of 2 formats:
- * Json file: <file>.js
-   A .js file can be accompanied by a .js.gpg file which contains
-   signature data for .js file.
+ * Json file: <file>.json
+   A .json file can be accompanied by a .json.gpg file which contains
+   signature data for .json file.
 
-   Due to race conditions caused by the fact that .js and .js.gpg
+   Due to race conditions caused by the fact that .json and .json.gpg
    may not be able to be obtained from a storage location at the same
-   time, the preferred delivery of signed data is via '.sjs' format.
+   time, the preferred delivery of signed data is via '.sjson' format.
 
- * Signed Json File: <file>.sjs
+ * Signed Json File: <file>.sjson
    This is a gpg cleartext signed message.
       http://rfc-ref.org/RFC-TEXTS/2440/chapter7.html
    The payload the same content that would be included in the json file.
@@ -43,7 +43,7 @@ Special dictionary entries:
 
 == Simple Sync Mirrors ==
 The default/expected location of an index file is 'streams/v1/index.sjs'
-or 'streams/v1/index.js' underneath the top level of a mirror.
+or 'streams/v1/index.json' underneath the top level of a mirror.
 
 'path' entries as described above are relative to the top level of a
 mirror, not relative to the location of the index.
@@ -51,10 +51,10 @@ mirror, not relative to the location of the index.
 For example:
  http://example.com/my-mirror/
 would be the top level of a mirror, and the expected path of an index is
- http://example.com/my-mirror/streams/v1/index.sjs
+ http://example.com/my-mirror/streams/v1/index.sjson
 
 To describe a file that lives at:
- http://example.com/my-mirror/streams/v1/products.sjs
+ http://example.com/my-mirror/streams/v1/products.sjson
 
 The 'path' element must be: 'streams/v1/products.sjs'
 
