@@ -21,13 +21,13 @@ def path_from_mirror_url(mirror, path):
     if path is not None:
         return (mirror, path)
 
-    path_regex = "streams/v1/.*[.](sjs|js)$"
+    path_regex = "streams/v1/.*[.](sjson|json)$"
     result = re.search(path_regex, mirror)
     if result:
         path = mirror[result.start():]
         mirror = mirror[:result.start()]
     else:
-        path = "streams/v1/index.sjs"
+        path = "streams/v1/index.sjson"
 
     return (mirror, path)
 

@@ -212,7 +212,7 @@ def signjson_file(fname, status_cb=None):
         content = fp.read()
     data = json.loads(content)
     fmt = data.get("format")
-    sjson = fname[0:-len(".json")] + ".sjs"
+    sjson = fname[0:-len(".json")] + ".sjson"
 
     if status_cb is None:
         def null_cb(fname, fmt):
@@ -229,7 +229,7 @@ def signjson_file(fname, status_cb=None):
         for _content_id, content in data.get('index').iteritems():
             path = content.get('path')
             if path.endswith(".json"):
-                content['path'] = path[0:-len(".json")] + ".sjs"
+                content['path'] = path[0:-len(".json")] + ".sjson"
         with open(sjson, "w") as fp:
             fp.write(json.dumps(data, indent=1))
         signfile_inline(sjson)
