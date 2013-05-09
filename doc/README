@@ -42,7 +42,7 @@ Special dictionary entries:
    This allows a client to quickly note that it is up to date.
 
 == Simple Sync Mirrors ==
-The default/expected location of an index file is 'streams/v1/index.sjs'
+The default/expected location of an index file is 'streams/v1/index.sjson'
 or 'streams/v1/index.json' underneath the top level of a mirror.
 
 'path' entries as described above are relative to the top level of a
@@ -56,7 +56,7 @@ would be the top level of a mirror, and the expected path of an index is
 To describe a file that lives at:
  http://example.com/my-mirror/streams/v1/products.sjson
 
-The 'path' element must be: 'streams/v1/products.sjs'
+The 'path' element must be: 'streams/v1/products.sjson'
 
 == Products List ==
 products list: (format=products:1.0)

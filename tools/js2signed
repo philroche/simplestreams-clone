@@ -15,7 +15,7 @@ def main():
     for path in sys.argv[1:]:
         if os.path.isfile(path):
             if not path.endswith(".json"):
-                sys.stderr.write("file must end with .js\n")
+                sys.stderr.write("file must end with .json\n")
                 sys.exit(1)
             toolutil.signjson_file(path)
         elif os.path.isdir(path):

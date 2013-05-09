@@ -208,7 +208,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         self.store.insert_content(dpath, util.dump_data(tree))
 
         # now insert or update an index
-        ipath = "streams/v1/index.js"
+        ipath = "streams/v1/index.json"
         try:
             index = util.load_content(self.store.reader(ipath).read())
         except IOError as exc:
