@@ -3,8 +3,8 @@
 import json
 import os
 import os.path
-import subprocess
 
+from simplestreams import util
 
 REL2VER = {
     "hardy": {'version': "8.04", 'devname': "Hardy Heron"},
@@ -154,88 +154,25 @@ def load_query_ec2(path, builds=None, rels=None, max_dailies=NUM_DAILIES):
     return results
 
 
-def get_sign_cmd(path, output=None, clearsign=False, armor=True):
-    cmd = ['gpg']
-    defkey = os.environ.get('SS_GPG_DEFAULT_KEY')
-    if defkey:
-        cmd.extend(['--default-key', defkey])
-
-    batch = os.environ.get('SS_GPG_BATCH', "1").lower()
-    if batch not in ("0", "false"):
-        cmd.append('--batch')
-
-    if output:
-        cmd.extend(['--output', output])
-
-    if clearsign:
-        cmd.append('--clearsign')
-    else:
-        if armor:
-            cmd.append('--armor')
-        cmd.append('--sign')
-
-    cmd.extend([path])
-    return cmd
-
-
-def signfile(path, output=None):
-    if output is None:
-        output = path + ".gpg"
-
-    if os.path.exists(output):
-        os.unlink(output)
-
-    subprocess.check_output(get_sign_cmd(path, output))
-
-
-def signfile_inline(path, output=None):
-    infile = path
-    tmpfile = None
-    if output is None:
-        # sign "in place" by using a temp file.
-        tmpfile = "%s.tmp" % path
-        os.rename(path, tmpfile)
-        output = path
-        infile = tmpfile
-    elif os.path.exists(output):
-        os.unlink(output)
-
-    subprocess.check_output(get_sign_cmd(infile, output, clearsign=True))
-
-    if tmpfile:
-        os.unlink(tmpfile)
-
-
 def signjson_file(fname, status_cb=None):
+    # input fname should be .json
+    # creates .json.gpg and .sjson
     content = ""
     with open(fname) as fp:
         content = fp.read()
-    data = json.loads(content)
-    fmt = data.get("format")
-    sjson = fname[0:-len(".json")] + ".sjson"
+    (changed, scontent) = util.make_signed_content_paths(content)
 
-    if status_cb is None:
-        def null_cb(fname, fmt):
-            pass
-        status_cb = null_cb
+    if status_cb:
+        status_cb(fname)
 
-    if fmt == "products:1.0":
-        status_cb(fname, fmt)
-        signfile(fname)
-        signfile_inline(fname, sjson)
-    elif fmt == "index:1.0":
-        status_cb(fname, fmt)
-        signfile(fname)
-        for _content_id, content in data.get('index').iteritems():
-            path = content.get('path')
-            if path.endswith(".json"):
-                content['path'] = path[0:-len(".json")] + ".sjson"
-        with open(sjson, "w") as fp:
-            fp.write(json.dumps(data, indent=1))
-        signfile_inline(sjson)
-        return
+    util.sign_file(fname, inline=False)
+    if changed:
+        util.sign_content(scontent, util.signed_fname(fname, inline=True),
+                          inline=True)
     else:
-        status_cb(fname, fmt)
-        return
+        util.sign_file(fname, inline=True)
+
+    return
+
 
 # vi: ts=4 expandtab syntax=python

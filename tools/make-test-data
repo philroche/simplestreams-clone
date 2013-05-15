@@ -425,8 +425,8 @@ def main():
             fp.write(json.dumps(index, indent=1) + "\n")
 
     if args.sign:
-        def printstatus(name, fmt):
-            sys.stderr.write("signing %s: %s\n" % (name, fmt))
+        def printstatus(name):
+            sys.stderr.write("signing %s\n" % name)
         for root, dirs, files in os.walk(args.out_d):
             for f in [f for f in files if f.endswith(".json")]:
                 toolutil.signjson_file(os.path.join(root, f),

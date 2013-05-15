@@ -389,4 +389,81 @@ def get_local_copy(contentsource, read_size=READ_SIZE):
     except Exception as e:
         os.unlink(tpath)
         raise e
+
+
+def subp(args, data=None, capture=True, shell=False):
+    if not capture:
+        stdout, stderr = (None, None)
+    else:
+        stdout, stderr = (subprocess.PIPE, subprocess.PIPE)
+
+    sp = subprocess.Popen(args, stdout=stdout, stderr=stderr,
+                          stdin=subprocess.PIPE)
+    (out, err) = sp.communicate(data)
+
+    if sp.returncode != 0:
+        raise subprocess.CalledProcessError(sp.returncode, args,
+                                            output=(out, err))
+
+    return (out, err)
+
+
+def get_sign_cmd(path, output=None, inline=False):
+    cmd = ['gpg']
+    defkey = os.environ.get('SS_GPG_DEFAULT_KEY')
+    if defkey:
+        cmd.extend(['--default-key', defkey])
+
+    batch = os.environ.get('SS_GPG_BATCH', "1").lower()
+    if batch not in ("0", "false"):
+        cmd.append('--batch')
+
+    if output:
+        cmd.extend(['--output', output])
+
+    if inline:
+        cmd.append('--clearsign')
+    else:
+        cmd.extend(['--armor', '--sign'])
+
+    cmd.extend([path])
+    return cmd
+
+
+def make_signed_content_paths(content):
+    # loads json content.  If it is a products:1.0 file
+    # then it fixes up 'path' elements to point to signed names (.sjson)
+    # returns tuple of (changed, updated)
+    data = json.loads(content)
+
+    if data.get("format") != "index:1.0":
+        return (False, None)
+
+    for content_ent in data.get('index', {}).values():
+        path = content_ent.get('path')
+        if path.endswith(".json"):
+            content_ent['path'] = signed_fname(path, inline=True)
+
+    return (True, json.dumps(data, indent=1))
+
+
+def signed_fname(fname, inline=True):
+    if inline:
+        sfname = fname[0:-len(".json")] + ".sjson"
+    else:
+        sfname = fname + ".gpg"
+
+    return sfname
+
+
+def sign_file(fname, inline=True, outfile=None):
+    if outfile is None:
+        outfile = signed_fname(fname, inline=inline)
+    return subp(get_sign_cmd(path=fname, output=outfile, inline=inline))[0]
+
+
+def sign_content(content, outfile="-", inline=True):
+    return subp(args=get_sign_cmd(path="-", output=outfile, inline=inline),
+                data=content)[0]
+
 # vi: ts=4 expandtab

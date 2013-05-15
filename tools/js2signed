@@ -8,8 +8,8 @@ import sys
 import toolutil
 
 
-def status_cb(fname, fmt):
-    sys.stderr.write("%s: %s\n" % (fmt, fname))
+def status_cb(fname):
+    sys.stderr.write("%s\n", fname)
 
 def main():
     for path in sys.argv[1:]:
