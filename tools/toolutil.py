@@ -21,6 +21,7 @@ BUILDS = ("server")
 
 NUM_DAILIES = 4
 
+
 def is_expected(repl, fields):
     rel = fields[0]
     serial = fields[3]
@@ -41,12 +42,13 @@ def is_expected(repl, fields):
 
     #if some data in /query is not truely available, fill up this array
     #to skip it. ex: export BROKEN="precise/20121212.1 quantal/20130128.1"
-    broken = os.environ.get("BROKEN","").split(" ")
+    broken = os.environ.get("BROKEN", "").split(" ")
     if "%s/%s" % (rel, serial) in broken:
         print "Known broken: %s/%s" % (rel, serial)
         return False
 
     return True
+
 
 def load_query_download(path, builds=None, rels=None):
     if builds is None:
@@ -55,8 +57,7 @@ def load_query_download(path, builds=None, rels=None):
         rels = RELEASES
 
     streams = [f[0:-len(".latest.txt")]
-               for f in os.listdir(path)
-                   if f.endswith("latest.txt")]
+               for f in os.listdir(path) if f.endswith("latest.txt")]
 
     results = []
     for stream in streams:
@@ -70,11 +71,11 @@ def load_query_download(path, builds=None, rels=None):
                 (rel, build, _stream, _serial) = line.split("\t")
 
                 if ((len(builds) and build not in builds) or
-                    (len(rels) and rel not in rels)):
+                        (len(rels) and rel not in rels)):
                     continue
 
                 dl_files.append("%s/%s/%s/%s-dl.txt" %
-                    (path, rel, build, stream))
+                                (path, rel, build, stream))
 
         field_path = 5
         field_name = 6
@@ -104,6 +105,7 @@ def load_query_download(path, builds=None, rels=None):
 
     return results
 
+
 def load_query_ec2(path, builds=None, rels=None, max_dailies=NUM_DAILIES):
     if builds is None:
         builds = BUILDS
@@ -111,8 +113,7 @@ def load_query_ec2(path, builds=None, rels=None, max_dailies=NUM_DAILIES):
         rels = RELEASES
 
     streams = [f[0:-len(".latest.txt")]
-               for f in os.listdir(path)
-                   if f.endswith("latest.txt")]
+               for f in os.listdir(path) if f.endswith("latest.txt")]
     results = []
 
     for stream in streams:
@@ -126,11 +127,11 @@ def load_query_ec2(path, builds=None, rels=None, max_dailies=NUM_DAILIES):
                 (rel, build, _stream, _serial) = line.split("\t")
 
                 if ((len(builds) and build not in builds) or
-                    (len(rels) and rel not in rels)):
+                        (len(rels) and rel not in rels)):
                     continue
 
                 id_files.append("%s/%s/%s/%s.txt" %
-                    (path, rel, build, stream))
+                                (path, rel, build, stream))
 
         for id_file in id_files:
             lines = reversed(open(id_file).readlines())
