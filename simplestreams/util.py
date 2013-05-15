@@ -22,14 +22,15 @@ CHECKSUMS = ("md5", "sha256", "sha512")
 READ_SIZE = (1024 * 50)
 
 PRODUCTS_TREE_DATA = (
-   ("products", "product_name"),
-   ("versions", "version_name"),
-   ("items", "item_name"),
+    ("products", "product_name"),
+    ("versions", "version_name"),
+    ("items", "item_name"),
 )
 PRODUCTS_TREE_HIERARCHY = [k[0] for k in PRODUCTS_TREE_DATA]
 
+
 def stringitems(data):
-    return {k:v for k,v in data.iteritems() if
+    return {k: v for k, v in data.iteritems() if
             isinstance(v, (unicode, str))}
 
 
@@ -64,7 +65,7 @@ def products_set(tree, data, pedigree):
             cur = cur[pedigree[n]]
 
     cur[pedigree[-1]] = data
-        
+
 
 def products_del(tree, pedigree):
     harchy = PRODUCTS_TREE_HIERARCHY
@@ -98,7 +99,7 @@ def products_prune(tree):
                 del tree['products'][prodname]['versions'][vername]
 
         if ('versions' not in tree['products'][prodname] or
-            not tree['products'][prodname]['versions']):
+                not tree['products'][prodname]['versions']):
             del tree['products'][prodname]
 
     if 'products' in tree and not tree['products']:
@@ -190,7 +191,8 @@ def resolve_work(src, target, max=None, keep=False, filter=None,
         while len(remove) and (max > (after_add - len(remove))):
             remove.pop(0)
 
-    mtarget = sorted([f for f in target + add if f not in remove], reverse=reverse)
+    mtarget = sorted([f for f in target + add if f not in remove],
+                     reverse=reverse)
     if max is not None and len(mtarget) > max:
         for item in mtarget[max:]:
             if item in target:
@@ -259,7 +261,7 @@ def timestamp(ts=None):
 
 
 def item_checksums(item):
-    return {k:item[k] for k in CHECKSUMS if k in item}
+    return {k: item[k] for k in CHECKSUMS if k in item}
 
 
 class checksummer(object):
@@ -300,7 +302,7 @@ def move_dups(src, target, sticky=None):
     # given src = {e1: {a:a, b:c}, e2: {a:a, b:d, e:f}}
     # update target with {a:a}, and delete 'a' from entries in dict1
     # if a key exists in target, it will not be copied or deleted.
-    if sticky == None:
+    if sticky is None:
         sticky = []
 
     allkeys = set()
