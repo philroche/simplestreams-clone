@@ -148,8 +148,9 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         if arch:
             props['architecture'] = arch
 
+        fullname = self.name_prefix + name
         create_kwargs = {
-            'name': self.name_prefix + name,
+            'name': fullname,
             'properties': props,
             'disk_format': 'qcow2',
             'container_format': 'bare',
@@ -170,7 +171,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             create_kwargs['data'] = open(tmp_path, 'rb')
             ret = self.gclient.images.create(**create_kwargs)
             t_item['id'] = ret.id
-            print "created %s: %s" % (ret.id, name)
+            print "created %s: %s" % (ret.id, fullname)
 
         finally:
             if tmp_del and os.path.exists(tmp_path):
@@ -179,6 +180,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         t_item['region'] = self.region
         t_item['endpoint'] = self.auth_url
         t_item['owner_id'] = self.tenant_id
+        t_item['name'] = fullname
         util.products_set(target, t_item, pedigree)
 
     def remove_item(self, data, src, target, pedigree):
