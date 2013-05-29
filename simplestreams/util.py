@@ -458,13 +458,27 @@ def signed_fname(fname, inline=True):
     return sfname
 
 
+def rm_f_file(fname, skip=None):
+    if skip is None:
+        skip = []
+    if fname in skip:
+        return
+    try:
+        os.unlink(fname)
+    except OSError as exc:
+        if exc.errno != errno.ENOENT:
+            raise
+    
+
 def sign_file(fname, inline=True, outfile=None):
     if outfile is None:
         outfile = signed_fname(fname, inline=inline)
+    rm_f_file(outfile, skip=["-"])
     return subp(get_sign_cmd(path=fname, output=outfile, inline=inline))[0]
 
 
 def sign_content(content, outfile="-", inline=True):
+    rm_f_file(outfile, skip=["-"])
     return subp(args=get_sign_cmd(path="-", output=outfile, inline=inline),
                 data=content)[0]
 
