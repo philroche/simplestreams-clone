@@ -226,8 +226,8 @@ class BasicMirrorWriter(MirrorWriter):
             (to_add, to_remove) = util.resolve_work(
                 src=product.get('versions', {}).keys(),
                 target=tproduct.get('versions', {}).keys(),
-                max=self.config.get('max_items'),
-                keep=self.config.get('keep_items'), filter=_filter)
+                maxnum=self.config.get('max_items'),
+                keep=self.config.get('keep_items'), itemfilter=_filter)
 
             LOG.info("%s/%s: to_add=%s to_remove=%s", content_id, prodname,
                      to_add, to_remove)

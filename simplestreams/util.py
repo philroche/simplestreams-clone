@@ -161,10 +161,10 @@ def expand_data(data, refs=None, delete=False):
             expand_data(item, refs)
 
 
-def resolve_work(src, target, max=None, keep=False, filter=None,
+def resolve_work(src, target, maxnum=None, keep=False, itemfilter=None,
                  sort_reverse=True):
-    # if more than max items are in src, only the most recent max will be
-    # stored in target.  If keep is true, then the most recent max items
+    # if more than maxnum items are in src, only the most recent maxnum will be
+    # stored in target.  If keep is true, then the most recent maxnum items
     # will be kept in target even if they are no longer in src.
     # if keep is false the number in target will never be greater than that
     # in src.
@@ -172,13 +172,13 @@ def resolve_work(src, target, max=None, keep=False, filter=None,
     remove = []
     reverse = sort_reverse
 
-    if max is None and keep:
-        raise TypeError("max(%s) cannot be None if keep is True" % max)
+    if maxnum is None and keep:
+        raise TypeError("maxnum(%s) cannot be None if keep is True" % maxnum)
 
     # Ensure that all source items are passed through filters
     # In case the filters have changed from the last run
     for item in sorted(src, reverse=reverse):
-        if filter is None or filter(item):
+        if itemfilter is None or itemfilter(item):
             if item not in target:
                 add.append(item)
 
@@ -188,13 +188,13 @@ def resolve_work(src, target, max=None, keep=False, filter=None,
 
     if keep and len(remove):
         after_add = len(target) + len(add)
-        while len(remove) and (max > (after_add - len(remove))):
+        while len(remove) and (maxnum > (after_add - len(remove))):
             remove.pop(0)
 
     mtarget = sorted([f for f in target + add if f not in remove],
                      reverse=reverse)
-    if max is not None and len(mtarget) > max:
-        for item in mtarget[max:]:
+    if maxnum is not None and len(mtarget) > maxnum:
+        for item in mtarget[maxnum:]:
             if item in target:
                 remove.append(item)
             else:
@@ -468,7 +468,7 @@ def rm_f_file(fname, skip=None):
     except OSError as exc:
         if exc.errno != errno.ENOENT:
             raise
-    
+
 
 def sign_file(fname, inline=True, outfile=None):
     if outfile is None:
