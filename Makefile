@@ -10,7 +10,7 @@ ifeq ($(EXDATA_SIGN),1)
 endif
 
 test:
-	nosetests -v tests/
+	nosetests3 -v tests/
 
 exdata: exdata/fake exdata/data
 

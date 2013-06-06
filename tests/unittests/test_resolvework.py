@@ -70,9 +70,9 @@ class TestStreamResolveWork(TestCase):
                    add=[], remove=[])
 
     def test_unordered_target_input(self):
-        self.tryit(src=[u'20121026.1', u'20120328', u'20121001'],
-                   target=[u'20121001', u'20120328', u'20121026.1'], maxnum=2,
-                   keep=False, add=[], remove=[u'20120328'])
+        self.tryit(src=['20121026.1', '20120328', '20121001'],
+                   target=['20121001', '20120328', '20121026.1'], maxnum=2,
+                   keep=False, add=[], remove=['20120328'])
 
     def test_reduced_max(self):
         self.tryit(src=[9, 5, 8, 4, 7, 3, 6, 2, 1],

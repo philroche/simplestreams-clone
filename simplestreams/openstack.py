@@ -58,7 +58,7 @@ def get_regions(client=None, services=None, kscreds=None):
 
     endpoints = client.service_catalog.get_endpoints()
     if services is None:
-        services = endpoints.keys()
+        services = list(endpoints.keys())
     regions = set()
     for service in services:
        [regions.add(r['region']) for r in endpoints.get(service, {}) 

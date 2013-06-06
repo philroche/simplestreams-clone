@@ -4,7 +4,7 @@ import os
 import subprocess
 import tempfile
 import time
-import urlparse
+import urllib.parse
 import json
 
 import simplestreams.contentsource as cs
@@ -30,8 +30,8 @@ PRODUCTS_TREE_HIERARCHY = [k[0] for k in PRODUCTS_TREE_DATA]
 
 
 def stringitems(data):
-    return {k: v for k, v in data.iteritems() if
-            isinstance(v, (unicode, str))}
+    return {k: v for k, v in data.items() if
+            isinstance(v, str)}
 
 
 def products_exdata(tree, pedigree, include_top=True, insert_fieldnames=True):
@@ -88,10 +88,10 @@ def products_del(tree, pedigree):
 
 
 def products_prune(tree):
-    for prodname in tree.get('products', {}).keys():
-        for vername in tree['products'][prodname].get('versions', {}).keys():
+    for prodname in list(tree.get('products', {}).keys()):
+        for vername in list(tree['products'][prodname].get('versions', {}).keys()):
             vtree = tree['products'][prodname]['versions'][vername]
-            for itemname in vtree.get('items', {}).keys():
+            for itemname in list(vtree.get('items', {}).keys()):
                 if not vtree['items'][itemname]:
                     del vtree['items'][itemname]
 
@@ -109,7 +109,7 @@ def products_prune(tree):
 def walk_products(tree, cb_product=None, cb_version=None, cb_item=None,
                   ret_finished=_UNSET):
     # walk a product tree. callbacks are called with (item, tree, (pedigree))
-    for prodname, proddata in tree['products'].iteritems():
+    for prodname, proddata in tree['products'].items():
         ped = [prodname]
         if cb_product:
             ret = cb_product(proddata, tree, (prodname,))
@@ -119,7 +119,7 @@ def walk_products(tree, cb_product=None, cb_version=None, cb_item=None,
         if (not cb_version and not cb_item) or 'versions' not in proddata:
             continue
 
-        for vername, verdata in proddata['versions'].iteritems():
+        for vername, verdata in proddata['versions'].items():
             if cb_version:
                 ret = cb_version(verdata, tree, (prodname, vername))
                 if ret_finished != _UNSET and ret == ret_finished:
@@ -128,7 +128,7 @@ def walk_products(tree, cb_product=None, cb_version=None, cb_item=None,
             if not cb_item or 'items' not in verdata:
                 continue
 
-            for itemname, itemdata in verdata['items'].iteritems():
+            for itemname, itemdata in verdata['items'].items():
                 ret = cb_item(itemdata, tree, (prodname, vername, itemname))
                 if ret_finished != _UNSET and ret == ret_finished:
                     return
@@ -143,14 +143,14 @@ def expand_tree(tree, refs=None, delete=False):
 def expand_data(data, refs=None, delete=False):
     if isinstance(data, dict):
         if isinstance(refs, dict):
-            for key in data.keys():
+            for key in list(data.keys()):
                 if key == ALIASNAME:
                     continue
                 ref = refs.get(key)
                 if not ref:
                     continue
                 value = data.get(key)
-                if value and isinstance(value, (unicode, str)):
+                if value and isinstance(value, str):
                     data.update(ref[value])
                     if delete:
                         del data[key]
@@ -307,27 +307,27 @@ def move_dups(src, target, sticky=None):
 
     allkeys = set()
     for entry in src:
-        allkeys.update(src[entry].keys())
+        allkeys.update(list(src[entry].keys()))
 
     candidates = allkeys.difference(sticky)
 
     updates = {}
-    for entry in src.keys():
-        for k, v in src[entry].iteritems():
+    for entry in list(src.keys()):
+        for k, v in src[entry].items():
             if k not in candidates:
                 continue
             if k in updates:
-                if v != updates[k] or not isinstance(v, (str, unicode)):
+                if v != updates[k] or not isinstance(v, str):
                     del updates[k]
                     candidates.remove(k)
             else:
-                if isinstance(v, (str, unicode)) and target.get(k, v) == v:
+                if isinstance(v, str) and target.get(k, v) == v:
                     updates[k] = v
                 else:
                     candidates.remove(k)
 
-    for entry in src.keys():
-        for k in src[entry].keys():
+    for entry in list(src.keys()):
+        for k in list(src[entry].keys()):
             if k in updates:
                 del src[entry][k]
 
@@ -349,7 +349,7 @@ def products_condense(ptree, sticky=None):
 def assert_safe_path(path):
     if path == "" or path is None:
         return
-    if not isinstance(path, (unicode, str)):
+    if not isinstance(path, str):
         raise TypeError("Path '%s' is not a string or unicode" % path)
     if os.path.isabs(path):
         raise TypeError("Path '%s' is absolute path" % path)
@@ -441,7 +441,7 @@ def make_signed_content_paths(content):
     if data.get("format") != "index:1.0":
         return (False, None)
 
-    for content_ent in data.get('index', {}).values():
+    for content_ent in list(data.get('index', {}).values()):
         path = content_ent.get('path')
         if path.endswith(".json"):
             content_ent['path'] = signed_fname(path, inline=True)

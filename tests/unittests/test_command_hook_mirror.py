@@ -36,7 +36,7 @@ class TestCommandHookMirror(TestCase):
         self._run_commands.append(cmd)
         rc = 0
         output = ''
-        print cmd
+        print(cmd)
         return (rc, output)
 
 # vi: ts=4 expandtab syntax=python

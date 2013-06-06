@@ -171,7 +171,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             create_kwargs['data'] = open(tmp_path, 'rb')
             ret = self.gclient.images.create(**create_kwargs)
             t_item['id'] = ret.id
-            print "created %s: %s" % (ret.id, fullname)
+            print("created %s: %s" % (ret.id, fullname))
 
         finally:
             if tmp_del and os.path.exists(tmp_path):
@@ -186,7 +186,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
     def remove_item(self, data, src, target, pedigree):
         util.products_del(target, pedigree)
         if 'id' in data:
-            print "removing %s: %s" % (data['id'], data['name'])
+            print("removing %s: %s" % (data['id'], data['name']))
             self.gclient.images.delete(data['id'])
 
     def filter_index_entry(self, data, src, pedigree):
@@ -225,7 +225,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             'clouds': [{'region': self.region, 'endpoint': self.auth_url}],
             'cloudname': self.cloudname,
             'path': dpath,
-            'products': tree['products'].keys(),
+            'products': list(tree['products'].keys()),
             'format': tree['format'],
         }
         LOG.info("writing data: %s", ipath)

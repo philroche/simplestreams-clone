@@ -44,7 +44,7 @@ def is_expected(repl, fields):
     #to skip it. ex: export BROKEN="precise/20121212.1 quantal/20130128.1"
     broken = os.environ.get("BROKEN", "").split(" ")
     if "%s/%s" % (rel, serial) in broken:
-        print "Known broken: %s/%s" % (rel, serial)
+        print("Known broken: %s/%s" % (rel, serial))
         return False
 
     return True

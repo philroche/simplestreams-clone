@@ -14,7 +14,7 @@ def get_swiftclient(**kwargs):
     nmap = {'endpoint': 'preauthurl', 'token': 'preauthtoken'}
     pt = ('insecure', 'cacert')
 
-    connargs = {v: kwargs.get(k) for k, v in nmap.iteritems() if k in kwargs}
+    connargs = {v: kwargs.get(k) for k, v in nmap.items() if k in kwargs}
     connargs.update({k: kwargs.get(k) for k in pt if k in kwargs})
     return Connection(**connargs)
 
@@ -97,7 +97,7 @@ class SwiftObjectStore(objectstores.ObjectStore):
         insargs = {'container': self.container, 'obj': self.path_prefix + path,
                    'contents': contents}
 
-        if size is not None and isinstance(contents, (unicode, str)):
+        if size is not None and isinstance(contents, str):
             size = len(contents)
 
         if size is not None:
@@ -105,7 +105,7 @@ class SwiftObjectStore(objectstores.ObjectStore):
 
         if checksums and checksums.get('md5'):
             insargs['etag'] = checksums.get('md5')
-        elif isinstance(contents, (unicode, str)):
+        elif isinstance(contents, str):
             insargs['etag'] = hashlib.md5(contents).hexdigest()
 
         self.swiftclient.put_object(**insargs)
