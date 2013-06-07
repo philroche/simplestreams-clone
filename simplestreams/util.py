@@ -401,6 +401,9 @@ def subp(args, data=None, capture=True, shell=False):
 
     sp = subprocess.Popen(args, stdout=stdout, stderr=stderr,
                           stdin=subprocess.PIPE)
+    if isinstance(data, str):
+        data = data.encode('utf-8')
+
     (out, err) = sp.communicate(data)
 
     if sp.returncode != 0:

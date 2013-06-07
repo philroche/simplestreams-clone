@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import argparse
 import json
@@ -99,7 +99,7 @@ def main():
         content = trees[content_id]
         index['index'][content_id] = { 
             'path': "%s/%s.json" % (streamdir, content_id),
-            'products': content['products'].keys(),
+            'products': list(content['products'].keys()),
         }
         for k in util.stringitems(content):
             if k not in not_copied_up:

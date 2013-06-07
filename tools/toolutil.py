@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import json
 import os
@@ -29,14 +29,14 @@ def is_expected(repl, fields):
         if rel in ("lucid", "oneiric"):
             # lucid, oneiric do not have -root.tar.gz
             return False
-        if rel == "precise" and cmp(serial, "20120202") <= 0:
+        if rel == "precise" and serial <= "20120202":
             # precise got -root.tar.gz after alpha2
             return False
 
     if repl == "-disk1.img":
         if rel == "lucid":
             return False
-        if rel == "oneiric" and cmp(serial, "20110802.2") <= 0:
+        if rel == "oneiric" and serial <= "20110802.2":
             # oneiric got -disk1.img after alpha3
             return False
 
