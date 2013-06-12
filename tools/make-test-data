@@ -302,7 +302,7 @@ def create_image_data(query_tree, out_d, streamdir):
     hashcache = os.path.join(query_tree, "FILE_DATA_CACHE")
     FILE_DATA['filename'] = hashcache
     if os.path.isfile(hashcache):
-        FILE_DATA.update(json.loads(open(hashcache).read()))
+        FILE_DATA.update(json.loads(open(hashcache, "r").read()))
 
     ts = util.timestamp()
     tree = dl_load_query(query_tree)

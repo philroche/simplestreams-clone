@@ -74,7 +74,7 @@ class FileStore(ObjectStore):
         partfile = os.path.join(out_d, "%s.part" % os.path.basename(wpath))
         try:
             util.mkdir_p(out_d)
-            with open(partfile, "w") as wfp:
+            with open(partfile, "wb") as wfp:
                 while True:
                     buf = reader.read(self.read_size)
                     wfp.write(buf)

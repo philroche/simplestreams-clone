@@ -59,7 +59,11 @@ class UrlContentSource(ContentSource):
             parsed = urllib.parse.urlparse(url)
 
         if parsed.scheme == "file":
-            return (url, open, (parsed.path,))
+
+            def binopen(path):
+                return open(path, "rb")
+
+            return (url, binopen, (parsed.path,))
         else:
             return (url, URL_READER, (url,))
 
@@ -177,7 +181,7 @@ class IteratorContentSource(ContentSource):
 
 class MemoryContentSource(FdContentSource):
     def __init__(self, url=None, content=""):
-        fd = io.StringIO(content)
+        fd = io.BytesIO(content)
         if url is None:
             url = "MemoryContentSource://undefined"
         super(MemoryContentSource, self).__init__(fd=fd, url=url)

@@ -10,6 +10,11 @@ import json
 import simplestreams.contentsource as cs
 from simplestreams.log import LOG
 
+try:
+    ALGORITHMS = list(getattr(hashlib, 'algorithms'))
+except AttributeError:
+    ALGORITHMS = list(hashlib.algorithms_available)
+
 ALIASNAME = "_aliases"
 
 PGP_SIGNED_MESSAGE_HEADER = "-----BEGIN PGP SIGNED MESSAGE-----"
@@ -207,7 +212,7 @@ def read_possibly_signed(path, reader=open):
     content = ""
 
     with reader(path) as cfp:
-        content = cfp.read()
+        content = cfp.read().decode('utf-8')
 
     if content.startswith(PGP_SIGNED_MESSAGE_HEADER):
         # http://rfc-ref.org/RFC-TEXTS/2440/chapter7.html
@@ -249,11 +254,13 @@ def read_possibly_signed(path, reader=open):
 
 
 def load_content(content):
+    if isinstance(content, bytes):
+        content = content.decode('utf-8')
     return json.loads(content)
 
 
 def dump_data(data):
-    return json.dumps(data, indent=1)
+    return json.dumps(data, indent=1).encode("utf-8")
 
 
 def timestamp(ts=None):
@@ -275,7 +282,7 @@ class checksummer(object):
             self._hasher = None
             return
         for meth in CHECKSUMS:
-            if meth in checksums and meth in hashlib.algorithms:
+            if meth in checksums and meth in ALGORITHMS:
                 self._hasher = hashlib.new(meth)
                 self.algorithm = meth
 
@@ -378,7 +385,7 @@ def mkdir_p(path):
 
 def get_local_copy(contentsource, read_size=READ_SIZE):
     (tfd, tpath) = tempfile.mkstemp()
-    tfile = os.fdopen(tfd, "w")
+    tfile = os.fdopen(tfd, "wb")
     try:
         LOG.debug("getting local copy of %s", contentsource.url)
         while True:
