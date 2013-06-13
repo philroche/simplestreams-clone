@@ -19,7 +19,7 @@ PGP_SIGNATURE_FOOTER = "-----END PGP SIGNATURE-----"
 _UNSET = object()
 CHECKSUMS = ("md5", "sha256", "sha512")
 
-READ_SIZE = (1024 * 50)
+READ_SIZE = (1024 * 10)
 
 PRODUCTS_TREE_DATA = (
     ("products", "product_name"),
