@@ -3,6 +3,8 @@ import os
 import io
 import urllib.parse
 
+READ_BUFFER_SIZE = 1024 * 10
+
 try:
     import requests
     from distutils.version import LooseVersion
@@ -243,7 +245,7 @@ class RequestsUrlReader(UrlReader):
         self.req = requests.get(url, stream=True, auth=auth)
         self.r_iter = None
         if buflen is None:
-            buflen = 1024 * 50
+            buflen = READ_BUFFER_SIZE
         self.buflen = buflen
         self.leftover = bytes()
         self.consumed = False

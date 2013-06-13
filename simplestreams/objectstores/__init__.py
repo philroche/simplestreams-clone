@@ -6,7 +6,7 @@ import simplestreams.contentsource as cs
 import simplestreams.util as util
 from simplestreams.log import LOG
 
-READ_BUFFER_SIZE = 1024 * 50
+READ_BUFFER_SIZE = 1024 * 10
 
 
 class ObjectStore(object):
