@@ -17,21 +17,6 @@ def warn(msg):
     sys.stderr.write("WARN: %s" % msg)
 
 
-def path_from_mirror_url(mirror, path):
-    if path is not None:
-        return (mirror, path)
-
-    path_regex = "streams/v1/.*[.](sjson|json)$"
-    result = re.search(path_regex, mirror)
-    if result:
-        path = mirror[result.start():]
-        mirror = mirror[:result.start()]
-    else:
-        path = "streams/v1/index.sjson"
-
-    return (mirror, path)
-
-
 class ItemFilter(object):
     def __init__(self, content, noneval=""):
         rparsefmt="(\w+)[ ]*([!]{0,1}[=~])[ ]*(.*)[ ]*$"
@@ -135,7 +120,8 @@ def main():
 
     cmdargs = parser.parse_args()
 
-    (mirror_url, path) = path_from_mirror_url(cmdargs.mirror_url, cmdargs.path)
+    (mirror_url, path) = util.path_from_mirror_url(cmdargs.mirror_url,
+                                                   cmdargs.path)
 
     level = (log.ERROR, log.INFO, log.DEBUG)[min(cmdargs.verbose, 2)]
     log.basicConfig(stream=cmdargs.log_file, level=level)

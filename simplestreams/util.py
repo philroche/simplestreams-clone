@@ -1,6 +1,7 @@
 import errno
 import hashlib
 import os
+import re
 import subprocess
 import tempfile
 import time
@@ -490,5 +491,20 @@ def sign_content(content, outfile="-", inline=True):
     rm_f_file(outfile, skip=["-"])
     return subp(args=get_sign_cmd(path="-", output=outfile, inline=inline),
                 data=content)[0]
+
+
+def path_from_mirror_url(mirror, path):
+    if path is not None:
+        return (mirror, path)
+
+    path_regex = "streams/v1/.*[.](sjson|json)$"
+    result = re.search(path_regex, mirror)
+    if result:
+        path = mirror[result.start():]
+        mirror = mirror[:result.start()]
+    else:
+        path = "streams/v1/index.sjson"
+
+    return (mirror, path)
 
 # vi: ts=4 expandtab
