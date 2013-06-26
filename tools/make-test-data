@@ -4,9 +4,10 @@ import argparse
 import json
 import os
 import os.path
-import urllib.request, urllib.error, urllib.parse
 import sys
 from simplestreams import util
+
+import urllib.request
 
 import toolutil
 

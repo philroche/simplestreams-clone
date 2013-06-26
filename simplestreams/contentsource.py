@@ -1,7 +1,12 @@
 import errno
-import os
 import io
-import urllib.parse
+import os
+import sys
+
+if sys.version_info > (3,0):
+    import urllib.parse as urlparse
+else:
+    import urlparse
 
 READ_BUFFER_SIZE = 1024 * 10
 
@@ -52,13 +57,13 @@ class UrlContentSource(ContentSource):
         self.url = url
 
     def _urlinfo(self, url):
-        parsed = urllib.parse.urlparse(url)
+        parsed = urlparse.urlparse(url)
         if not parsed.scheme:
             if url.startswith("/"):
                 url = "file://%s" % url
             else:
                 url = "file://%s/%s" % (os.getcwd(), url)
-            parsed = urllib.parse.urlparse(url)
+            parsed = urlparse.urlparse(url)
 
         if parsed.scheme == "file":
 
@@ -313,7 +318,7 @@ class RequestsUrlReader(UrlReader):
 
 
 def parse_url_auth(url):
-    parsed = urllib.parse.urlparse(url)
+    parsed = urlparse.urlparse(url)
     authtok = "%s:%s@" % (parsed.username, parsed.password)
     if parsed.netloc.startswith(authtok):
         url = url.replace(authtok, "", 1)
