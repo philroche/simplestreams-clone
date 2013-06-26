@@ -2,8 +2,6 @@ from keystoneclient.v2_0 import client as ksclient
 import os
 import re
 
-import glanceclient
-
 OS_ENV_VARS = (
     'OS_AUTH_TOKEN', 'OS_AUTH_URL', 'OS_CACERT', 'OS_IMAGE_API_VERSION',
     'OS_IMAGE_URL', 'OS_PASSWORD', 'OS_REGION_NAME', 'OS_STORAGE_URL',
