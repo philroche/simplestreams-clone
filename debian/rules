@@ -1,7 +1,13 @@
 #!/usr/bin/make -f
 
+PY3VERSIONS := $(shell py3versions -r)
 %:
 	dh $@ --with=python3 --install-layout=deb
 
 override_dh_auto_install:
-	python3 setup.py install --root=debian/simplestreams --install-layout=deb
+	dh_auto_install
+	set -ex; for python in $(shell py3versions -r); do \
+		$$python setup.py install --root=$(CURDIR)/debian/tmp --install-layout=deb; \
+        done
+
+
