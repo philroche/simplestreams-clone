@@ -4,7 +4,6 @@ import os
 import subprocess
 import tempfile
 import time
-import urllib.parse
 import json
 
 import simplestreams.contentsource as cs
@@ -31,7 +30,7 @@ PRODUCTS_TREE_DATA = (
     ("versions", "version_name"),
     ("items", "item_name"),
 )
-PRODUCTS_TREE_HIERARCHY = [k[0] for k in PRODUCTS_TREE_DATA]
+PRODUCTS_TREE_HIERARCHY = [_k[0] for _k in PRODUCTS_TREE_DATA]
 
 
 def stringitems(data):
@@ -94,7 +93,8 @@ def products_del(tree, pedigree):
 
 def products_prune(tree):
     for prodname in list(tree.get('products', {}).keys()):
-        for vername in list(tree['products'][prodname].get('versions', {}).keys()):
+        keys = list(tree['products'][prodname].get('versions', {}).keys())
+        for vername in keys:
             vtree = tree['products'][prodname]['versions'][vername]
             for itemname in list(vtree.get('items', {}).keys()):
                 if not vtree['items'][itemname]:
@@ -115,7 +115,6 @@ def walk_products(tree, cb_product=None, cb_version=None, cb_item=None,
                   ret_finished=_UNSET):
     # walk a product tree. callbacks are called with (item, tree, (pedigree))
     for prodname, proddata in tree['products'].items():
-        ped = [prodname]
         if cb_product:
             ret = cb_product(proddata, tree, (prodname,))
             if ret_finished != _UNSET and ret == ret_finished:
@@ -344,9 +343,9 @@ def move_dups(src, target, sticky=None):
 def products_condense(ptree, sticky=None):
     # walk a products tree, copying up item keys as far as they'll go
 
-    def call_move_dups(cur, tree, pedigree):
-        (mtype, stname) = (("product", "versions"),
-                           ("version", "items"))[len(pedigree) - 1]
+    def call_move_dups(cur, _tree, pedigree):
+        (_mtype, stname) = (("product", "versions"),
+                            ("version", "items"))[len(pedigree) - 1]
         move_dups(cur.get(stname, {}), cur, sticky=sticky)
 
     walk_products(ptree, cb_version=call_move_dups)
