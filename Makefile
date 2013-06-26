@@ -9,6 +9,8 @@ ifeq ($(EXDATA_SIGN),1)
     EXDATA_SIGN_ARG := --sign
 endif
 
+build:
+	@echo nothing to do for $@
 test:
 	nosetests3 -v tests/
 
