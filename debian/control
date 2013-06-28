@@ -27,7 +27,11 @@ Description: Library and tools for using Simple Streams data
 Package: python3-simplestreams
 Architecture: all
 Priority: extra
-Depends: gnupg, python3-requests (>= 0.8.2), ${misc:Depends}, ${python3:Depends}
+Depends: gnupg,
+         python3-requests (>= 0.8.2),
+         python3-yaml,
+         ${misc:Depends},
+         ${python3:Depends}
 Description: Library and tools for using Simple Streams data
  This package provides a client for interacting with simple
  streams data as is produced to describe Ubuntu's cloud images.
