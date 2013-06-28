@@ -356,8 +356,7 @@ def products_condense(ptree, sticky=None):
 def assert_safe_path(path):
     if path == "" or path is None:
         return
-    if not isinstance(path, (str, unicode)):
-        raise TypeError("Path '%s' is not a string or unicode: %s" % path)
+    path = str(path)
     if os.path.isabs(path):
         raise TypeError("Path '%s' is absolute path" % path)
     bad = (".." + os.path.sep, "..." + os.path.sep)
