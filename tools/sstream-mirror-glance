@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# this is python2 as openstack dependencies (swiftclient, keystoneclient,
+# glanceclient) are not python3.
 import argparse
 import os.path
 import sys

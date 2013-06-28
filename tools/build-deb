@@ -75,7 +75,7 @@ debuild "$@" || fail "debuild failed"
 cd "$TEMP_D"
 for f in *; do
    [ -f "$f" ] || continue
-   cp "$f" "$start_d/" || fail "failed copy $f"
+   cp "$f" "$start_d" || fail "failed copy $f"
    echo "wrote $f"
 done
 exit

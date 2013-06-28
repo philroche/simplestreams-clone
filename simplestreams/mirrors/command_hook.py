@@ -182,7 +182,7 @@ class CommandHookMirror(mirrors.BasicMirrorWriter):
         content_file = None
         if content is not None:
             (tfd, content_file) = tempfile.mkstemp()
-            tfile = os.fdopen(tfd, "w")
+            tfile = os.fdopen(tfd, "wb")
             tfile.write(content)
             tfile.close()
             fdata['content_file_path'] = content_file

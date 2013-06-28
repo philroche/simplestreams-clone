@@ -2,8 +2,6 @@ from keystoneclient.v2_0 import client as ksclient
 import os
 import re
 
-import glanceclient
-
 OS_ENV_VARS = (
     'OS_AUTH_TOKEN', 'OS_AUTH_URL', 'OS_CACERT', 'OS_IMAGE_API_VERSION',
     'OS_IMAGE_URL', 'OS_PASSWORD', 'OS_REGION_NAME', 'OS_STORAGE_URL',
@@ -58,7 +56,7 @@ def get_regions(client=None, services=None, kscreds=None):
 
     endpoints = client.service_catalog.get_endpoints()
     if services is None:
-        services = endpoints.keys()
+        services = list(endpoints.keys())
     regions = set()
     for service in services:
        [regions.add(r['region']) for r in endpoints.get(service, {}) 

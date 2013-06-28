@@ -1,7 +1,14 @@
 import errno
+import io
 import os
-import StringIO
-import urlparse
+import sys
+
+if sys.version_info > (3,0):
+    import urllib.parse as urlparse
+else:
+    import urlparse
+
+READ_BUFFER_SIZE = 1024 * 10
 
 READ_BUFFER_SIZE = 1024 * 10
 
@@ -15,7 +22,7 @@ try:
         raise Exception("Couldn't use requests")
     URL_READER_CLASSNAME = "RequestsUrlReader"
 except:
-    import urllib2
+    import urllib.request, urllib.error, urllib.parse
     URL_READER_CLASSNAME = "Urllib2UrlReader"
 
 
@@ -61,7 +68,11 @@ class UrlContentSource(ContentSource):
             parsed = urlparse.urlparse(url)
 
         if parsed.scheme == "file":
-            return (url, open, (parsed.path,))
+
+            def binopen(path):
+                return open(path, "rb")
+
+            return (url, binopen, (parsed.path,))
         else:
             return (url, URL_READER, (url,))
 
@@ -163,7 +174,7 @@ class IteratorContentSource(ContentSource):
 
         while True:
             try:
-                ret += self.r_iter.next()
+                ret += next(self.r_iter)
                 if len(ret) >= size:
                     self.leftover = ret[size:]
                     ret = ret[0:size]
@@ -179,7 +190,7 @@ class IteratorContentSource(ContentSource):
 
 class MemoryContentSource(FdContentSource):
     def __init__(self, url=None, content=""):
-        fd = StringIO.StringIO(content)
+        fd = io.BytesIO(content)
         if url is None:
             url = "MemoryContentSource://undefined"
         super(MemoryContentSource, self).__init__(fd=fd, url=url)
@@ -201,16 +212,16 @@ class Urllib2UrlReader(UrlReader):
         (url, username, password) = parse_url_auth(url)
         self.url = url
         if username is None:
-            opener = urllib2.urlopen
+            opener = urllib.request.urlopen
         else:
-            mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
+            mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
             mgr.add_password(None, url, username, password)
-            handler = urllib2.HTTPBasicAuthHandler(mgr)
-            opener = urllib2.build_opener(handler).open
+            handler = urllib.request.HTTPBasicAuthHandler(mgr)
+            opener = urllib.request.build_opener(handler).open
 
         try:
             self.req = opener(url)
-        except urllib2.HTTPError as e:
+        except urllib.error.HTTPError as e:
             if e.code == 404:
                 myerr = IOError("Unable to open %s" % url)
                 myerr.errno = errno.ENOENT
@@ -291,7 +302,7 @@ class RequestsUrlReader(UrlReader):
 
         while True:
             try:
-                ret += self.r_iter.next()
+                ret += next(self.r_iter)
                 if len(ret) >= size:
                     self.leftover = ret[size:]
                     ret = ret[0:size]

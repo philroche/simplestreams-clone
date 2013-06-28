@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import json
 import os
@@ -29,14 +29,14 @@ def is_expected(repl, fields):
         if rel in ("lucid", "oneiric"):
             # lucid, oneiric do not have -root.tar.gz
             return False
-        if rel == "precise" and cmp(serial, "20120202") <= 0:
+        if rel == "precise" and serial <= "20120202":
             # precise got -root.tar.gz after alpha2
             return False
 
     if repl == "-disk1.img":
         if rel == "lucid":
             return False
-        if rel == "oneiric" and cmp(serial, "20110802.2") <= 0:
+        if rel == "oneiric" and serial <= "20110802.2":
             # oneiric got -disk1.img after alpha3
             return False
 
@@ -44,7 +44,7 @@ def is_expected(repl, fields):
     #to skip it. ex: export BROKEN="precise/20121212.1 quantal/20130128.1"
     broken = os.environ.get("BROKEN", "").split(" ")
     if "%s/%s" % (rel, serial) in broken:
-        print "Known broken: %s/%s" % (rel, serial)
+        print("Known broken: %s/%s" % (rel, serial))
         return False
 
     return True
@@ -66,7 +66,7 @@ def load_query_download(path, builds=None, rels=None):
         latest_f = "%s/%s.latest.txt" % (path, stream)
 
         # get the builds and releases
-        with open(latest_f) as fp:
+        with open(latest_f, "r") as fp:
             for line in fp.readlines():
                 (rel, build, _stream, _serial) = line.split("\t")
 
@@ -81,7 +81,7 @@ def load_query_download(path, builds=None, rels=None):
         field_name = 6
         # stream/build/release/arch
         for dl_file in dl_files:
-            olines = open(dl_file).readlines()
+            olines = open(dl_file, "r").readlines()
 
             # download files in /query only contain '.tar.gz' (uec tarball)
             # file.  So we have to make up other entries.
@@ -122,7 +122,7 @@ def load_query_ec2(path, builds=None, rels=None, max_dailies=NUM_DAILIES):
         latest_f = "%s/%s.latest.txt" % (path, stream)
 
         # get the builds and releases
-        with open(latest_f) as fp:
+        with open(latest_f, "r") as fp:
             for line in fp.readlines():
                 (rel, build, _stream, _serial) = line.split("\t")
 
@@ -134,7 +134,7 @@ def load_query_ec2(path, builds=None, rels=None, max_dailies=NUM_DAILIES):
                                 (path, rel, build, stream))
 
         for id_file in id_files:
-            lines = reversed(open(id_file).readlines())
+            lines = reversed(open(id_file, "r").readlines())
             serials_seen = 0
             last_serial = None
             for line in lines:
@@ -159,7 +159,7 @@ def signjson_file(fname, status_cb=None):
     # input fname should be .json
     # creates .json.gpg and .sjson
     content = ""
-    with open(fname) as fp:
+    with open(fname, "r") as fp:
         content = fp.read()
     (changed, scontent) = util.make_signed_content_paths(content)
 

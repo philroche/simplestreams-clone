@@ -168,7 +168,7 @@ class BasicMirrorWriter(MirrorWriter):
         check_tree_paths(src)
 
         itree = src.get('index')
-        for content_id, index_entry in itree.iteritems():
+        for content_id, index_entry in itree.items():
             if not self.filter_index_entry(index_entry, src, (content_id,)):
                 continue
             epath = index_entry.get('path', None)
@@ -203,7 +203,7 @@ class BasicMirrorWriter(MirrorWriter):
         tproducts = target['products']
 
         filtered_products = []
-        for prodname, product in stree.iteritems():
+        for prodname, product in stree.items():
             if not self.filter_product(product, src, target, (prodname,)):
                 filtered_products.append(prodname)
                 continue
@@ -224,8 +224,8 @@ class BasicMirrorWriter(MirrorWriter):
                 return ret
 
             (to_add, to_remove) = util.resolve_work(
-                src=product.get('versions', {}).keys(),
-                target=tproduct.get('versions', {}).keys(),
+                src=list(product.get('versions', {}).keys()),
+                target=list(tproduct.get('versions', {}).keys()),
                 maxnum=self.config.get('max_items'),
                 keep=self.config.get('keep_items'), itemfilter=_filter)
 
@@ -240,7 +240,7 @@ class BasicMirrorWriter(MirrorWriter):
                     tversions[vername] = util.stringitems(version)
 
                 added = {}
-                for itemname, item in version.get('items', {}).iteritems():
+                for itemname, item in version.get('items', {}).items():
                     pgree = (prodname, vername, itemname)
                     if not self.filter_item(item, src, target, pgree):
                         continue
@@ -260,7 +260,7 @@ class BasicMirrorWriter(MirrorWriter):
 
             for vername in to_remove:
                 tversion = tversions[vername]
-                for itemname in tversion.get('items', {}).keys():
+                for itemname in list(tversion.get('items', {}).keys()):
                     self.remove_item(tversion['items'][itemname], src, target,
                                      (prodname, vername, itemname))
 
@@ -275,7 +275,7 @@ class BasicMirrorWriter(MirrorWriter):
         ##
         del_products = []
         if self.config.get('delete_products', False):
-            del_products.extend([p for p in ttree.keys() if p not in stree])
+            del_products.extend([p for p in list(ttree.keys()) if p not in stree])
         if self.config.get('delete_filtered_products', False):
             del_products.extend([p for p in filtered_products
                                  if p not in stree])
