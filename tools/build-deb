@@ -6,7 +6,6 @@ UNCOMMITTED=${UNCOMMITTED:-0}
 
 fail() { echo "$@" 1>&2; exit 1; }
 cleanup() {
-   rm -Rf /tmp/my.out; cp -a $TEMP_D /tmp/my.out
    [ -z "$TEMP_D" ] || rm -Rf "$TEMP_D"
 }
 
@@ -76,8 +75,7 @@ debuild "$@" || fail "debuild failed"
 cd "$TEMP_D"
 for f in *; do
    [ -f "$f" ] || continue
-   cp "$f" "$start_d/out" || fail "failed copy $f"
+   cp "$f" "$start_d" || fail "failed copy $f"
    echo "wrote $f"
 done
 exit
-
