@@ -4,7 +4,7 @@ import simplestreams.util as util
 import os
 import subprocess
 import tempfile
-import yaml
+import json
 
 REQUIRED_FIELDS = ("load_products",)
 HOOK_NAMES = (
@@ -50,12 +50,11 @@ Available command hooks:
 
 
 Other Configuration:
-  product_load_output_format: one of [serial_list, yaml]
+  product_load_output_format: one of [serial_list, json]
     serial_list: The default output should be white space delimited
                  output of product_name and version.
-    yaml: output should be a yaml formated dictionary formated like
-          products:1.0 content.  Note, json is a proper subset of
-          yaml, so it is acceptable to output json content.
+    json: output should be a json formated dictionary formated like
+          products:1.0 content.
 
 Environments / Variables:
   When a hook is invoked, data about the relevant entity is
@@ -79,7 +78,7 @@ Environments / Variables:
 class CommandHookMirror(mirrors.BasicMirrorWriter):
     def __init__(self, config):
         if isinstance(config, str):
-            config = yaml.safe_load(config)
+            config = util.load_content(config)
         check_config(config)
 
         super(CommandHookMirror, self).__init__(config=config)
@@ -250,8 +249,8 @@ def load_product_output(output, content_id, fmt="serial_list"):
             working['products'][product_id]['versions'][version] = {}
         return working
 
-    elif fmt == "yaml":
-        return yaml.safe_load(output)
+    elif fmt == "json":
+        return util.load_content(output)
 
     return
 
