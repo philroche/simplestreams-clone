@@ -17,7 +17,10 @@ X-Python3-Version: >= 3.2
 Package: simplestreams
 Architecture: all
 Priority: extra
-Depends: python3-simplestreams, ${misc:Depends}, ${python3:Depends}
+Depends: python3-simplestreams,
+         python3-yaml,
+         ${misc:Depends},
+         ${python3:Depends}
 Replaces: python-simplestreams (<= 0.1.0~bzr230)
 Conflicts: python-simplestreams (<= 0.1.0~bzr230)
 Description: Library and tools for using Simple Streams data
@@ -27,11 +30,7 @@ Description: Library and tools for using Simple Streams data
 Package: python3-simplestreams
 Architecture: all
 Priority: extra
-Depends: gnupg,
-         python3-requests (>= 0.8.2),
-         python3-yaml,
-         ${misc:Depends},
-         ${python3:Depends}
+Depends: gnupg, python3-requests (>= 0.8.2), ${misc:Depends}, ${python3:Depends}
 Description: Library and tools for using Simple Streams data
  This package provides a client for interacting with simple
  streams data as is produced to describe Ubuntu's cloud images.
