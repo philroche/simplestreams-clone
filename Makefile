@@ -13,6 +13,8 @@ build:
 	@echo nothing to do for $@
 test:
 	nosetests3 -v tests/
+test2:
+	nosetests -v tests/
 
 exdata: exdata/fake exdata/data
 
@@ -42,4 +44,4 @@ gnupg/README: $(PUBKEYS) $(SECKEY)
 examples-sign:
 	$(TENV) js2signed examples/cirros examples/foocloud
 
-.PHONY: exdata/fake exdata/data exdata-query examples-sign
+.PHONY: exdata/fake exdata/data exdata-query examples-sign test test2
