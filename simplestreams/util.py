@@ -413,7 +413,7 @@ def subp(args, data=None, capture=True, shell=False):
         stdout, stderr = (subprocess.PIPE, subprocess.PIPE)
 
     sp = subprocess.Popen(args, stdout=stdout, stderr=stderr,
-                          stdin=subprocess.PIPE)
+                          stdin=subprocess.PIPE, shell=shell)
     if isinstance(data, str):
         data = data.encode('utf-8')
 
