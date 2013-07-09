@@ -33,10 +33,17 @@ PRODUCTS_TREE_DATA = (
 )
 PRODUCTS_TREE_HIERARCHY = [_k[0] for _k in PRODUCTS_TREE_DATA]
 
+try:
+    # python2
+    _STRING_TYPES = (str, basestring, unicode)
+except NameError:
+    # python3
+    _STRING_TYPES = (str,)
+
 
 def stringitems(data):
     return {k: v for k, v in data.items() if
-            isinstance(v, str)}
+            isinstance(v, _STRING_TYPES)}
 
 
 def products_exdata(tree, pedigree, include_top=True, insert_fieldnames=True):
