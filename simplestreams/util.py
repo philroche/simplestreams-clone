@@ -225,11 +225,7 @@ def read_possibly_signed(path, reader=open):
         # http://rfc-ref.org/RFC-TEXTS/2440/chapter7.html
         out = ""
         cmd = ["gpg", "--batch", "--verify", "-"]
-        sp = subprocess.Popen(cmd, stderr=subprocess.STDOUT,
-                              stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-        (out, _err) = sp.communicate(content)
-        if sp.returncode != 0:
-            raise subprocess.CalledProcessError(sp.returncode, cmd, output=out)
+        (out, _err) = subp(cmd, data=content)
 
         ret = {'body': '', 'signature': '', 'garbage': ''}
         lines = content.splitlines()
