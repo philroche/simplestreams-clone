@@ -245,7 +245,7 @@ def _checksum_file(fobj, read_size=util.READ_SIZE, checksums=None):
         checksums = {'md5': None}
     cksum = util.checksummer(checksums=checksums)
     while True:
-        buf = fp.read(read_size)
+        buf = fobj.read(read_size)
         cksum.update(buf)
         if len(buf) != read_size:
             break
