@@ -43,6 +43,9 @@ def main():
                         help='prefix for each published image name')
     parser.add_argument('--cloud-name', metavar="name", default=None,
                         required=True, help='unique name for this cloud')
+    parser.add_argument('--modify-hook', metavar="cmd", default=None,
+                        required=False,
+                        help='invoke cmd on each image prior to upload')
     parser.add_argument('--content-id', metavar="name", default=None,
                         required=True,
                         help='content-id to use for published data.'
@@ -57,7 +60,8 @@ def main():
     args = parser.parse_args()
 
     mirror_config = {'max_items': args.max, 'keep_items': args.keep,
-                     'cloud_name': args.cloud_name}
+                     'cloud_name': args.cloud_name,
+                     'modify_hook': args.modify_hook}
 
     smirror = mirrors.UrlMirrorReader(args.source_mirror, mirrors=args.mirrors)
     if args.output_dir and args.output_swift:
