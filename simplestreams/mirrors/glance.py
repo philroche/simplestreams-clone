@@ -168,8 +168,10 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             try:
                 (tmp_path, tmp_del) = util.get_local_copy(contentsource)
                 if self.modify_hook:
-                    create_kwargs['checksum'] = call_hook(item=t_item,
-                                                          path=tmp_path)
+                    newmd5 = call_hook(item=t_item, path=tmp_path)
+                    create_kwargs['checksum'] = newmd5
+                    t_item['md5'] = newmd5
+
             finally:
                 contentsource.close()
 
