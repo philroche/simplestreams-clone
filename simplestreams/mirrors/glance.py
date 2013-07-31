@@ -241,9 +241,11 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
 
 def _checksum_file(fobj, read_size=util.READ_SIZE, checksums=None):
+    if checksums is None:
+        checksums = {'md5': None}
     cksum = util.checksummer(checksums=checksums)
     while True:
-        buf = reader.read(read_size)
+        buf = fp.read(read_size)
         cksum.update(buf)
         if len(buf) != read_size:
             break
@@ -259,7 +261,7 @@ def call_hook(item, path, cmd):
     util.subp(cmd, env=env, capture=False)
 
     with open(path, "rb") as fp:
-        md5 = _checksum_file(fp, checksums=["md5"])
+        md5 = _checksum_file(fp, checksums={'md5': None})
 
     return md5
 
