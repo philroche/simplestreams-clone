@@ -168,10 +168,12 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             try:
                 (tmp_path, tmp_del) = util.get_local_copy(contentsource)
                 if self.modify_hook:
-                    newmd5 = call_hook(item=t_item, path=tmp_path,
-                                       cmd=self.modify_hook)
+                    (newsize, newmd5) = call_hook(item=t_item, path=tmp_path,
+                                                  cmd=self.modify_hook)
                     create_kwargs['checksum'] = newmd5
+                    create_kwargs['size'] = newsize
                     t_item['md5'] = newmd5
+                    t_item['size'] = newsize
 
             finally:
                 contentsource.close()
@@ -263,6 +265,6 @@ def call_hook(item, path, cmd):
     with open(path, "rb") as fp:
         md5 = _checksum_file(fp, checksums={'md5': None})
 
-    return md5
+    return (os.path.getsize(path), md5)
 
 # vi: ts=4 expandtab syntax=python
