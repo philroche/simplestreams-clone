@@ -59,9 +59,13 @@ def main():
     parser.add_argument('path', nargs='?', default="streams/v1/index.sjson")
     args = parser.parse_args()
 
+    modify_hook = None
+    if args.modify_hook:
+        modify_hook = split(args.modify_hook)
+
     mirror_config = {'max_items': args.max, 'keep_items': args.keep,
                      'cloud_name': args.cloud_name,
-                     'modify_hook': args.modify_hook}
+                     'modify_hook': modify_hook}
 
     smirror = mirrors.UrlMirrorReader(args.source_mirror, mirrors=args.mirrors)
     if args.output_dir and args.output_swift:
