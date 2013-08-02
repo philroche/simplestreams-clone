@@ -112,8 +112,6 @@ def main():
     pfm = util.path_from_mirror_url
     (cfg['mirror_url'], cfg['path']) = pfm(cfg['mirror_url'], cfg.get('path'))
 
-    print("cfg['path']=%s cfg['mirror']=%s" % (cfg['path'], cfg['mirror_url']))
-
     if missing:
         sys.stderr.write("must provide input for (--hook/%s for default):\n"
                          % defhook)
