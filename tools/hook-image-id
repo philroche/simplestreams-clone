@@ -83,13 +83,7 @@ call_sync() {
     url="$1"
     shift
 
-    if [ -z "$path" ] &&
-        [ "${url%.json}" != "${url}" -o "${url%.sjson}" != "${url}" ]; then
-        # split up path if it looks like it could use it
-        local ourl="$url"
-        url="${ourl%/streams/v1/*}/"
-        path="${ourl#${url}}"
-    fi
+    [ -n "$url" ] || { Usage 1>&2; error "Must provide url"; return 1; }
 
     [ -n "$path" ] && pt[${#pt[@]}]="--path=$path"
     pt[${#pt[@]}]="$url"
