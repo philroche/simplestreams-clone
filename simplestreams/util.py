@@ -438,7 +438,7 @@ def get_sign_cmd(path, output=None, inline=False):
     if inline:
         cmd.append('--clearsign')
     else:
-        cmd.extend(['--armor', '--sign'])
+        cmd.extend(['--armor', '--detach-sign'])
 
     cmd.extend([path])
     return cmd
