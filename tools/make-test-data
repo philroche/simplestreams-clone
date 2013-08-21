@@ -308,6 +308,7 @@ def printitem(item, exdata):
 
 
 def create_image_data(query_tree, out_d, streamdir):
+    license = 'http://www.canonical.com/intellectual-property-policy'
     hashcache = os.path.join(query_tree, "FILE_DATA_CACHE")
     FILE_DATA['filename'] = hashcache
     if os.path.isfile(hashcache):
@@ -338,6 +339,7 @@ def create_image_data(query_tree, out_d, streamdir):
         tree[stream]['updated'] = ts
         tree[stream]['content_id'] = cid
         tree[stream]['datatype'] = 'image-downloads'
+        tree[stream]['license'] = license
 
         outfile = os.path.join(out_d, stream, streamdir, cid + ".json")
         util.mkdir_p(os.path.dirname(outfile))
