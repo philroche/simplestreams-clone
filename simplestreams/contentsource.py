@@ -21,7 +21,7 @@ import os
 import sys
 
 if sys.version_info > (3, 0):
-    import urllib.parse as urlparse
+    import urllib.parse as urlparse  # pylint: disable=F0401,E0611
 else:
     import urlparse
 
@@ -43,8 +43,8 @@ try:
     URL_READER_CLASSNAME = "RequestsUrlReader"
 except:
     if sys.version_info > (3, 0):
-        import urllib.request as urllib_request
-        import urllib.error as urllib_error
+        import urllib.request as urllib_request  # pylint: disable=F0401, E0611
+        import urllib.error as urllib_error  # pylint: disable=F0401, E0611
     else:
         import urllib2 as urllib_request
         urllib_error = urllib_request
