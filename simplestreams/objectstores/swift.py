@@ -58,14 +58,15 @@ class SwiftObjectStore(objectstores.ObjectStore):
         self.keystone_creds = openstack.load_keystone_creds()
         if region is not None:
             self.keystone_creds['region_name'] = region
-        
+
         conn_info = openstack.get_service_conn_info('object-store',
                                                     **self.keystone_creds)
         self.swiftclient = get_swiftclient(**conn_info)
 
         # http://docs.openstack.org/developer/swift/misc.html#acls
         self.swiftclient.put_container(self.container,
-            headers={'X-Container-Read': '.r:*,.rlistings'})
+                                       headers={'X-Container-Read':
+                                                '.r:*,.rlistings'})
 
     def insert(self, path, reader, checksums=None, mutable=True):
         #store content from reader.read() into path, expecting result checksum
@@ -131,8 +132,7 @@ class SwiftObjectStore(objectstores.ObjectStore):
 def headers_match_checksums(headers, checksums):
     if not (headers and checksums):
         return False
-    if ('md5' in checksums and
-        headers.get('etag') == checksums.get('md5')):
+    if ('md5' in checksums and headers.get('etag') == checksums.get('md5')):
         return True
     return False
 

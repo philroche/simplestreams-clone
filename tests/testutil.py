@@ -6,6 +6,7 @@ from simplestreams import mirrors
 EXAMPLES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                             "..", "examples"))
 
+
 def get_mirror_reader(name, docdir=None):
     if docdir is None:
         docdir = EXAMPLES_DIR

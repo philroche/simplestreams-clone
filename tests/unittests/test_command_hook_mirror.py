@@ -2,6 +2,7 @@ from unittest import TestCase
 import simplestreams.mirrors.command_hook as chm
 from tests.testutil import get_mirror_reader
 
+
 class TestCommandHookMirror(TestCase):
     """Test of CommandHookMirror."""
 
@@ -30,7 +31,6 @@ class TestCommandHookMirror(TestCase):
         # the 'load_products' should be called once for each content
         # in the stream.
         self.assertEqual(self._run_commands, [['true'], ['true']])
-
 
     def _run_command(self, cmd, env=None, capture=False, rcs=None):
         _pylint = (env, capture, rcs)

@@ -25,6 +25,7 @@ import tempfile
 import simplestreams.objectstores as objectstores
 import simplestreams.contentsource as cs
 
+
 class S3ObjectStore(objectstores.ObjectStore):
 
     _bucket = None
