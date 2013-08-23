@@ -12,7 +12,7 @@ class TestCommandHookMirror(TestCase):
         self.assertRaises(TypeError, chm.CommandHookMirror, {})
 
     def test_init_with_load_products_works(self):
-        mirror = chm.CommandHookMirror({'load_products': 'true'})
+        _mirror = chm.CommandHookMirror({'load_products': 'true'})
 
     def test_stream_load_empty(self):
 
@@ -33,10 +33,10 @@ class TestCommandHookMirror(TestCase):
 
 
     def _run_command(self, cmd, env=None, capture=False, rcs=None):
+        _pylint = (env, capture, rcs)
         self._run_commands.append(cmd)
         rc = 0
         output = ''
-        print(cmd)
         return (rc, output)
 
 # vi: ts=4 expandtab syntax=python

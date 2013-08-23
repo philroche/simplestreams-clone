@@ -57,7 +57,6 @@ class TestProductsSet(TestCase):
                                                   'item2': {'f2': '2'}}}}
         self.assertEqual(tree,
             {'products': {'P1': {'versions': expvers}}})
-        pass
 
 
 class TestProductsDel(TestCase):

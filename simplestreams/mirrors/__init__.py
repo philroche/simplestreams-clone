@@ -189,13 +189,13 @@ class BasicMirrorWriter(MirrorWriter):
             if not self.filter_index_entry(index_entry, src, (content_id,)):
                 continue
             epath = index_entry.get('path', None)
-            cs = None
+            mycs = None
             if epath:
                 if index_entry.get('format') in ("index:1.0", "products:1.0"):
                     self.sync(reader, path=epath)
-                cs = reader(epath)
+                mycs = reader(epath)
 
-            self.insert_index_entry(index_entry, src, (content_id,), cs)
+            self.insert_index_entry(index_entry, src, (content_id,), mycs)
 
         self.insert_index(path, src, content)
 
@@ -220,6 +220,7 @@ class BasicMirrorWriter(MirrorWriter):
         tproducts = target['products']
 
         filtered_products = []
+        prodname = None
         for prodname, product in stree.items():
             if not self.filter_product(product, src, target, (prodname,)):
                 filtered_products.append(prodname)
@@ -256,7 +257,6 @@ class BasicMirrorWriter(MirrorWriter):
                 if vername not in tversions:
                     tversions[vername] = util.stringitems(version)
 
-                added = {}
                 for itemname, item in version.get('items', {}).items():
                     pgree = (prodname, vername, itemname)
                     if not self.filter_item(item, src, target, pgree):
@@ -292,7 +292,8 @@ class BasicMirrorWriter(MirrorWriter):
         ##
         del_products = []
         if self.config.get('delete_products', False):
-            del_products.extend([p for p in list(ttree.keys()) if p not in stree])
+            del_products.extend([p for p in list(tproducts.keys())
+                                 if p not in stree])
         if self.config.get('delete_filtered_products', False):
             del_products.extend([p for p in filtered_products
                                  if p not in stree])
@@ -300,8 +301,8 @@ class BasicMirrorWriter(MirrorWriter):
         for prodname in del_products:
             ## FIXME: we remove a product here, but unless that acts
             ## recursively, nothing will remove the items in that product
-            self.remove_product(ttree[prodname], src, target, (prodname,))
-            del ttree[prodname]
+            self.remove_product(tproducts[prodname], src, target, (prodname,))
+            del tproducts[prodname]
 
         self.insert_products(path, target, content)
 
@@ -395,6 +396,7 @@ def check_tree_paths(tree, fmt=None):
         fmt = tree.get('format')
     if fmt == "products:1.0":
         def check_path(item, tree, pedigree):
+            _pylint = (tree, pedigree)
             util.assert_safe_path(item.get('path'))
         util.walk_products(tree, cb_item=check_path)
     elif fmt == "index:1.0":

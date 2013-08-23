@@ -21,7 +21,6 @@ import simplestreams.util as util
 import os
 import subprocess
 import tempfile
-import json
 
 REQUIRED_FIELDS = ("load_products",)
 HOOK_NAMES = (
@@ -46,53 +45,51 @@ ENV_HOOK_NAME = "HOOK"
 ENV_FIELDS_NAME = "FIELDS"
 
 
-"""
-CommandHookMirror: invoke commands to implement a SimpleStreamMirror
-
-Available command hooks:
-  load_products:
-    invoked to list items in the products in a given content_id.
-    See product_load_output_format.
-
-  filter_index_entry, filter_item, filter_product, filter_version:
-    invoked to determine if the named entity should be operated on
-    exit 0 for "yes", 1 for "no".
-
-  insert_index, insert_index_entry, insert_item, insert_product,
-  insert_products, insert_version :
-    invoked to insert the given entity.
-
-  remove_product, remove_version, remove_item:
-    invoked to remove the given entity
-
-
-Other Configuration:
-  product_load_output_format: one of [serial_list, json]
-    serial_list: The default output should be white space delimited
-                 output of product_name and version.
-    json: output should be a json formated dictionary formated like
-          products:1.0 content.
-
-Environments / Variables:
-  When a hook is invoked, data about the relevant entity is
-  made available in the environment.
-
-  In all cases:
-    * a special 'FIELDS' key is available which is a space delimited
-      list of keys
-    * a special 'HOOK' field is available that specifies which
-      hook is being called.
-
-  For an item in a products:1.0 file that has a 'path' item, the item
-  will be downloaded and a 'path_local' field inserted into the metadata
-  which will contain the path to the local file.
-
-  If the configuration setting 'item_skip_download' is set to True, then
-  'path_url' will be set instead to a url where the item can be found.
-"""
-
-
 class CommandHookMirror(mirrors.BasicMirrorWriter):
+    """
+    CommandHookMirror: invoke commands to implement a SimpleStreamMirror
+
+    Available command hooks:
+      load_products:
+        invoked to list items in the products in a given content_id.
+        See product_load_output_format.
+    
+      filter_index_entry, filter_item, filter_product, filter_version:
+        invoked to determine if the named entity should be operated on
+        exit 0 for "yes", 1 for "no".
+    
+      insert_index, insert_index_entry, insert_item, insert_product,
+      insert_products, insert_version :
+        invoked to insert the given entity.
+    
+      remove_product, remove_version, remove_item:
+        invoked to remove the given entity
+    
+    
+    Other Configuration:
+      product_load_output_format: one of [serial_list, json]
+        serial_list: The default output should be white space delimited
+                     output of product_name and version.
+        json: output should be a json formated dictionary formated like
+              products:1.0 content.
+    
+    Environments / Variables:
+      When a hook is invoked, data about the relevant entity is
+      made available in the environment.
+    
+      In all cases:
+        * a special 'FIELDS' key is available which is a space delimited
+          list of keys
+        * a special 'HOOK' field is available that specifies which
+          hook is being called.
+    
+      For an item in a products:1.0 file that has a 'path' item, the item
+      will be downloaded and a 'path_local' field inserted into the metadata
+      which will contain the path to the local file.
+    
+      If the configuration setting 'item_skip_download' is set to True, then
+      'path_url' will be set instead to a url where the item can be found.
+    """
     def __init__(self, config):
         if isinstance(config, str):
             config = util.load_content(config)
@@ -283,7 +280,7 @@ def run_command(cmd, env=None, capture=False, rcs=None):
 
     sp = subprocess.Popen(cmd, env=env, stdout=stdout, shell=False)
     (out, _err) = sp.communicate()
-    rc = sp.returncode
+    rc = sp.returncode  # pylint: disable=E1101
 
     if rc not in rcs:
         raise subprocess.CalledProcessError(rc, cmd)

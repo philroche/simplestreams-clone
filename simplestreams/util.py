@@ -30,7 +30,7 @@ from simplestreams.log import LOG
 try:
     ALGORITHMS = list(getattr(hashlib, 'algorithms'))
 except AttributeError:
-    ALGORITHMS = list(hashlib.algorithms_available)
+    ALGORITHMS = list(hashlib.algorithms_available)  # pylint: disable=E1101
 
 ALIASNAME = "_aliases"
 
@@ -240,9 +240,8 @@ def read_possibly_signed(path, reader=open):
 
     if content.startswith(PGP_SIGNED_MESSAGE_HEADER):
         # http://rfc-ref.org/RFC-TEXTS/2440/chapter7.html
-        out = ""
         cmd = ["gpg", "--batch", "--verify", "-"]
-        (out, _err) = subp(cmd, data=content)
+        _outerr = subp(cmd, data=content)
 
         ret = {'body': '', 'signature': '', 'garbage': ''}
         lines = content.splitlines()
@@ -432,9 +431,9 @@ def subp(args, data=None, capture=True, shell=False):
 
     (out, err) = sp.communicate(data)
 
-    if sp.returncode != 0:
-        raise subprocess.CalledProcessError(sp.returncode, args,
-                                            output=(out, err))
+    rc = sp.returncode  # pylint: disable=E1101
+    if rc != 0:
+        raise subprocess.CalledProcessError(rc, args, output=(out, err))
 
     return (out, err)
 

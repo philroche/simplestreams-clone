@@ -4,8 +4,13 @@ from simplestreams.util import resolve_work
 
 class TestStreamResolveWork(TestCase):
 
-    def tryit(self, src=[], target=[], maxnum=None, keep=False,
-              itemfilter=None, add=[], remove=[]):
+    def tryit(self, src, target, maxnum=None, keep=False,
+              itemfilter=None, add=None, remove=None):
+        if add is None:
+            add = []
+        if remove is None:
+            remove = []
+
         (r_add, r_remove) = resolve_work(src, target, maxnum=maxnum, keep=keep,
                                          itemfilter=itemfilter)
         self.assertEqual(r_add, add)
@@ -49,7 +54,7 @@ class TestStreamResolveWork(TestCase):
         self.tryit(src=[], target=[3, 2, 1], maxnum=3, keep=True, add=[],
                    remove=[])
 
-    def test_null_remote_without_keep(self):
+    def test_null_remote_without_keep_with_maxnum(self):
         self.tryit(src=[], target=[3, 2, 1], maxnum=3, keep=False, add=[],
                    remove=[1, 2, 3])
 

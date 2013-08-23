@@ -24,7 +24,6 @@ import copy
 import errno
 import glanceclient
 import os
-import re
 
 
 def get_glanceclient(version='1', **kwargs):

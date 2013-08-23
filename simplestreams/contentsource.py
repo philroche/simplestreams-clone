@@ -20,7 +20,7 @@ import io
 import os
 import sys
 
-if sys.version_info > (3,0):
+if sys.version_info > (3, 0):
     import urllib.parse as urlparse
 else:
     import urlparse
@@ -39,7 +39,7 @@ try:
         raise Exception("Couldn't use requests")
     URL_READER_CLASSNAME = "RequestsUrlReader"
 except:
-    import urllib.request, urllib.error, urllib.parse
+    import urllib.request, urllib.error
     URL_READER_CLASSNAME = "Urllib2UrlReader"
 
 
@@ -108,11 +108,11 @@ class UrlContentSource(ContentSource):
         myerr.errno = errno.ENOENT
         raise myerr
 
-    def open(self):
+    def open(self):  # pylint: disable=E0202
         self.fd = self._open()
         self.read = self._read
 
-    def read(self, size=-1):
+    def read(self, size=-1):  # pylint: disable=E0202
         if self.fd is None:
             self.open()
 
@@ -201,7 +201,7 @@ class IteratorContentSource(ContentSource):
                 break
         return ret
 
-    def close():
+    def close(self):
         pass
 
 
@@ -214,9 +214,6 @@ class MemoryContentSource(FdContentSource):
 
 
 class UrlReader(object):
-    def __init__(self, url):
-        raise NotImplementedError()
-
     def read(self, size=-1):
         raise NotImplementedError()
 

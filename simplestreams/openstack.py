@@ -37,7 +37,7 @@ def load_keystone_creds(**kwargs):
             ret[lc[3:]] = os.environ[name]
 
     if 'insecure' in ret:
-        if isinstance(insecure, str):
+        if isinstance(ret['insecure'], str):
             ret['insecure'] = (ret['insecure'].lower() not in
                                ("", "0", "no", "off"))
         else:
@@ -76,8 +76,8 @@ def get_regions(client=None, services=None, kscreds=None):
         services = list(endpoints.keys())
     regions = set()
     for service in services:
-       [regions.add(r['region']) for r in endpoints.get(service, {}) 
-           if r.get('region')]
+        for r in endpoints.get(service, {}):
+            regions.add(r['region'])
 
     return list(regions)
 
@@ -123,6 +123,6 @@ def _strip_version(endpoint):
         endpoint = endpoint[:-1]
     url_bits = endpoint.split('/')
     # regex to match 'v1' or 'v2.0' etc
-    if re.match('v\d+\.?\d*', url_bits[-1]):
+    if re.match(r'v\d+\.?\d*', url_bits[-1]):
         endpoint = '/'.join(url_bits[:-1])
     return endpoint

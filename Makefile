@@ -15,6 +15,8 @@ test:
 	nosetests3 -v tests/
 test2:
 	nosetests -v tests/
+lint:
+	./tools/run-pylint
 
 exdata: exdata/fake exdata/data
 
