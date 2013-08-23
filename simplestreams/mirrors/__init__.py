@@ -82,71 +82,75 @@ class MirrorWriter(object):
     def filter_index_entry(self, data, src, pedigree):
         # src is source index tree.
         # data is src['index'][ped[0]]
+        _pylint = (data, src, pedigree)
         return True
 
     def insert_index(self, path, src, content):
         # src is the source index tree
         # content is None or a json rendering (possibly signed) of src
-        pass
+        _pylint = (path, src, content)
 
     def insert_index_entry(self, data, src, pedigree, contentsource):
         # src is the top level index (index:1.0 format)
         # data is src['index'][pedigree[0]]
         # contentsource is a ContentSource if 'path' exists in data or None
-        pass
+        _pylint = (data, src, pedigree, contentsource)
 
     ## Products Operations ##
     def filter_product(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]
+        _pylint = (data, src, target, pedigree)
         return True
 
     def filter_version(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]
+        _pylint = (data, src, target, pedigree)
         return True
 
     def filter_item(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]['items'][ped[2]]
+        _pylint = (data, src, target, pedigree)
         return True
 
     def insert_products(self, path, target, content):
         # path is the path to store data (where it came from on source mirror)
         # target is the target products:1.0 tree
         # content is None or a json rendering (possibly signed) of src
-        pass
+        _pylint = (path, target, content)
 
     def insert_product(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]
-        pass
+        _pylint = (data, src, target, pedigree)
 
     def insert_version(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]
-        pass
+        _pylint = (data, src, target, pedigree)
 
     def insert_item(self, data, src, target, pedigree, contentsource):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]['items'][ped[2]]
         # contentsource is a ContentSource if 'path' exists in data or None
-        pass
+        _pylint = (data, src, target, pedigree, contentsource)
 
     def remove_product(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]
-        pass
+        _pylint = (data, src, target, pedigree)
 
     def remove_version(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]
-        pass
+        _pylint = (data, src, target, pedigree)
 
     def remove_item(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]['items'][ped[2]]
-        pass
+        _pylint = (data, src, target, pedigree)
 
 
 class UrlMirrorReader(MirrorReader):
@@ -176,6 +180,9 @@ class BasicMirrorWriter(MirrorWriter):
         if config is None:
             config = {}
         self.config = config
+
+    def load_products(self, path=None, content_id=None):
+        super(BasicMirrorWriter, self).load_products(path, content_id)
 
     def sync_index(self, reader, path=None, src=None, content=None):
         (src, content) = _get_data_content(path, src, content, reader)
