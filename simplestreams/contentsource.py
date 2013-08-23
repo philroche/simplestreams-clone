@@ -30,6 +30,9 @@ READ_BUFFER_SIZE = 1024 * 10
 READ_BUFFER_SIZE = 1024 * 10
 
 try:
+    # We try to use requests because we can do gzip encoding with it.
+    # however requests < 1.1 didn't have 'stream' argument to 'get'
+    # making it completely unsuitable for downloading large files.
     import requests
     from distutils.version import LooseVersion
     import pkg_resources
@@ -39,7 +42,13 @@ try:
         raise Exception("Couldn't use requests")
     URL_READER_CLASSNAME = "RequestsUrlReader"
 except:
-    import urllib.request, urllib.error
+    if sys.version_info > (3, 0):
+        import urllib.request as urllib_request
+        import urllib.error as urllib_error
+    else:
+        import urllib2 as urllib_request
+        urllib_error = urllib_request
+
     URL_READER_CLASSNAME = "Urllib2UrlReader"
 
 
@@ -226,16 +235,16 @@ class Urllib2UrlReader(UrlReader):
         (url, username, password) = parse_url_auth(url)
         self.url = url
         if username is None:
-            opener = urllib.request.urlopen
+            opener = urllib_request.urlopen
         else:
-            mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+            mgr = urllib_request.HTTPPasswordMgrWithDefaultRealm()
             mgr.add_password(None, url, username, password)
-            handler = urllib.request.HTTPBasicAuthHandler(mgr)
-            opener = urllib.request.build_opener(handler).open
+            handler = urllib_request.HTTPBasicAuthHandler(mgr)
+            opener = urllib_request.build_opener(handler).open
 
         try:
             self.req = opener(url)
-        except urllib.error.HTTPError as e:
+        except urllib_error.HTTPError as e:
             if e.code == 404:
                 myerr = IOError("Unable to open %s" % url)
                 myerr.errno = errno.ENOENT
