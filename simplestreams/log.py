@@ -16,8 +16,8 @@
 #   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-from logging import NOTSET
-
+from logging import (DEBUG, ERROR, FATAL, INFO, NOTSET, # pylint: disable=W0611
+                     WARN, WARNING)
 
 class NullHandler(logging.Handler):
     def emit(self, record):
