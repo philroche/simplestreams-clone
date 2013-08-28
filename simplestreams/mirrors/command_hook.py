@@ -287,6 +287,9 @@ def run_command(cmd, env=None, capture=False, rcs=None):
 
     if out is None:
         out = ''
+    elif isinstance(out, bytes):
+        out = out.decode()
+
     return (rc, out)
 
 # vi: ts=4 expandtab syntax=python
