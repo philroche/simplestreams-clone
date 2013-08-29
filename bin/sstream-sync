@@ -81,6 +81,9 @@ def main():
     parser.add_argument('--log-file', default=sys.stderr,
                         type=argparse.FileType('w'))
 
+    parser.add_argument('--keyring', action='store', default=None,
+                        help='The keyring to be specified to gpg via --keyring')
+
     parser.add_argument('mirror_url')
     cmdargs = parser.parse_args()
 
@@ -136,8 +139,13 @@ def main():
     level = (log.ERROR, log.INFO, log.DEBUG)[min(cmdargs.verbose, 2)]
     log.basicConfig(stream=cmdargs.log_file, level=level)
 
-    signed = cfg['mirror_url'].endswith('sjson')
-    smirror = mirrors.UrlMirrorReader(cfg['mirror_url'], signed=signed)
+    def policy(content):
+        if cfg['mirror_url'].endswith('sjson'):
+            return util.read_signed(content, keyring=cmdargs.keyring)
+        else:
+            return content
+
+    smirror = mirrors.UrlMirrorReader(cfg['mirror_url'], policy=policy)
     tmirror = command_hook.CommandHookMirror(config=cfg)
     tmirror.sync(smirror, cfg['path'])
 

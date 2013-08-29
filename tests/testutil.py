@@ -13,6 +13,6 @@ def get_mirror_reader(name, docdir=None):
 
     src_d = os.path.join(EXAMPLES_DIR, name)
     sstore = objectstores.FileStore(src_d)
-    return mirrors.ObjectStoreMirrorReader(sstore, signed=False)
+    return mirrors.ObjectStoreMirrorReader(sstore, policy=lambda c: c)
 
 # vi: ts=4 expandtab syntax=python

@@ -23,21 +23,18 @@ from simplestreams.log import LOG
 
 
 class MirrorReader(object):
-    def __init__(self, keyring=None, signed=True):
-        self.keyring = keyring
-        self.signed = signed
+    def __init__(self, policy=util.read_signed):
+        """ policy should be a function which returns the extracted payload or
+        raises an exception if the policy is violated. """
+        self.policy = policy
 
     def load_products(self, path):
-        _, content = self.reader(path).read()
+        _, content = self.read(path)
         return util.load_content(content)
 
     def read(self, path):
-        raw = self.source(path).read()
-        raw = raw.decode('utf-8')
-        payload = raw
-        if self.signed:
-            payload = util.read_signed(raw, keyring=self.keyring)
-        return raw, payload
+        raw = self.source(path).read().decode('utf-8')
+        return raw, self.policy(raw)
 
     def source(self, path):
         raise NotImplementedError()
@@ -165,8 +162,8 @@ class MirrorWriter(object):
 
 
 class UrlMirrorReader(MirrorReader):
-    def __init__(self, prefix, mirrors=None, keyring=None, signed=True):
-        super(UrlMirrorReader, self).__init__(keyring=keyring, signed=signed)
+    def __init__(self, prefix, mirrors=None, policy=util.read_signed):
+        super(UrlMirrorReader, self).__init__(policy=policy)
         self._cs = cs.UrlContentSource
         if mirrors is None:
             mirrors = []
@@ -179,9 +176,8 @@ class UrlMirrorReader(MirrorReader):
 
 
 class ObjectStoreMirrorReader(MirrorReader):
-    def __init__(self, objectstore, keyring=None, signed=True):
-        super(ObjectStoreMirrorReader, self).__init__(keyring=keyring,
-                                                      signed=signed)
+    def __init__(self, objectstore, policy=util.read_signed):
+        super(ObjectStoreMirrorReader, self).__init__(policy=policy)
         self.objectstore = objectstore
 
     def source(self, path):
@@ -341,14 +337,14 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
         if content_id:
             try:
                 dpath = self.products_data_path(content_id)
-                return util.load_content(self.read(dpath))
+                return util.load_content(self.source(dpath).read())
             except IOError as e:
                 if e.errno != errno.ENOENT:
                     raise
 
         if path:
             try:
-                (payload, _sig) = util.read_possibly_signed(path, self.reader)
+                payload = self.source(path).read().decode('utf-8')
             except IOError as e:
                 if e.errno != errno.ENOENT:
                     raise
