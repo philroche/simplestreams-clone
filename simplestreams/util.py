@@ -232,15 +232,13 @@ def resolve_work(src, target, maxnum=None, keep=False, itemfilter=None,
     return(add, remove)
 
 
-def read_possibly_signed(path, reader=open):
-    content = ""
-
-    with reader(path) as cfp:
-        content = cfp.read().decode('utf-8')
-
+def read_signed(content, keyring=None):
     if content.startswith(PGP_SIGNED_MESSAGE_HEADER):
         # http://rfc-ref.org/RFC-TEXTS/2440/chapter7.html
-        cmd = ["gpg", "--batch", "--verify", "-"]
+        cmd = ["gpg", "--batch", "--verify"]
+        if keyring:
+            cmd.append("--keyring=%s" % keyring)
+        cmd.append("-")
         _outerr = subp(cmd, data=content)
 
         ret = {'body': '', 'signature': '', 'garbage': ''}
@@ -267,9 +265,10 @@ def read_possibly_signed(path, reader=open):
             else:
                 ret[mode] += lines[i] + "\n"
 
-        return(ret['body'], ret['signature'])
+        return ret['body']
     else:
-        return(content, None)
+        # TODO: something more reasonable?
+        raise Exception("No signature found!")
 
 
 def load_content(content):

@@ -136,9 +136,10 @@ def main():
     level = (log.ERROR, log.INFO, log.DEBUG)[min(cmdargs.verbose, 2)]
     log.basicConfig(stream=cmdargs.log_file, level=level)
 
-    smirror = mirrors.UrlMirrorReader(cfg['mirror_url'])
+    signed = cfg['mirror_url'].endswith('sjson')
+    smirror = mirrors.UrlMirrorReader(cfg['mirror_url'], signed=signed)
     tmirror = command_hook.CommandHookMirror(config=cfg)
-    tmirror.sync(smirror.reader, cfg['path'])
+    tmirror.sync(smirror, cfg['path'])
 
 if __name__ == '__main__':
     main()

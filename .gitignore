@@ -1,0 +1,8 @@
+*__pycache__*
+*pyc
+gnupg
+.gnupg
+exdata
+exdata-query
+examples/**/*.sjson
+examples/**/*.gpg

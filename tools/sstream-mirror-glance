@@ -104,7 +104,7 @@ def main():
         tmirror = glance.GlanceMirror(config=mirror_config,
                                       objectstore=tstore, region=region,
                                       name_prefix=args.name_prefix)
-        tmirror.sync(smirror.reader, args.path)
+        tmirror.sync(smirror, args.path)
 
 
 if __name__ == '__main__':

@@ -23,11 +23,23 @@ from simplestreams.log import LOG
 
 
 class MirrorReader(object):
+    def __init__(self, keyring=None, signed=True):
+        self.keyring = keyring
+        self.signed = signed
+
     def load_products(self, path):
-        content = self.reader(path).read()
+        _, content = self.reader(path).read()
         return util.load_content(content)
 
-    def reader(self, path):
+    def read(self, path):
+        raw = self.source(path).read()
+        raw = raw.decode('utf-8')
+        payload = raw
+        if self.signed:
+            payload = util.read_signed(raw, keyring=self.keyring)
+        return raw, payload
+
+    def source(self, path):
         raise NotImplementedError()
 
 
@@ -67,8 +79,7 @@ class MirrorWriter(object):
         raise NotImplementedError()
 
     def sync(self, reader, path):
-        content = reader(path).read()
-        (payload, _sig) = util.read_possibly_signed(path, reader)
+        content, payload = reader.read(path)
         data = util.load_content(payload)
         fmt = data.get("format", "UNSPECIFIED")
         if fmt == "products:1.0":
@@ -154,24 +165,27 @@ class MirrorWriter(object):
 
 
 class UrlMirrorReader(MirrorReader):
-    def __init__(self, prefix, mirrors=None):
+    def __init__(self, prefix, mirrors=None, keyring=None, signed=True):
+        super(UrlMirrorReader, self).__init__(keyring=keyring, signed=signed)
         self._cs = cs.UrlContentSource
         if mirrors is None:
             mirrors = []
         self.mirrors = mirrors
         self.prefix = prefix
 
-    def reader(self, path):
+    def source(self, path):
         mirrors = [m + path for m in self.mirrors]
         return self._cs(self.prefix + path, mirrors=mirrors)
 
 
 class ObjectStoreMirrorReader(MirrorReader):
-    def __init__(self, objectstore):
+    def __init__(self, objectstore, keyring=None, signed=True):
+        super(ObjectStoreMirrorReader, self).__init__(keyring=keyring,
+                                                      signed=signed)
         self.objectstore = objectstore
 
-    def reader(self, path):
-        return self.objectstore.reader(path)
+    def source(self, path):
+        return self.objectstore.source(path)
 
 
 class BasicMirrorWriter(MirrorWriter):
@@ -200,7 +214,7 @@ class BasicMirrorWriter(MirrorWriter):
             if epath:
                 if index_entry.get('format') in ("index:1.0", "products:1.0"):
                     self.sync(reader, path=epath)
-                mycs = reader(epath)
+                mycs = reader.source(epath)
 
             self.insert_index_entry(index_entry, src, (content_id,), mycs)
 
@@ -272,7 +286,7 @@ class BasicMirrorWriter(MirrorWriter):
                     ipath = item.get('path', None)
                     ipath_cs = None
                     if ipath:
-                        ipath_cs = reader(ipath)
+                        ipath_cs = reader.source(ipath)
                     self.insert_item(item, src, target, pgree, ipath_cs)
 
                 self.insert_version(version, src, target, (prodname, vername))
@@ -327,7 +341,7 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
         if content_id:
             try:
                 dpath = self.products_data_path(content_id)
-                return util.load_content(self.reader(dpath).read())
+                return util.load_content(self.read(dpath))
             except IOError as e:
                 if e.errno != errno.ENOENT:
                     raise
@@ -343,7 +357,7 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
             return util.load_content(payload)
         raise TypeError("unable to load_products with no path")
 
-    def reader(self, path):
+    def source(self, path):
         return self.store.reader(path)
 
     def insert_item(self, data, src, target, pedigree, contentsource):
@@ -388,7 +402,7 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
 
 def _get_data_content(path, data, content, reader):
     if content is None and path:
-        content = reader(path).read()
+        _, content = reader.read(path)
     if data is None and content:
         data = util.load_content(content)
 

@@ -140,7 +140,7 @@ def main():
     level = (log.ERROR, log.INFO, log.DEBUG)[min(cmdargs.verbose, 2)]
     log.basicConfig(stream=cmdargs.log_file, level=level)
 
-    smirror = mirrors.UrlMirrorReader(mirror_url)
+    smirror = mirrors.UrlMirrorReader(mirror_url, signed=path.endswith('sjson'))
 
     filters = get_filters(cmdargs.filters)
     cfg = {'max_items': cmdargs.max_items,
@@ -148,7 +148,7 @@ def main():
            'output_format': cmdargs.output_format}
 
     tmirror = FilterMirror(config=cfg)
-    tmirror.sync(smirror.reader, path)
+    tmirror.sync(smirror, path)
 
 if __name__ == '__main__':
     main()

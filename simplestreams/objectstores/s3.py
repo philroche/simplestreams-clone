@@ -77,7 +77,7 @@ class S3ObjectStore(objectstores.ObjectStore):
         #remove path from store
         self.bucket.delete_key(self.path_prefix + path)
 
-    def reader(self, path):
+    def source(self, path):
         # essentially return an 'open(path, r)'
         key = self.bucket.get_key(self.path_prefix + path)
         if not key:

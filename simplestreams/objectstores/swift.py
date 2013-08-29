@@ -81,7 +81,7 @@ class SwiftObjectStore(objectstores.ObjectStore):
         self.swiftclient.delete_object(container=self.container,
                                        obj=self.path_prefix + path)
 
-    def reader(self, path):
+    def source(self, path):
         def itgen():
             (_headers, iterator) = self.swiftclient.get_object(
                 container=self.container, obj=self.path_prefix + path,
