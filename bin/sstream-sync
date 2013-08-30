@@ -140,7 +140,7 @@ def main():
     log.basicConfig(stream=cmdargs.log_file, level=level)
 
     def policy(content):
-        if cfg['mirror_url'].endswith('sjson'):
+        if cfg['path'].endswith('sjson'):
             return util.read_signed(content, keyring=cmdargs.keyring)
         else:
             return content
