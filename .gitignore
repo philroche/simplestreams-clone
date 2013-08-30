@@ -4,5 +4,6 @@ gnupg
 .gnupg
 exdata
 exdata-query
-examples/**/*.sjson
-examples/**/*.gpg
+*.sjson
+*.gpg
+examples/bad

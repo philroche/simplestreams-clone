@@ -11,14 +11,14 @@ endif
 
 build:
 	@echo nothing to do for $@
-test:
-	nosetests3 -v tests/
-test2:
-	nosetests -v tests/
+test: bad-data
+	$(TENV) nosetests3 -v tests/
+test2: bad-data
+	$(TENV) nosetests -v tests/
 lint:
 	./tools/run-pylint
 
-exdata: exdata/fake exdata/data
+exdata: exdata/fake exdata/data exdata/bad
 
 exdata/data: exdata-query gnupg
 	$(TENV) env REAL_DATA=1 ./tools/make-test-data $(EXDATA_SIGN_ARG) exdata-query/ exdata/data
@@ -43,7 +43,15 @@ gnupg/README: $(PUBKEYS) $(SECKEY)
 	  $(TENV) gpg-trust-pubkey $$pubkey; done
 	@echo "this is used by $(TENV) as the gpg directory" > gnupg/README
 
-examples-sign:
+examples-sign: gnupg
 	$(TENV) js2signed examples/cirros examples/foocloud
 
-.PHONY: exdata/fake exdata/data exdata-query examples-sign test test2
+# This is data where the signatures are invalid which can be used for testing
+# whether or not the signature verification is behaving properly.
+bad-data: examples-sign
+	@mkdir -p examples/bad
+	@cp examples/foocloud/streams/v1/index.sjson examples/bad/
+	@sed -i 's/foovendor/attacker/g' examples/bad/index.sjson
+	@touch examples/bad/index.json
+
+.PHONY: exdata/fake exdata/data exdata/bad exdata-query examples-sign bad-data test test2
