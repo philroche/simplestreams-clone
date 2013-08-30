@@ -41,7 +41,7 @@ class ObjectStore(object):
         #remove path from store
         raise NotImplementedError()
 
-    def reader(self, path):
+    def source(self, path):
         # return a ContentSource for the provided path
         raise NotImplementedError()
 
@@ -65,7 +65,7 @@ class MemoryObjectStore(ObjectStore):
         #remove path from store
         del self.data[path]
 
-    def reader(self, path):
+    def source(self, path):
         return cs.MemoryContentSource(content=self.data['path'],
                                       url="%s://%s" % (self.__class__, path))
 
@@ -128,7 +128,7 @@ class FileStore(ObjectStore):
             prev_d = cur_d
             cur_d = os.path.dirname(path)
 
-    def reader(self, path):
+    def source(self, path):
         return cs.UrlContentSource(url=self._fullpath(path))
 
     def _fullpath(self, path):

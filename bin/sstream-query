@@ -129,6 +129,9 @@ def main():
     parser.add_argument('--log-file', default=sys.stderr,
                         type=argparse.FileType('w'))
 
+    parser.add_argument('--keyring', action='store', default=None,
+                        help='The keyring to be specified to gpg via --keyring')
+
     parser.add_argument('mirror_url')
     parser.add_argument('filters', nargs='*', default=[])
 
@@ -140,7 +143,13 @@ def main():
     level = (log.ERROR, log.INFO, log.DEBUG)[min(cmdargs.verbose, 2)]
     log.basicConfig(stream=cmdargs.log_file, level=level)
 
-    smirror = mirrors.UrlMirrorReader(mirror_url)
+    def policy(content):
+        if path.endswith('sjson'):
+            return util.read_signed(content, keyring=cmdargs.keyring)
+        else:
+            return content
+
+    smirror = mirrors.UrlMirrorReader(mirror_url, policy=policy)
 
     filters = get_filters(cmdargs.filters)
     cfg = {'max_items': cmdargs.max_items,
@@ -148,7 +157,7 @@ def main():
            'output_format': cmdargs.output_format}
 
     tmirror = FilterMirror(config=cfg)
-    tmirror.sync(smirror.reader, path)
+    tmirror.sync(smirror, path)
 
 if __name__ == '__main__':
     main()
