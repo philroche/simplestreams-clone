@@ -4,6 +4,8 @@ PUBKEY := examples/keys/example.pub
 PUBKEYS := $(PUBKEY)
 SECKEY := examples/keys/example.sec
 
+example_sstream_files := $(shell find examples/*/streams/ -name "*.json" -type f)
+
 EXDATA_SIGN ?= 1
 ifeq ($(EXDATA_SIGN),1)
     EXDATA_SIGN_ARG := --sign
@@ -11,14 +13,15 @@ endif
 
 build:
 	@echo nothing to do for $@
-test:
+
+test: examples-sign
 	$(TENV) nosetests3 -v tests/
-test2:
+test2: examples-sign
 	$(TENV) nosetests -v tests/
 lint:
 	./tools/run-pylint
 
-exdata: exdata/fake exdata/data exdata/bad
+exdata: exdata/fake exdata/data
 
 exdata/data: exdata-query gnupg
 	$(TENV) env REAL_DATA=1 ./tools/make-test-data $(EXDATA_SIGN_ARG) exdata-query/ exdata/data
@@ -43,7 +46,14 @@ gnupg/README: $(PUBKEYS) $(SECKEY)
 	  $(TENV) gpg-trust-pubkey $$pubkey; done
 	@echo "this is used by $(TENV) as the gpg directory" > gnupg/README
 
+# this is less than ideal, but Make and ':' in targets do not work together
+# so instead of proper rules, we have this phoney rule that makes the
+# targets.  This would probably cause issue with -j.
 examples-sign: gnupg
-	$(TENV) js2signed examples/cirros examples/foocloud
+	@for f in $(example_sstream_files); do \
+		[ "$$f.gpg" -nt "$$f" -a "$${f%.json}.sjson" -nt "$$f" ] || \
+		{ echo "$(TENV) js2signed $$f" 1>&2; $(TENV) js2signed $$f; } || exit; \
+	done
 
-.PHONY: exdata/fake exdata/data exdata/bad exdata-query examples-sign test test2
+
+.PHONY: exdata/fake exdata/data exdata-query examples-sign test test2
