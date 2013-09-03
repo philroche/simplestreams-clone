@@ -58,7 +58,7 @@ def main():
     tmirror = mirrors.ObjectStoreMirrorWriter(config=mirror_config,
                                               objectstore=tstore)
 
-    tmirror.sync(smirror.reader, args.path)
+    tmirror.sync(smirror, args.path)
 
 
 if __name__ == '__main__':
