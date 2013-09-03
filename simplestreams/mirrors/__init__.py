@@ -354,7 +354,7 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
         raise TypeError("unable to load_products with no path")
 
     def source(self, path):
-        return self.store.reader(path)
+        return self.store.source(path)
 
     def insert_item(self, data, src, target, pedigree, contentsource):
         util.products_set(target, data, pedigree)

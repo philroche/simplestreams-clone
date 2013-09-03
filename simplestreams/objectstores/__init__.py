@@ -81,7 +81,7 @@ class FileStore(ObjectStore):
             if not mutable:
                 # if the file exists, and not mutable, return
                 return
-            if has_valid_checksum(path=path, reader=self.reader,
+            if has_valid_checksum(path=path, reader=self.source,
                                   checksums=checksums,
                                   read_size=self.read_size):
                 return

@@ -216,6 +216,8 @@ class IteratorContentSource(ContentSource):
 
 class MemoryContentSource(FdContentSource):
     def __init__(self, url=None, content=""):
+        if isinstance(content, str):
+            content = content.encode('utf-8')
         fd = io.BytesIO(content)
         if url is None:
             url = "MemoryContentSource://undefined"
