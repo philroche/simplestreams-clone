@@ -4,7 +4,7 @@ PUBKEY := examples/keys/example.pub
 PUBKEYS := $(PUBKEY)
 SECKEY := examples/keys/example.sec
 
-example_sstream_files := $(shell find examples/*/streams/ -name "*.json" -type f)
+example_sstream_files := $(wildcard examples/*/streams/v1/*.json)
 
 EXDATA_SIGN ?= 1
 ifeq ($(EXDATA_SIGN),1)
