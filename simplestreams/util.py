@@ -50,6 +50,8 @@ PRODUCTS_TREE_DATA = (
 )
 PRODUCTS_TREE_HIERARCHY = [_k[0] for _k in PRODUCTS_TREE_DATA]
 
+class SignatureMissingException(Exception): pass
+
 try:
     # python2
     _STRING_TYPES = (str, basestring, unicode)
@@ -267,8 +269,7 @@ def read_signed(content, keyring=None):
 
         return ret['body']
     else:
-        # TODO: something more reasonable?
-        raise Exception("No signature found!")
+        raise SignatureMissingException("No signature found!")
 
 
 def load_content(content):
