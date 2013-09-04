@@ -48,13 +48,7 @@ class FilterMirror(mirrors.BasicMirrorWriter):
         return {'content_id': content_id, 'products': {}}
 
     def filter_item(self, data, src, target, pedigree):
-        # src and target are top level products:1.0
-        # data is src['products'][ped[0]]['versions'][ped[1]]['items'][ped[2]]
-        data = util.products_exdata(src, pedigree)
-        for f in self.filters:
-            if not f.matches(data):
-                return False
-        return True
+        return filters.filter_item(self.filters, data, src, pedigree)
 
     def insert_item(self, data, src, target, pedigree, contentsource):
         # src and target are top level products:1.0

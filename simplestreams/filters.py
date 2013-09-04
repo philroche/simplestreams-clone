@@ -15,6 +15,8 @@
 #   You should have received a copy of the GNU Affero General Public License
 #   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
 
+from simplestreams import util
+
 import re
 
 
@@ -59,3 +61,11 @@ def get_filters(filters, noneval=""):
     for f in filters:
         flist.append(ItemFilter(f, noneval=noneval))
     return flist
+
+
+def filter_item(filters, data, src, pedigree):
+    data = util.products_exdata(src, pedigree)
+    for f in filters:
+        if not f.matches(data):
+            return False
+    return True
