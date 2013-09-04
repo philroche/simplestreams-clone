@@ -21,6 +21,11 @@ test2: examples-sign
 lint:
 	./tools/run-pylint
 
+pep8:
+	./tools/run-pep8
+
+check: lint pep8 test test2
+
 exdata: exdata/fake exdata/data
 
 exdata/data: exdata-query gnupg
@@ -56,4 +61,4 @@ examples-sign: gnupg
 	done
 
 
-.PHONY: exdata/fake exdata/data exdata-query examples-sign test test2
+.PHONY: check exdata/fake exdata/data exdata-query examples-sign test test2

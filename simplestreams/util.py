@@ -50,7 +50,9 @@ PRODUCTS_TREE_DATA = (
 )
 PRODUCTS_TREE_HIERARCHY = [_k[0] for _k in PRODUCTS_TREE_DATA]
 
-class SignatureMissingException(Exception): pass
+
+class SignatureMissingException(Exception):
+    pass
 
 try:
     # python2

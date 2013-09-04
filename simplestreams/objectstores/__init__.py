@@ -46,7 +46,7 @@ class ObjectStore(object):
         raise NotImplementedError()
 
     def exists_with_checksum(self, path, checksums=None):
-        return has_valid_checksum(path=path, reader=self.reader,
+        return has_valid_checksum(path=path, reader=self.source,
                                   checksums=checksums,
                                   read_size=self.read_size)
 
