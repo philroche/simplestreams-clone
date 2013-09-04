@@ -1,10 +1,11 @@
 #!/bin/bash
 
 if [ $# -eq 0 ]; then
-   files=( $(find * -name "*.py" -type f) )
+   files=( $(find * -name "*.py" -type f)
+           $(for f in bin/*; do [ "${f%.*}" = "$f" ] && echo "$f"; done) )
 else
    files=( "$@" );
-fi 
+fi
 
 cmd=( pep8 "${files[@]}" )
 
