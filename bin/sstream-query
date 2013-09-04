@@ -22,7 +22,10 @@ from simplestreams import util
 
 import argparse
 import re
+import pprint
 import sys
+
+FORMAT_PRETTY = "PRETTY"
 
 
 def warn(msg):
@@ -104,11 +107,14 @@ class FilterMirror(mirrors.BasicMirrorWriter):
         if 'path' in data:
             data.update({'item_url': contentsource.url})
 
-        try:
-            print(self.output_format % (data))
-        except KeyError as e:
-            sys.stderr.write("output format failed. Missing %s\n" % e.args)
-            sys.stderr.write("item: %s\n" % data)
+        if self.output_format == FORMAT_PRETTY:
+            pprint.pprint(data)
+        else:
+            try:
+                print(self.output_format % (data))
+            except KeyError as e:
+                sys.stderr.write("output format failed. Missing %s\n" % e.args)
+                sys.stderr.write("item: %s\n" % data)
 
 
 def main():
@@ -120,7 +126,13 @@ def main():
     parser.add_argument('--path', default=None,
                         help='sync from index or products file in mirror')
 
-    parser.add_argument('--output-format', '-o', action='store', default=None)
+    fmt_group = parser.add_mutually_exclusive_group()
+    fmt_group.add_argument('--output-format', '-o', action='store',
+                           dest='output_format', default=None,
+                           help="specify output format per python str.format")
+    fmt_group.add_argument('--pretty', action='store_const',
+                           const=FORMAT_PRETTY, dest='output_format',
+                           help="pretty print output")
     parser.add_argument('--verbose', '-v', action='count', default=0)
     parser.add_argument('--log-file', default=sys.stderr,
                         type=argparse.FileType('w'))
