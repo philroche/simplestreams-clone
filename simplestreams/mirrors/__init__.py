@@ -282,7 +282,7 @@ class BasicMirrorWriter(MirrorWriter):
                     ipath = item.get('path', None)
                     ipath_cs = None
                     if ipath:
-                        ipath_cs = reader.source(ipath)
+                        ipath_cs = reader.source(ipath) if reader else None
                     self.insert_item(item, src, target, pgree, ipath_cs)
 
                 self.insert_version(version, src, target, (prodname, vername))
