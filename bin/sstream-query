@@ -21,10 +21,8 @@ from simplestreams import log
 from simplestreams import util
 
 import argparse
-import os
 import re
 import sys
-import yaml
 
 
 def warn(msg):
@@ -33,7 +31,7 @@ def warn(msg):
 
 class ItemFilter(object):
     def __init__(self, content, noneval=""):
-        rparsefmt="(\w+)[ ]*([!]{0,1}[=~])[ ]*(.*)[ ]*$"
+        rparsefmt = r"(\w+)[ ]*([!]{0,1}[=~])[ ]*(.*)[ ]*$"
         parsed = re.match(rparsefmt, content)
 
         if not parsed:
@@ -54,7 +52,6 @@ class ItemFilter(object):
         self.value = val
         self.content = content
         self.noneval = noneval
-
 
     def __str__(self):
         return "%s %s %s [none=%s]" % (self.key, self.op,
@@ -86,7 +83,6 @@ class FilterMirror(mirrors.BasicMirrorWriter):
         if not outfmt:
             outfmt = "%s"
         self.output_format = outfmt
-            
 
     def load_products(self, path=None, content_id=None):
         return {'content_id': content_id, 'products': {}}
@@ -130,7 +126,7 @@ def main():
                         type=argparse.FileType('w'))
 
     parser.add_argument('--keyring', action='store', default=None,
-                        help='The keyring to be specified to gpg via --keyring')
+                        help='keyring to be specified to gpg via --keyring')
 
     parser.add_argument('mirror_url')
     parser.add_argument('filters', nargs='*', default=[])

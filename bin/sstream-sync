@@ -82,7 +82,7 @@ def main():
                         type=argparse.FileType('w'))
 
     parser.add_argument('--keyring', action='store', default=None,
-                        help='The keyring to be specified to gpg via --keyring')
+                        help='keyring to be specified to gpg via --keyring')
 
     parser.add_argument('mirror_url')
     cmdargs = parser.parse_args()
@@ -116,14 +116,14 @@ def main():
             cfg[cfgname] = None
 
         if ((cfgname in command_hook.HOOK_NAMES or cfgname == defhook)
-            and cfg.get(cfgname) is not None):
+                and cfg.get(cfgname) is not None):
             if which(cfg[cfgname]) is None:
                 msg = "invalid input for %s. '%s' is not executable\n"
                 sys.stderr.write(msg % (argname, val))
                 sys.exit(1)
 
         if (cfgname in command_hook.REQUIRED_FIELDS and
-            cfg.get(cfgname) is None and not fallback):
+                cfg.get(cfgname) is None and not fallback):
             missing.append((argname, cfgname,))
 
     pfm = util.path_from_mirror_url
