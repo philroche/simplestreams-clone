@@ -162,7 +162,7 @@ class MirrorWriter(object):
 
 
 class UrlMirrorReader(MirrorReader):
-    def __init__(self, prefix, mirrors=None, policy=util.read_signed):
+    def __init__(self, prefix, mirrors=None, policy=util.policy_read_signed):
         super(UrlMirrorReader, self).__init__(policy=policy)
         self._cs = cs.UrlContentSource
         if mirrors is None:
