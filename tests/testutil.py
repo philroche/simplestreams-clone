@@ -13,7 +13,11 @@ def get_mirror_reader(name, docdir=None, signed=False):
 
     src_d = os.path.join(EXAMPLES_DIR, name)
     sstore = objectstores.FileStore(src_d)
-    kwargs = {} if signed else {"policy": lambda c: c}
+
+    def policy(content, path):  # pylint: disable=W0613
+        return content
+
+    kwargs = {} if signed else {"policy": policy}
     return mirrors.ObjectStoreMirrorReader(sstore, **kwargs)
 
 # vi: ts=4 expandtab syntax=python

@@ -236,7 +236,14 @@ def resolve_work(src, target, maxnum=None, keep=False, itemfilter=None,
     return(add, remove)
 
 
+def policy_read_signed(content, path, keyring=None):  # pylint: disable=W0613
+    # convenience wrapper around 'read_signed' for use MirrorReader policy
+    return read_signed(content=content, keyring=keyring)
+
+
 def read_signed(content, keyring=None):
+    # ensure that content is signed by a key in keyring.
+    # if no keyring given use default.
     if content.startswith(PGP_SIGNED_MESSAGE_HEADER):
         # http://rfc-ref.org/RFC-TEXTS/2440/chapter7.html
         cmd = ["gpg", "--batch", "--verify"]

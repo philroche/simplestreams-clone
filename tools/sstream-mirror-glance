@@ -28,6 +28,7 @@ from simplestreams.objectstores import swift
 from simplestreams import log
 from simplestreams import mirrors
 from simplestreams import openstack
+from simplestreams import util
 from simplestreams.mirrors import glance
 
 
@@ -71,7 +72,7 @@ def main():
                         type=argparse.FileType('w'))
 
     parser.add_argument('--keyring', action='store', default=None,
-                        help='The keyring to be specified to gpg via --keyring')
+                        help='The keyring for gpg --keyring')
 
     parser.add_argument('source_mirror')
     parser.add_argument('path', nargs='?', default="streams/v1/index.sjson")
@@ -80,9 +81,9 @@ def main():
     mirror_config = {'max_items': args.max, 'keep_items': args.keep,
                      'cloud_name': args.cloud_name}
 
-    def policy(content):
+    def policy(content, path):  # pylint: disable=W0613
         if args.path.endswith('sjson'):
-            return util.read_signed(content, keyring=cmdargs.keyring)
+            return util.read_signed(content, keyring=args.keyring)
         else:
             return content
 

@@ -23,7 +23,7 @@ from simplestreams.log import LOG
 
 
 class MirrorReader(object):
-    def __init__(self, policy=util.read_signed):
+    def __init__(self, policy=util.policy_read_signed):
         """ policy should be a function which returns the extracted payload or
         raises an exception if the policy is violated. """
         self.policy = policy
@@ -34,7 +34,7 @@ class MirrorReader(object):
 
     def read_json(self, path):
         raw = self.source(path).read().decode('utf-8')
-        return raw, self.policy(raw)
+        return raw, self.policy(content=raw, path=path)
 
     def source(self, path):
         raise NotImplementedError()
@@ -176,7 +176,7 @@ class UrlMirrorReader(MirrorReader):
 
 
 class ObjectStoreMirrorReader(MirrorReader):
-    def __init__(self, objectstore, policy=util.read_signed):
+    def __init__(self, objectstore, policy=util.policy_read_signed):
         super(ObjectStoreMirrorReader, self).__init__(policy=policy)
         self.objectstore = objectstore
 
