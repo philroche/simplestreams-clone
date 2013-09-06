@@ -29,10 +29,10 @@ class MirrorReader(object):
         self.policy = policy
 
     def load_products(self, path):
-        _, content = self.read(path)
+        _, content = self.read_json(path)
         return util.load_content(content)
 
-    def read(self, path):
+    def read_json(self, path):
         raw = self.source(path).read().decode('utf-8')
         return raw, self.policy(raw)
 
@@ -76,7 +76,7 @@ class MirrorWriter(object):
         raise NotImplementedError()
 
     def sync(self, reader, path):
-        content, payload = reader.read(path)
+        content, payload = reader.read_json(path)
         data = util.load_content(payload)
         fmt = data.get("format", "UNSPECIFIED")
         if fmt == "products:1.0":
@@ -344,13 +344,12 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
 
         if path:
             try:
-                payload = self.source(path).read().decode('utf-8')
+                return util.load_content(self.source(path).read())
             except IOError as e:
                 if e.errno != errno.ENOENT:
                     raise
-                payload = "{}"
+                return {}
 
-            return util.load_content(payload)
         raise TypeError("unable to load_products with no path")
 
     def source(self, path):

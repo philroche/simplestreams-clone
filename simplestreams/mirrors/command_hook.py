@@ -288,7 +288,7 @@ def run_command(cmd, env=None, capture=False, rcs=None):
     if out is None:
         out = ''
     elif isinstance(out, bytes):
-        out = out.decode()
+        out = out.decode('utf-8')
 
     return (rc, out)
 

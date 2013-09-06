@@ -34,6 +34,8 @@ class ObjectStore(object):
         raise NotImplementedError()
 
     def insert_content(self, path, content, checksums=None, mutable=True):
+        if not isinstance(content, bytes):
+            content = content.encode('utf-8')
         self.insert(path=path, reader=cs.MemoryContentSource(content=content),
                     checksums=checksums, mutable=mutable)
 

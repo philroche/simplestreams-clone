@@ -27,7 +27,7 @@ def test_read_bad_data():
         for line in lines:
             f.write(line.replace('foovendor', 'attacker'))
 
-    _tmp_reader().read("index.sjson")
+    _tmp_reader().read_json("index.sjson")
 
 
 @raises(SignatureMissingException)
@@ -35,9 +35,9 @@ def test_read_unsigned():
     # empty files aren't signed
     open(join(tempfile.gettempdir(), 'index.json'), 'w').close()
 
-    _tmp_reader().read("index.json")
+    _tmp_reader().read_json("index.json")
 
 
 def test_read_signed():
     reader = get_mirror_reader("foocloud")
-    reader.read("streams/v1/index.sjson")
+    reader.read_json("streams/v1/index.sjson")
