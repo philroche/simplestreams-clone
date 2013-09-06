@@ -19,7 +19,7 @@ test: examples-sign
 test2: examples-sign
 	$(TENV) nosetests -v tests/
 lint:
-	./tools/run-pylint
+	$(TENV) ./tools/run-pylint
 
 pep8:
 	./tools/run-pep8
