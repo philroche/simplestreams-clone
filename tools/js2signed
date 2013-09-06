@@ -18,7 +18,6 @@
 
 import os
 import os.path
-import json
 import sys
 
 import toolutil
@@ -35,14 +34,14 @@ def main():
                 sys.exit(1)
             toolutil.signjson_file(path)
         elif os.path.isdir(path):
-            for root, dirs, files in os.walk(path):
+            for root, _dirs, files in os.walk(path):
                 for f in [f for f in files if f.endswith(".json")]:
-                    toolutil.signjson_file(os.path.join(root, f), status_cb=status_cb)
+                    toolutil.signjson_file(os.path.join(root, f),
+                                           status_cb=status_cb)
         else:
             sys.stderr.write("input must be file or dir\n")
             sys.exit(1)
 
 
 if __name__ == '__main__':
-    import sys
     main()
