@@ -1,3 +1,20 @@
+#   Copyright (C) 2013 Canonical Ltd.
+#
+#   Author: Scott Moser <scott.moser@canonical.com>
+#
+#   Simplestreams is free software: you can redistribute it and/or modify it
+#   under the terms of the GNU Affero General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or (at your
+#   option) any later version.
+#
+#   Simplestreams is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+#   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public
+#   License for more details.
+#
+#   You should have received a copy of the GNU Affero General Public License
+#   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
+
 from keystoneclient.v2_0 import client as ksclient
 import os
 import re
@@ -20,7 +37,7 @@ def load_keystone_creds(**kwargs):
             ret[lc[3:]] = os.environ[name]
 
     if 'insecure' in ret:
-        if isinstance(insecure, str):
+        if isinstance(ret['insecure'], str):
             ret['insecure'] = (ret['insecure'].lower() not in
                                ("", "0", "no", "off"))
         else:
@@ -33,7 +50,7 @@ def load_keystone_creds(**kwargs):
 
     if not (ret.get('auth_token') or ret.get('password')):
         missing.append("(auth_token or password)")
-        
+
     if not (ret.get('tenant_id') or ret.get('tenant_name')):
         raise ValueError("(tenant_id or tenant_name)")
 
@@ -59,8 +76,8 @@ def get_regions(client=None, services=None, kscreds=None):
         services = list(endpoints.keys())
     regions = set()
     for service in services:
-       [regions.add(r['region']) for r in endpoints.get(service, {}) 
-           if r.get('region')]
+        for r in endpoints.get(service, {}):
+            regions.add(r['region'])
 
     return list(regions)
 
@@ -106,6 +123,6 @@ def _strip_version(endpoint):
         endpoint = endpoint[:-1]
     url_bits = endpoint.split('/')
     # regex to match 'v1' or 'v2.0' etc
-    if re.match('v\d+\.?\d*', url_bits[-1]):
+    if re.match(r'v\d+\.?\d*', url_bits[-1]):
         endpoint = '/'.join(url_bits[:-1])
     return endpoint

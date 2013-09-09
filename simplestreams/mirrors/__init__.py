@@ -1,3 +1,20 @@
+#   Copyright (C) 2013 Canonical Ltd.
+#
+#   Author: Scott Moser <scott.moser@canonical.com>
+#
+#   Simplestreams is free software: you can redistribute it and/or modify it
+#   under the terms of the GNU Affero General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or (at your
+#   option) any later version.
+#
+#   Simplestreams is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+#   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public
+#   License for more details.
+#
+#   You should have received a copy of the GNU Affero General Public License
+#   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
+
 import errno
 
 import simplestreams.util as util
@@ -6,11 +23,20 @@ from simplestreams.log import LOG
 
 
 class MirrorReader(object):
+    def __init__(self, policy=util.policy_read_signed):
+        """ policy should be a function which returns the extracted payload or
+        raises an exception if the policy is violated. """
+        self.policy = policy
+
     def load_products(self, path):
-        content = self.reader(path).read()
+        _, content = self.read_json(path)
         return util.load_content(content)
 
-    def reader(self, path):
+    def read_json(self, path):
+        raw = self.source(path).read().decode('utf-8')
+        return raw, self.policy(content=raw, path=path)
+
+    def source(self, path):
         raise NotImplementedError()
 
 
@@ -50,8 +76,7 @@ class MirrorWriter(object):
         raise NotImplementedError()
 
     def sync(self, reader, path):
-        content = reader(path).read()
-        (payload, _sig) = util.read_possibly_signed(path, reader)
+        content, payload = reader.read_json(path)
         data = util.load_content(payload)
         fmt = data.get("format", "UNSPECIFIED")
         if fmt == "products:1.0":
@@ -65,92 +90,98 @@ class MirrorWriter(object):
     def filter_index_entry(self, data, src, pedigree):
         # src is source index tree.
         # data is src['index'][ped[0]]
+        _pylint = (data, src, pedigree)
         return True
 
     def insert_index(self, path, src, content):
         # src is the source index tree
         # content is None or a json rendering (possibly signed) of src
-        pass
+        _pylint = (path, src, content)
 
     def insert_index_entry(self, data, src, pedigree, contentsource):
         # src is the top level index (index:1.0 format)
         # data is src['index'][pedigree[0]]
         # contentsource is a ContentSource if 'path' exists in data or None
-        pass
+        _pylint = (data, src, pedigree, contentsource)
 
     ## Products Operations ##
     def filter_product(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]
+        _pylint = (data, src, target, pedigree)
         return True
 
     def filter_version(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]
+        _pylint = (data, src, target, pedigree)
         return True
 
     def filter_item(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]['items'][ped[2]]
+        _pylint = (data, src, target, pedigree)
         return True
 
     def insert_products(self, path, target, content):
         # path is the path to store data (where it came from on source mirror)
         # target is the target products:1.0 tree
         # content is None or a json rendering (possibly signed) of src
-        pass
+        _pylint = (path, target, content)
 
     def insert_product(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]
-        pass
+        _pylint = (data, src, target, pedigree)
 
     def insert_version(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]
-        pass
+        _pylint = (data, src, target, pedigree)
 
     def insert_item(self, data, src, target, pedigree, contentsource):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]['items'][ped[2]]
         # contentsource is a ContentSource if 'path' exists in data or None
-        pass
+        _pylint = (data, src, target, pedigree, contentsource)
 
     def remove_product(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]
-        pass
+        _pylint = (data, src, target, pedigree)
 
     def remove_version(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]
-        pass
+        _pylint = (data, src, target, pedigree)
 
     def remove_item(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]['items'][ped[2]]
-        pass
+        _pylint = (data, src, target, pedigree)
 
 
 class UrlMirrorReader(MirrorReader):
-    def __init__(self, prefix, mirrors=None):
+    def __init__(self, prefix, mirrors=None, policy=util.policy_read_signed):
+        super(UrlMirrorReader, self).__init__(policy=policy)
         self._cs = cs.UrlContentSource
         if mirrors is None:
             mirrors = []
         self.mirrors = mirrors
         self.prefix = prefix
 
-    def reader(self, path):
+    def source(self, path):
         mirrors = [m + path for m in self.mirrors]
         return self._cs(self.prefix + path, mirrors=mirrors)
 
 
 class ObjectStoreMirrorReader(MirrorReader):
-    def __init__(self, objectstore):
+    def __init__(self, objectstore, policy=util.policy_read_signed):
+        super(ObjectStoreMirrorReader, self).__init__(policy=policy)
         self.objectstore = objectstore
 
-    def reader(self, path):
-        return self.objectstore.reader(path)
+    def source(self, path):
+        return self.objectstore.source(path)
 
 
 class BasicMirrorWriter(MirrorWriter):
@@ -159,6 +190,9 @@ class BasicMirrorWriter(MirrorWriter):
         if config is None:
             config = {}
         self.config = config
+
+    def load_products(self, path=None, content_id=None):
+        super(BasicMirrorWriter, self).load_products(path, content_id)
 
     def sync_index(self, reader, path=None, src=None, content=None):
         (src, content) = _get_data_content(path, src, content, reader)
@@ -172,13 +206,13 @@ class BasicMirrorWriter(MirrorWriter):
             if not self.filter_index_entry(index_entry, src, (content_id,)):
                 continue
             epath = index_entry.get('path', None)
-            cs = None
+            mycs = None
             if epath:
                 if index_entry.get('format') in ("index:1.0", "products:1.0"):
                     self.sync(reader, path=epath)
-                cs = reader(epath)
+                mycs = reader.source(epath)
 
-            self.insert_index_entry(index_entry, src, (content_id,), cs)
+            self.insert_index_entry(index_entry, src, (content_id,), mycs)
 
         self.insert_index(path, src, content)
 
@@ -203,6 +237,7 @@ class BasicMirrorWriter(MirrorWriter):
         tproducts = target['products']
 
         filtered_products = []
+        prodname = None
         for prodname, product in stree.items():
             if not self.filter_product(product, src, target, (prodname,)):
                 filtered_products.append(prodname)
@@ -239,7 +274,6 @@ class BasicMirrorWriter(MirrorWriter):
                 if vername not in tversions:
                     tversions[vername] = util.stringitems(version)
 
-                added = {}
                 for itemname, item in version.get('items', {}).items():
                     pgree = (prodname, vername, itemname)
                     if not self.filter_item(item, src, target, pgree):
@@ -248,7 +282,7 @@ class BasicMirrorWriter(MirrorWriter):
                     ipath = item.get('path', None)
                     ipath_cs = None
                     if ipath:
-                        ipath_cs = reader(ipath)
+                        ipath_cs = reader.source(ipath) if reader else None
                     self.insert_item(item, src, target, pgree, ipath_cs)
 
                 self.insert_version(version, src, target, (prodname, vername))
@@ -275,7 +309,8 @@ class BasicMirrorWriter(MirrorWriter):
         ##
         del_products = []
         if self.config.get('delete_products', False):
-            del_products.extend([p for p in list(ttree.keys()) if p not in stree])
+            del_products.extend([p for p in list(tproducts.keys())
+                                 if p not in stree])
         if self.config.get('delete_filtered_products', False):
             del_products.extend([p for p in filtered_products
                                  if p not in stree])
@@ -283,8 +318,8 @@ class BasicMirrorWriter(MirrorWriter):
         for prodname in del_products:
             ## FIXME: we remove a product here, but unless that acts
             ## recursively, nothing will remove the items in that product
-            self.remove_product(ttree[prodname], src, target, (prodname,))
-            del ttree[prodname]
+            self.remove_product(tproducts[prodname], src, target, (prodname,))
+            del tproducts[prodname]
 
         self.insert_products(path, target, content)
 
@@ -302,24 +337,23 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
         if content_id:
             try:
                 dpath = self.products_data_path(content_id)
-                return util.load_content(self.reader(dpath).read())
+                return util.load_content(self.source(dpath).read())
             except IOError as e:
                 if e.errno != errno.ENOENT:
                     raise
 
         if path:
             try:
-                (payload, _sig) = util.read_possibly_signed(path, self.reader)
+                return util.load_content(self.source(path).read())
             except IOError as e:
                 if e.errno != errno.ENOENT:
                     raise
-                payload = "{}"
+                return {}
 
-            return util.load_content(payload)
         raise TypeError("unable to load_products with no path")
 
-    def reader(self, path):
-        return self.store.reader(path)
+    def source(self, path):
+        return self.store.source(path)
 
     def insert_item(self, data, src, target, pedigree, contentsource):
         util.products_set(target, data, pedigree)
@@ -363,7 +397,7 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
 
 def _get_data_content(path, data, content, reader):
     if content is None and path:
-        content = reader(path).read()
+        _, content = reader.read(path)
     if data is None and content:
         data = util.load_content(content)
 
@@ -378,6 +412,7 @@ def check_tree_paths(tree, fmt=None):
         fmt = tree.get('format')
     if fmt == "products:1.0":
         def check_path(item, tree, pedigree):
+            _pylint = (tree, pedigree)
             util.assert_safe_path(item.get('path'))
         util.walk_products(tree, cb_item=check_path)
     elif fmt == "index:1.0":

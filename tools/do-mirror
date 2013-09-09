@@ -1,10 +1,27 @@
 #!/usr/bin/python3
+#   Copyright (C) 2013 Canonical Ltd.
+#
+#   Author: Scott Moser <scott.moser@canonical.com>
+#
+#   Simplestreams is free software: you can redistribute it and/or modify it
+#   under the terms of the GNU Affero General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or (at your
+#   option) any later version.
+#
+#   Simplestreams is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+#   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public
+#   License for more details.
+#
+#   You should have received a copy of the GNU Affero General Public License
+#   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
 import argparse
 import sys
 
 from simplestreams import log
 from simplestreams import mirrors
 from simplestreams import objectstores
+from simplestreams import util
 
 
 def main():
@@ -15,6 +32,8 @@ def main():
                              'even after they have fallen out of the source')
     parser.add_argument('--max', type=int, default=None,
                         help='store at most MAX items in the target')
+    parser.add_argument('--path', default=None,
+                        help='sync from index or products file in mirror')
     parser.add_argument('--no-item-download', action='store_true',
                         default=False,
                         help='do not download items with a "path"')
@@ -26,10 +45,22 @@ def main():
     parser.add_argument('--log-file', default=sys.stderr,
                         type=argparse.FileType('w'))
 
+    parser.add_argument('--keyring', action='store', default=None,
+                        help='keyring to be specified to gpg via --keyring')
+
     parser.add_argument('source_mirror')
     parser.add_argument('output_d')
-    parser.add_argument('path', nargs='?', default="streams/v1/index.sjson")
+
     args = parser.parse_args()
+
+    (mirror_url, initial_path) = util.path_from_mirror_url(args.source_mirror,
+                                                           args.path)
+
+    def policy(content, path):  # pylint: disable=W0613
+        if initial_path.endswith('sjson'):
+            return util.read_signed(content, keyring=args.keyring)
+        else:
+            return content
 
     mirror_config = {'max_items': args.max, 'keep_items': args.keep,
                      'item_download': not args.no_item_download}
@@ -37,12 +68,13 @@ def main():
     level = (log.ERROR, log.INFO, log.DEBUG)[min(args.verbose, 2)]
     log.basicConfig(stream=args.log_file, level=level)
 
-    smirror = mirrors.UrlMirrorReader(args.source_mirror, mirrors=args.mirrors)
+    smirror = mirrors.UrlMirrorReader(mirror_url, mirrors=args.mirrors,
+                                      policy=policy)
     tstore = objectstores.FileStore(args.output_d)
     tmirror = mirrors.ObjectStoreMirrorWriter(config=mirror_config,
                                               objectstore=tstore)
 
-    tmirror.sync(smirror.reader, args.path)
+    tmirror.sync(smirror, initial_path)
 
 
 if __name__ == '__main__':

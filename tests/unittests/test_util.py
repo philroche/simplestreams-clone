@@ -14,38 +14,38 @@ class TestProductsSet(TestCase):
         tree = {'products': {'A': 'B'}}
         util.products_set(tree, {'F1': 'V1'}, ('P1',))
         self.assertEqual(tree,
-            {'products': {'A': 'B', 'P1': {'F1': 'V1'}}})
+                         {'products': {'A': 'B', 'P1': {'F1': 'V1'}}})
 
     def test_product_no_products_tree(self):
         tree = {}
         util.products_set(tree, {'F1': 'V1'}, ('P1',))
         self.assertEqual(tree,
-            {'products': {'P1': {'F1': 'V1'}}})
+                         {'products': {'P1': {'F1': 'V1'}}})
 
     def test_version_exists(self):
         tree = {'products': {'P1': {'versions': {'FOO': {'1': 'one'}}}}}
         util.products_set(tree, {'2': 'two'}, ('P1', 'FOO'))
         self.assertEqual(tree,
-            {'products': {'P1': {'versions': {'FOO': {'2': 'two'}}}}})
+                         {'products': {'P1': {'versions':
+                                              {'FOO': {'2': 'two'}}}}})
 
     def test_version_no_exists(self):
         tree = {'products': {'P1': {'versions': {'BAR': {'1': 'one'}}}}}
         util.products_set(tree, {'2': 'two'}, ('P1', 'FOO'))
-        self.assertEqual(tree,
-            {'products': {'P1':
+        d = {'products': {'P1':
                           {'versions': {'BAR': {'1': 'one'},
-                                        'FOO': {'2': 'two'}}}}})
+                                        'FOO': {'2': 'two'}}}}}
+        self.assertEqual(tree, d)
 
     def test_item_exists(self):
         items = {'item1': {'f1': '1'}}
         tree = {'products': {'P1': {'versions':
-                                       {'VBAR': {'1': 'one',
-                                                 'items': items}}}}}
+                                    {'VBAR': {'1': 'one',
+                                              'items': items}}}}}
         mnew = {'f2': 'two'}
         util.products_set(tree, mnew, ('P1', 'VBAR', 'item1',))
         expvers = {'VBAR': {'1': 'one', 'items': {'item1': mnew}}}
-        self.assertEqual(tree,
-            {'products': {'P1': {'versions': expvers}}})
+        self.assertEqual(tree, {'products': {'P1': {'versions': expvers}}})
 
     def test_item_no_exists(self):
         items = {'item1': {'f1': '1'}}
@@ -55,9 +55,7 @@ class TestProductsSet(TestCase):
         util.products_set(tree, {'f2': '2'}, ('P1', 'V1', 'item2',))
         expvers = {'V1': {'VF1': 'VV1', 'items': {'item1': {'f1': '1'},
                                                   'item2': {'f2': '2'}}}}
-        self.assertEqual(tree,
-            {'products': {'P1': {'versions': expvers}}})
-        pass
+        self.assertEqual(tree, {'products': {'P1': {'versions': expvers}}})
 
 
 class TestProductsDel(TestCase):
@@ -142,7 +140,7 @@ class TestProductsPrune(TestCase):
 
 class TestProductsCondense(TestCase):
     def test_condense_1(self):
-        tree = {'products': {'P1': {'versions': {'1': {'A':'B'},
+        tree = {'products': {'P1': {'versions': {'1': {'A': 'B'},
                                                  '2': {'A': 'B'}}}}}
         exp = {'products': {'P1': {'versions': {'1': {}, '2': {}},
                                    'A': 'B'}}}
@@ -152,7 +150,7 @@ class TestProductsCondense(TestCase):
 
     def test_repeats_removed(self):
         tree = {'products': {'P1': {'A': 'B',
-                                    'versions': {'1': {'A':'B'},
+                                    'versions': {'1': {'A': 'B'},
                                                  '2': {'A': 'B'}}}}}
         exp = {'products': {'P1': {'versions': {'1': {}, '2': {}},
                                    'A': 'B'}}}
@@ -162,11 +160,11 @@ class TestProductsCondense(TestCase):
 
     def test_nonrepeats_stay(self):
         tree = {'products': {'P1': {'A': 'C',
-                                    'versions': {'1': {'A':'B'},
+                                    'versions': {'1': {'A': 'B'},
                                                  '2': {'A': 'B'}}}}}
         exp = {'products': {'P1': {'A': 'C',
-                                    'versions': {'1': {'A':'B'},
-                                                 '2': {'A': 'B'}}}}}
+                                   'versions': {'1': {'A': 'B'},
+                                                '2': {'A': 'B'}}}}}
 
         util.products_condense(tree)
         self.assertEqual(tree, exp)

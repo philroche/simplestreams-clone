@@ -1,10 +1,27 @@
+#   Copyright (C) 2013 Canonical Ltd.
+#
+#   Author: Scott Moser <scott.moser@canonical.com>
+#
+#   Simplestreams is free software: you can redistribute it and/or modify it
+#   under the terms of the GNU Affero General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or (at your
+#   option) any later version.
+#
+#   Simplestreams is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+#   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public
+#   License for more details.
+#
+#   You should have received a copy of the GNU Affero General Public License
+#   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
+
 import errno
 import io
 import os
 import sys
 
-if sys.version_info > (3,0):
-    import urllib.parse as urlparse
+if sys.version_info > (3, 0):
+    import urllib.parse as urlparse  # pylint: disable=F0401,E0611
 else:
     import urlparse
 
@@ -13,6 +30,9 @@ READ_BUFFER_SIZE = 1024 * 10
 READ_BUFFER_SIZE = 1024 * 10
 
 try:
+    # We try to use requests because we can do gzip encoding with it.
+    # however requests < 1.1 didn't have 'stream' argument to 'get'
+    # making it completely unsuitable for downloading large files.
     import requests
     from distutils.version import LooseVersion
     import pkg_resources
@@ -22,7 +42,13 @@ try:
         raise Exception("Couldn't use requests")
     URL_READER_CLASSNAME = "RequestsUrlReader"
 except:
-    import urllib.request, urllib.error, urllib.parse
+    if sys.version_info > (3, 0):
+        import urllib.request as urllib_request  # pylint: disable=F0401, E0611
+        import urllib.error as urllib_error  # pylint: disable=F0401, E0611
+    else:
+        import urllib2 as urllib_request
+        urllib_error = urllib_request
+
     URL_READER_CLASSNAME = "Urllib2UrlReader"
 
 
@@ -91,11 +117,11 @@ class UrlContentSource(ContentSource):
         myerr.errno = errno.ENOENT
         raise myerr
 
-    def open(self):
+    def open(self):  # pylint: disable=E0202
         self.fd = self._open()
         self.read = self._read
 
-    def read(self, size=-1):
+    def read(self, size=-1):  # pylint: disable=E0202
         if self.fd is None:
             self.open()
 
@@ -184,12 +210,14 @@ class IteratorContentSource(ContentSource):
                 break
         return ret
 
-    def close():
+    def close(self):
         pass
 
 
 class MemoryContentSource(FdContentSource):
     def __init__(self, url=None, content=""):
+        if isinstance(content, str):
+            content = content.encode('utf-8')
         fd = io.BytesIO(content)
         if url is None:
             url = "MemoryContentSource://undefined"
@@ -197,9 +225,6 @@ class MemoryContentSource(FdContentSource):
 
 
 class UrlReader(object):
-    def __init__(self, url):
-        raise NotImplementedError()
-
     def read(self, size=-1):
         raise NotImplementedError()
 
@@ -212,16 +237,16 @@ class Urllib2UrlReader(UrlReader):
         (url, username, password) = parse_url_auth(url)
         self.url = url
         if username is None:
-            opener = urllib.request.urlopen
+            opener = urllib_request.urlopen
         else:
-            mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+            mgr = urllib_request.HTTPPasswordMgrWithDefaultRealm()
             mgr.add_password(None, url, username, password)
-            handler = urllib.request.HTTPBasicAuthHandler(mgr)
-            opener = urllib.request.build_opener(handler).open
+            handler = urllib_request.HTTPBasicAuthHandler(mgr)
+            opener = urllib_request.build_opener(handler).open
 
         try:
             self.req = opener(url)
-        except urllib.error.HTTPError as e:
+        except urllib_error.HTTPError as e:
             if e.code == 404:
                 myerr = IOError("Unable to open %s" % url)
                 myerr.errno = errno.ENOENT

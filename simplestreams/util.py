@@ -1,3 +1,20 @@
+#   Copyright (C) 2013 Canonical Ltd.
+#
+#   Author: Scott Moser <scott.moser@canonical.com>
+#
+#   Simplestreams is free software: you can redistribute it and/or modify it
+#   under the terms of the GNU Affero General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or (at your
+#   option) any later version.
+#
+#   Simplestreams is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+#   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public
+#   License for more details.
+#
+#   You should have received a copy of the GNU Affero General Public License
+#   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
+
 import errno
 import hashlib
 import os
@@ -13,7 +30,7 @@ from simplestreams.log import LOG
 try:
     ALGORITHMS = list(getattr(hashlib, 'algorithms'))
 except AttributeError:
-    ALGORITHMS = list(hashlib.algorithms_available)
+    ALGORITHMS = list(hashlib.algorithms_available)  # pylint: disable=E1101
 
 ALIASNAME = "_aliases"
 
@@ -32,6 +49,10 @@ PRODUCTS_TREE_DATA = (
     ("items", "item_name"),
 )
 PRODUCTS_TREE_HIERARCHY = [_k[0] for _k in PRODUCTS_TREE_DATA]
+
+
+class SignatureMissingException(Exception):
+    pass
 
 try:
     # python2
@@ -215,17 +236,21 @@ def resolve_work(src, target, maxnum=None, keep=False, itemfilter=None,
     return(add, remove)
 
 
-def read_possibly_signed(path, reader=open):
-    content = ""
+def policy_read_signed(content, path, keyring=None):  # pylint: disable=W0613
+    # convenience wrapper around 'read_signed' for use MirrorReader policy
+    return read_signed(content=content, keyring=keyring)
 
-    with reader(path) as cfp:
-        content = cfp.read().decode('utf-8')
 
+def read_signed(content, keyring=None):
+    # ensure that content is signed by a key in keyring.
+    # if no keyring given use default.
     if content.startswith(PGP_SIGNED_MESSAGE_HEADER):
         # http://rfc-ref.org/RFC-TEXTS/2440/chapter7.html
-        out = ""
-        cmd = ["gpg", "--batch", "--verify", "-"]
-        (out, _err) = subp(cmd, data=content)
+        cmd = ["gpg", "--batch", "--verify"]
+        if keyring:
+            cmd.append("--keyring=%s" % keyring)
+        cmd.append("-")
+        _outerr = subp(cmd, data=content)
 
         ret = {'body': '', 'signature': '', 'garbage': ''}
         lines = content.splitlines()
@@ -251,9 +276,9 @@ def read_possibly_signed(path, reader=open):
             else:
                 ret[mode] += lines[i] + "\n"
 
-        return(ret['body'], ret['signature'])
+        return ret['body']
     else:
-        return(content, None)
+        raise SignatureMissingException("No signature found!")
 
 
 def load_content(content):
@@ -263,7 +288,7 @@ def load_content(content):
 
 
 def dump_data(data):
-    return json.dumps(data, indent=1).encode("utf-8")
+    return json.dumps(data, indent=1).encode('utf-8')
 
 
 def timestamp(ts=None):
@@ -415,9 +440,9 @@ def subp(args, data=None, capture=True, shell=False, env=None):
 
     (out, err) = sp.communicate(data)
 
-    if sp.returncode != 0:
-        raise subprocess.CalledProcessError(sp.returncode, args,
-                                            output=(out, err))
+    rc = sp.returncode  # pylint: disable=E1101
+    if rc != 0:
+        raise subprocess.CalledProcessError(rc, args, output=(out, err))
 
     return (out, err)
 
@@ -438,7 +463,7 @@ def get_sign_cmd(path, output=None, inline=False):
     if inline:
         cmd.append('--clearsign')
     else:
-        cmd.extend(['--armor', '--sign'])
+        cmd.extend(['--armor', '--detach-sign'])
 
     cmd.extend([path])
     return cmd

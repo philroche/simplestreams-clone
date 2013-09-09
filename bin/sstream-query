@@ -1,64 +1,35 @@
 #!/usr/bin/python3
+#   Copyright (C) 2013 Canonical Ltd.
 #
-# client showing use of command_hook_mirror
+#   Author: Scott Moser <scott.moser@canonical.com>
+#
+#   Simplestreams is free software: you can redistribute it and/or modify it
+#   under the terms of the GNU Affero General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or (at your
+#   option) any later version.
+#
+#   Simplestreams is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+#   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public
+#   License for more details.
+#
+#   You should have received a copy of the GNU Affero General Public License
+#   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
 
+from simplestreams import filters
 from simplestreams import mirrors
 from simplestreams import log
 from simplestreams import util
 
 import argparse
-import os
-import re
+import pprint
 import sys
-import yaml
+
+FORMAT_PRETTY = "PRETTY"
 
 
 def warn(msg):
     sys.stderr.write("WARN: %s" % msg)
-
-
-class ItemFilter(object):
-    def __init__(self, content, noneval=""):
-        rparsefmt="(\w+)[ ]*([!]{0,1}[=~])[ ]*(.*)[ ]*$"
-        parsed = re.match(rparsefmt, content)
-
-        if not parsed:
-            raise ValueError("Unable to parse expression %s" % content)
-
-        (key, op, val) = parsed.groups()
-
-        if op in ("!=", "="):
-            self._matches = val.__eq__
-        elif op in ("!~", "~"):
-            self._matches = re.compile(val).search
-        else:
-            raise ValueError("Bad parsing of %s" % content)
-
-        self.negator = (op[0] != "!")
-        self.op = op
-        self.key = key
-        self.value = val
-        self.content = content
-        self.noneval = noneval
-
-
-    def __str__(self):
-        return "%s %s %s [none=%s]" % (self.key, self.op,
-                                       self.value, self.noneval)
-
-    def __repr__(self):
-        return self.__str__()
-
-    def matches(self, item):
-        val = str(item.get(self.key, self.noneval))
-        return (self.negator == bool(self._matches(val)))
-
-
-def get_filters(filters, noneval=""):
-    flist = []
-    for f in filters:
-        flist.append(ItemFilter(f, noneval=noneval))
-    return flist
 
 
 class FilterMirror(mirrors.BasicMirrorWriter):
@@ -72,19 +43,12 @@ class FilterMirror(mirrors.BasicMirrorWriter):
         if not outfmt:
             outfmt = "%s"
         self.output_format = outfmt
-            
 
     def load_products(self, path=None, content_id=None):
         return {'content_id': content_id, 'products': {}}
 
     def filter_item(self, data, src, target, pedigree):
-        # src and target are top level products:1.0
-        # data is src['products'][ped[0]]['versions'][ped[1]]['items'][ped[2]]
-        data = util.products_exdata(src, pedigree)
-        for f in self.filters:
-            if not f.matches(data):
-                return False
-        return True
+        return filters.filter_item(self.filters, data, src, pedigree)
 
     def insert_item(self, data, src, target, pedigree, contentsource):
         # src and target are top level products:1.0
@@ -94,11 +58,14 @@ class FilterMirror(mirrors.BasicMirrorWriter):
         if 'path' in data:
             data.update({'item_url': contentsource.url})
 
-        try:
-            print(self.output_format % (data))
-        except KeyError as e:
-            sys.stderr.write("output format failed. Missing %s\n" % e.args)
-            sys.stderr.write("item: %s\n" % data)
+        if self.output_format == FORMAT_PRETTY:
+            pprint.pprint(data)
+        else:
+            try:
+                print(self.output_format % (data))
+            except KeyError as e:
+                sys.stderr.write("output format failed. Missing %s\n" % e.args)
+                sys.stderr.write("item: %s\n" % data)
 
 
 def main():
@@ -110,10 +77,19 @@ def main():
     parser.add_argument('--path', default=None,
                         help='sync from index or products file in mirror')
 
-    parser.add_argument('--output-format', '-o', action='store', default=None)
+    fmt_group = parser.add_mutually_exclusive_group()
+    fmt_group.add_argument('--output-format', '-o', action='store',
+                           dest='output_format', default=None,
+                           help="specify output format per python str.format")
+    fmt_group.add_argument('--pretty', action='store_const',
+                           const=FORMAT_PRETTY, dest='output_format',
+                           help="pretty print output")
     parser.add_argument('--verbose', '-v', action='count', default=0)
     parser.add_argument('--log-file', default=sys.stderr,
                         type=argparse.FileType('w'))
+
+    parser.add_argument('--keyring', action='store', default=None,
+                        help='keyring to be specified to gpg via --keyring')
 
     parser.add_argument('mirror_url')
     parser.add_argument('filters', nargs='*', default=[])
@@ -126,15 +102,23 @@ def main():
     level = (log.ERROR, log.INFO, log.DEBUG)[min(cmdargs.verbose, 2)]
     log.basicConfig(stream=cmdargs.log_file, level=level)
 
-    smirror = mirrors.UrlMirrorReader(mirror_url)
+    initial_path = path
 
-    filters = get_filters(cmdargs.filters)
+    def policy(content, path):  # pylint: disable=W0613
+        if initial_path.endswith('sjson'):
+            return util.read_signed(content, keyring=cmdargs.keyring)
+        else:
+            return content
+
+    smirror = mirrors.UrlMirrorReader(mirror_url, policy=policy)
+
+    filter_list = filters.get_filters(cmdargs.filters)
     cfg = {'max_items': cmdargs.max_items,
-           'filters': filters,
+           'filters': filter_list,
            'output_format': cmdargs.output_format}
 
     tmirror = FilterMirror(config=cfg)
-    tmirror.sync(smirror.reader, path)
+    tmirror.sync(smirror, path)
 
 if __name__ == '__main__':
     main()
