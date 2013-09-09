@@ -18,10 +18,20 @@
 import argparse
 import sys
 
+from simplestreams import filters
 from simplestreams import log
 from simplestreams import mirrors
 from simplestreams import objectstores
 from simplestreams import util
+
+
+class ObjectFilterMirror(mirrors.ObjectStoreMirrorWriter):
+    def __init__(self, *args, **kwargs):
+        super(ObjectFilterMirror, self).__init__(*args, **kwargs)
+        self.filters = self.config.get('filters', [])
+
+    def filter_item(self, data, src, target, pedigree):
+        return filters.filter_item(self.filters, data, src, pedigree)
 
 
 def main():
@@ -50,6 +60,7 @@ def main():
 
     parser.add_argument('source_mirror')
     parser.add_argument('output_d')
+    parser.add_argument('filters', nargs='*', default=[])
 
     args = parser.parse_args()
 
@@ -62,7 +73,9 @@ def main():
         else:
             return content
 
+    filter_list = filters.get_filters(args.filters)
     mirror_config = {'max_items': args.max, 'keep_items': args.keep,
+                     'filters': filter_list,
                      'item_download': not args.no_item_download}
 
     level = (log.ERROR, log.INFO, log.DEBUG)[min(args.verbose, 2)]
@@ -71,8 +84,7 @@ def main():
     smirror = mirrors.UrlMirrorReader(mirror_url, mirrors=args.mirrors,
                                       policy=policy)
     tstore = objectstores.FileStore(args.output_d)
-    tmirror = mirrors.ObjectStoreMirrorWriter(config=mirror_config,
-                                              objectstore=tstore)
+    tmirror = ObjectFilterMirror(config=mirror_config, objectstore=tstore)
 
     tmirror.sync(smirror, initial_path)
 
