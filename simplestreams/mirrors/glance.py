@@ -64,6 +64,8 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         self.auth_url = self.keystone_creds['auth_url']
 
         self.content_id = config.get("content_id")
+        self.modify_hook = config.get("modify_hook")
+
         if not self.content_id:
             raise TypeError("content_id is required")
 
@@ -179,6 +181,14 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         try:
             try:
                 (tmp_path, tmp_del) = util.get_local_copy(contentsource)
+                if self.modify_hook:
+                    (newsize, newmd5) = call_hook(item=t_item, path=tmp_path,
+                                                  cmd=self.modify_hook)
+                    create_kwargs['checksum'] = newmd5
+                    create_kwargs['size'] = newsize
+                    t_item['md5'] = newmd5
+                    t_item['size'] = newsize
+
             finally:
                 contentsource.close()
 
@@ -244,5 +254,31 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         }
         LOG.info("writing data: %s", ipath)
         self.store.insert_content(ipath, util.dump_data(index))
+
+
+def _checksum_file(fobj, read_size=util.READ_SIZE, checksums=None):
+    if checksums is None:
+        checksums = {'md5': None}
+    cksum = util.checksummer(checksums=checksums)
+    while True:
+        buf = fobj.read(read_size)
+        cksum.update(buf)
+        if len(buf) != read_size:
+            break
+    return cksum.hexdigest()
+
+
+def call_hook(item, path, cmd):
+    env = os.environ.copy()
+    env.update(item)
+    env['IMAGE_PATH'] = path
+    env['FIELDS'] = ' '.join(item.keys()) + ' IMAGE_PATH'
+
+    util.subp(cmd, env=env, capture=False)
+
+    with open(path, "rb") as fp:
+        md5 = _checksum_file(fp, checksums={'md5': None})
+
+    return (os.path.getsize(path), md5)
 
 # vi: ts=4 expandtab syntax=python

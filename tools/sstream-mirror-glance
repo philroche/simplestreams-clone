@@ -62,6 +62,9 @@ def main():
                         help='prefix for each published image name')
     parser.add_argument('--cloud-name', metavar="name", default=None,
                         required=True, help='unique name for this cloud')
+    parser.add_argument('--modify-hook', metavar="cmd", default=None,
+                        required=False,
+                        help='invoke cmd on each image prior to upload')
     parser.add_argument('--content-id', metavar="name", default=None,
                         required=True,
                         help='content-id to use for published data.'
@@ -78,8 +81,13 @@ def main():
     parser.add_argument('path', nargs='?', default="streams/v1/index.sjson")
     args = parser.parse_args()
 
+    modify_hook = None
+    if args.modify_hook:
+        modify_hook = args.modify_hook.split()
+
     mirror_config = {'max_items': args.max, 'keep_items': args.keep,
-                     'cloud_name': args.cloud_name}
+                     'cloud_name': args.cloud_name,
+                     'modify_hook': modify_hook}
 
     def policy(content, path):  # pylint: disable=W0613
         if args.path.endswith('sjson'):

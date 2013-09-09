@@ -427,14 +427,14 @@ def get_local_copy(contentsource, read_size=READ_SIZE):
         raise e
 
 
-def subp(args, data=None, capture=True, shell=False):
+def subp(args, data=None, capture=True, shell=False, env=None):
     if not capture:
         stdout, stderr = (None, None)
     else:
         stdout, stderr = (subprocess.PIPE, subprocess.PIPE)
 
     sp = subprocess.Popen(args, stdout=stdout, stderr=stderr,
-                          stdin=subprocess.PIPE, shell=shell)
+                          stdin=subprocess.PIPE, shell=shell, env=env)
     if isinstance(data, str):
         data = data.encode('utf-8')
 
