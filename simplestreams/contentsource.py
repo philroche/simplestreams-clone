@@ -63,6 +63,11 @@ class ContentSource(object):
     def read(self, size=-1):
         raise NotImplementedError()
 
+    def seek(self, offset):
+        """ Implemented if the ContentSource supports seeking within content.
+        Used to resume failed transfers. """
+        raise NotImplementedError()
+
     def __enter__(self):
         self.open()
         return self
@@ -83,6 +88,7 @@ class UrlContentSource(ContentSource):
         self.mirrors = mirrors
         self.input_url = url
         self.url = url
+        self.offset = None
 
     def _urlinfo(self, url):
         parsed = urlparse.urlparse(url)
@@ -95,8 +101,11 @@ class UrlContentSource(ContentSource):
 
         if parsed.scheme == "file":
 
-            def binopen(path):
-                return open(path, "rb")
+            def binopen(path, offset=None):
+                f = open(path, "rb")
+                if offset is not None:
+                    f.seek(offset)
+                return f
 
             return (url, binopen, (parsed.path,))
         else:
@@ -107,7 +116,7 @@ class UrlContentSource(ContentSource):
             try:
                 (normurl, opener, oargs) = self._urlinfo(url)
                 self.url = normurl
-                return opener(*oargs)
+                return opener(*oargs, offset=self.offset)
             except IOError as e:
                 if e.errno != errno.ENOENT:
                     raise
@@ -119,16 +128,15 @@ class UrlContentSource(ContentSource):
 
     def open(self):  # pylint: disable=E0202
         self.fd = self._open()
-        self.read = self._read
 
     def read(self, size=-1):  # pylint: disable=E0202
         if self.fd is None:
             self.open()
 
-        return self._read(size)
-
-    def _read(self, size=-1):
         return self.fd.read(size)
+
+    def seek(self, offset):
+        self.offset = offset
 
     def close(self):
         if self.fd:
@@ -233,7 +241,7 @@ class UrlReader(object):
 
 
 class Urllib2UrlReader(UrlReader):
-    def __init__(self, url):
+    def __init__(self, url, offset=None):
         (url, username, password) = parse_url_auth(url)
         self.url = url
         if username is None:
@@ -245,7 +253,10 @@ class Urllib2UrlReader(UrlReader):
             opener = urllib_request.build_opener(handler).open
 
         try:
-            self.req = opener(url)
+            req = urllib_request.Request(url)
+            if offset is not None:
+                req.add_header('Range', 'bytes=%d-' % offset)
+            self.req = opener(req)
         except urllib_error.HTTPError as e:
             if e.code == 404:
                 myerr = IOError("Unable to open %s" % url)
@@ -266,7 +277,7 @@ class RequestsUrlReader(UrlReader):
     # r = RequestsUrlReader(http://example.com)
     # r.read(10)
     # r.close()
-    def __init__(self, url, buflen=None):
+    def __init__(self, url, buflen=None, offset=None):
         self.url = url
         (url, user, password) = parse_url_auth(url)
         if user is None:
@@ -274,7 +285,8 @@ class RequestsUrlReader(UrlReader):
         else:
             auth = (user, password)
 
-        self.req = requests.get(url, stream=True, auth=auth)
+        headers = {'Range': 'bytes=%d-' % offset}
+        self.req = requests.get(url, stream=True, auth=auth, headers=headers)
         self.r_iter = None
         if buflen is None:
             buflen = READ_BUFFER_SIZE
