@@ -9,6 +9,7 @@ from subprocess import Popen, PIPE
 from unittest import TestCase
 from nose.tools import raises
 
+
 class TestResume(TestCase):
     def setUp(self):
         self.target = tempfile.mkdtemp()
@@ -38,7 +39,7 @@ class TestResume(TestCase):
             started = False
             # wait for the HTTP server to start up
             while True:
-                line = p.stdout.readline() # pylint: disable=E1101
+                line = p.stdout.readline()  # pylint: disable=E1101
                 if b'Serving HTTP' in line:
                     started = True
                     break
@@ -56,7 +57,7 @@ class TestResume(TestCase):
                 # header, so we get two 'hello's.
                 assert contents == b'hellohello world\n', contents
         finally:
-            p.kill() # pylint: disable=E1101
+            p.kill()  # pylint: disable=E1101
 
     @raises(Exception)
     def test_post_open_set_start_pos(self):
