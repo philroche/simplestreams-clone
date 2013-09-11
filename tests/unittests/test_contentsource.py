@@ -72,13 +72,13 @@ class TestResume(TestCase):
 
     def test_percent_callback(self):
         with RandomPortServer(self.source) as server:
-            self.done = 0.0
+            self.done = 0
             def handler(path, downloaded, total):
                 _pylint = path, total
                 self.done = downloaded
             tcs = objectstores.FileStore(self.target, complete_callback=handler)
             loc = 'http://localhost:%d/foo' % server.port
             scs = contentsource.UrlContentSource(loc)
-            tcs.insert('foo', scs)
+            tcs.insert('foo', scs, size=len('hellohello world'))
 
-            assert self.done > 0.0 # just make sure it was called
+            assert self.done > 0 # just make sure it was called

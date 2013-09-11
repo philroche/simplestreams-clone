@@ -29,7 +29,7 @@ READ_BUFFER_SIZE = 1024 * 10
 class ObjectStore(object):
     read_size = READ_BUFFER_SIZE
 
-    def insert(self, path, reader, checksums=None, mutable=True):
+    def insert(self, path, reader, checksums=None, mutable=True, size=None):
         #store content from reader.read() into path, expecting result checksum
         raise NotImplementedError()
 
@@ -60,7 +60,7 @@ class MemoryObjectStore(ObjectStore):
             data = {}
         self.data = data
 
-    def insert(self, path, reader, checksums=None, mutable=True):
+    def insert(self, path, reader, checksums=None, mutable=True, size=None):
         self.data[path] = reader.read()
 
     def remove(self, path):
@@ -82,7 +82,7 @@ class FileStore(ObjectStore):
         self.prefix = prefix
         self.complete_callback = complete_callback
 
-    def insert(self, path, reader, checksums=None, mutable=True):
+    def insert(self, path, reader, checksums=None, mutable=True, size=None):
         wpath = self._fullpath(path)
         if os.path.isfile(wpath):
             if not mutable:
@@ -100,30 +100,32 @@ class FileStore(ObjectStore):
         util.mkdir_p(out_d)
 
         if os.path.exists(partfile):
-            size = os.path.getsize(partfile)
             try:
-                reader.set_start_pos(size)
+                reader.set_start_pos(os.path.getsize(partfile))
             except NotImplementedError:
                 # continuing not supported, just delete and retry
                 os.unlink(partfile)
 
         with open(partfile, "ab") as wfp:
 
-            try:
-                filesize = float(reader.size())
-            except cs.SizeUnknownError:
-                filesize = None
-
             while True:
                 buf = reader.read(self.read_size)
                 wfp.write(buf)
-                if filesize is not None and self.complete_callback:
-                    self.complete_callback(path, wfp.tell(), filesize)
                 cksum.update(buf)
+
+                if size is not None:
+                    if self.complete_callback:
+                        self.complete_callback(path, wfp.tell(), size)
+                    if wfp.tell() > size:
+                        # file is too big, so the checksum won't match; we
+                        # might as well stop downloading.
+                        break
+
                 if len(buf) != self.read_size:
                     break
+
         if not cksum.check():
-            msg = "unexpected checksum '%s' on %s (found: %s expected: %s"
+            msg = "unexpected checksum '%s' on %s (found: %s expected: %s)"
             raise Exception(msg % (cksum.algorithm, path,
                                    cksum.hexdigest(), cksum.expected))
         os.rename(partfile, wpath)
