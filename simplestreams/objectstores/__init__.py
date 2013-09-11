@@ -97,7 +97,7 @@ class FileStore(ObjectStore):
         if os.path.exists(partfile):
             size = os.path.getsize(partfile)
             try:
-                reader.seek(size)
+                reader.set_start_pos(size)
             except NotImplementedError:
                 # continuing not supported, just delete and retry
                 os.unlink(partfile)

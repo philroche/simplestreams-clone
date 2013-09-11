@@ -6,6 +6,7 @@ from simplestreams import objectstores
 from simplestreams import contentsource
 from subprocess import Popen, PIPE
 from unittest import TestCase
+from nose.tools import raises
 
 class TestResume(TestCase):
     def setUp(self):
@@ -48,3 +49,9 @@ class TestResume(TestCase):
                 assert contents == b'hellohello world\n', contents
         finally:
             p.kill()
+
+    @raises(Exception)
+    def test_post_open_set_start_pos(self):
+        cs = contentsource.UrlContentSource('file://%s/foo' % self.source)
+        cs.open()
+        cs.set_start_pos(1)

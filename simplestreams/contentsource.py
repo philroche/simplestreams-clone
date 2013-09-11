@@ -63,7 +63,7 @@ class ContentSource(object):
     def read(self, size=-1):
         raise NotImplementedError()
 
-    def seek(self, offset):
+    def set_start_pos(self, offset):
         """ Implemented if the ContentSource supports seeking within content.
         Used to resume failed transfers. """
         raise NotImplementedError()
@@ -89,6 +89,7 @@ class UrlContentSource(ContentSource):
         self.input_url = url
         self.url = url
         self.offset = None
+        self.fd = None
 
     def _urlinfo(self, url):
         parsed = urlparse.urlparse(url)
@@ -135,7 +136,9 @@ class UrlContentSource(ContentSource):
 
         return self.fd.read(size)
 
-    def seek(self, offset):
+    def set_start_pos(self, offset):
+        if self.fd is not None:
+            raise Exception("can't set start pos after open()")
         self.offset = offset
 
     def close(self):
