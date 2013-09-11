@@ -36,7 +36,7 @@ def get_swiftclient(**kwargs):
     return Connection(**connargs)
 
 
-class SwiftContentSource(cs.IteratorContentSource):
+class SwiftContentSource(cs.IteratorContentSource): # pylint: disable=W0223
     def is_enoent(self, exc):
         return is_enoent(exc)
 

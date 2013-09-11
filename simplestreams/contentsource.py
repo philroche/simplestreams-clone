@@ -148,7 +148,7 @@ class UrlContentSource(ContentSource):
             self.open = self._open
 
 
-class FdContentSource(ContentSource):
+class FdContentSource(ContentSource): # pylint: disable=W0223
     def __init__(self, fd, url=None):
         self.fd = fd
         self.url = url
@@ -160,7 +160,7 @@ class FdContentSource(ContentSource):
         self.fd.close()
 
 
-class IteratorContentSource(ContentSource):
+class IteratorContentSource(ContentSource): # pylint: disable=W0223
     def __init__(self, itgen, url=None):
         self.itgen = itgen
         self.url = url
@@ -225,7 +225,7 @@ class IteratorContentSource(ContentSource):
         pass
 
 
-class MemoryContentSource(FdContentSource):
+class MemoryContentSource(FdContentSource): # pylint: disable=W0223
     def __init__(self, url=None, content=""):
         if isinstance(content, str):
             content = content.encode('utf-8')

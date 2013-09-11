@@ -38,7 +38,8 @@ class TestResume(TestCase):
             started = False
             # wait for the HTTP server to start up
             while True:
-                if b'Serving HTTP' in p.stdout.readline():
+                line = p.stdout.readline() # pylint: disable=E1101
+                if b'Serving HTTP' in line:
                     started = True
                     break
             if started:
@@ -46,7 +47,8 @@ class TestResume(TestCase):
 
         try:
             tcs = objectstores.FileStore(self.target)
-            scs = contentsource.UrlContentSource('http://localhost:%d/foo' % port)
+            loc = 'http://localhost:%d/foo' % port
+            scs = contentsource.UrlContentSource(loc)
             tcs.insert('foo', scs)
             with open(join(self.target, 'foo'), 'rb') as f:
                 contents = f.read()
@@ -54,7 +56,7 @@ class TestResume(TestCase):
                 # header, so we get two 'hello's.
                 assert contents == b'hellohello world\n', contents
         finally:
-            p.kill()
+            p.kill() # pylint: disable=E1101
 
     @raises(Exception)
     def test_post_open_set_start_pos(self):
