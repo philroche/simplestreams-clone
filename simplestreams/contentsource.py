@@ -66,7 +66,14 @@ class ContentSource(object):
     def set_start_pos(self, offset):
         """ Implemented if the ContentSource supports seeking within content.
         Used to resume failed transfers. """
-        raise NotImplementedError()
+
+        class SetStartPosNotImplementedError(NotImplementedError):
+            # This is only here to satisfy pylint W0223.  Users
+            # have to accept that it may NotImplementedError
+            pass
+
+        _pylint = offset
+        raise SetStartPosNotImplementedError()
 
     def __enter__(self):
         self.open()
@@ -148,7 +155,7 @@ class UrlContentSource(ContentSource):
             self.open = self._open
 
 
-class FdContentSource(ContentSource): # pylint: disable=W0223
+class FdContentSource(ContentSource):
     def __init__(self, fd, url=None):
         self.fd = fd
         self.url = url
@@ -160,7 +167,7 @@ class FdContentSource(ContentSource): # pylint: disable=W0223
         self.fd.close()
 
 
-class IteratorContentSource(ContentSource): # pylint: disable=W0223
+class IteratorContentSource(ContentSource):
     def __init__(self, itgen, url=None):
         self.itgen = itgen
         self.url = url
@@ -225,7 +232,7 @@ class IteratorContentSource(ContentSource): # pylint: disable=W0223
         pass
 
 
-class MemoryContentSource(FdContentSource): # pylint: disable=W0223
+class MemoryContentSource(FdContentSource):
     def __init__(self, url=None, content=""):
         if isinstance(content, str):
             content = content.encode('utf-8')
