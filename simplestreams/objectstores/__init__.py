@@ -91,27 +91,29 @@ class FileStore(ObjectStore):
         cksum = util.checksummer(checksums)
         out_d = os.path.dirname(wpath)
         partfile = os.path.join(out_d, "%s.part" % os.path.basename(wpath))
-        try:
-            util.mkdir_p(out_d)
-            with open(partfile, "wb") as wfp:
-                while True:
-                    buf = reader.read(self.read_size)
-                    wfp.write(buf)
-                    cksum.update(buf)
-                    if len(buf) != self.read_size:
-                        break
-            if not cksum.check():
-                msg = "unexpected checksum '%s' on %s (found: %s expected: %s"
-                raise Exception(msg % (cksum.algorithm, path,
-                                       cksum.hexdigest(), cksum.expected))
-            os.rename(partfile, wpath)
 
-        except Exception as e:
+        util.mkdir_p(out_d)
+
+        if os.path.exists(partfile):
+            size = os.path.getsize(partfile)
             try:
+                reader.set_start_pos(size)
+            except NotImplementedError:
+                # continuing not supported, just delete and retry
                 os.unlink(partfile)
-            except IOError:
-                pass
-            raise e
+
+        with open(partfile, "ab") as wfp:
+            while True:
+                buf = reader.read(self.read_size)
+                wfp.write(buf)
+                cksum.update(buf)
+                if len(buf) != self.read_size:
+                    break
+        if not cksum.check():
+            msg = "unexpected checksum '%s' on %s (found: %s expected: %s"
+            raise Exception(msg % (cksum.algorithm, path,
+                                   cksum.hexdigest(), cksum.expected))
+        os.rename(partfile, wpath)
 
     def remove(self, path):
         try:
