@@ -1,3 +1,4 @@
+import random
 import shutil
 import tempfile
 
@@ -30,17 +31,22 @@ class TestResume(TestCase):
             assert contents == b'hello world\n', contents
 
     def test_url_seek(self):
-        p = Popen(['python', '-u', '-m', 'SimpleHTTPServer', '8000'],
-                  cwd=self.source, stdout=PIPE)
-
-        try:
+        for _ in range(10):
+            port = random.randrange(40000, 65000)
+            p = Popen(['python', '-u', '-m', 'SimpleHTTPServer', str(port)],
+                      cwd=self.source, stdout=PIPE)
+            started = False
             # wait for the HTTP server to start up
             while True:
                 if b'Serving HTTP' in p.stdout.readline():
+                    started = True
                     break
+            if started:
+                break
 
+        try:
             tcs = objectstores.FileStore(self.target)
-            scs = contentsource.UrlContentSource('http://localhost:8000/foo')
+            scs = contentsource.UrlContentSource('http://localhost:%d/foo' % port)
             tcs.insert('foo', scs)
             with open(join(self.target, 'foo'), 'rb') as f:
                 contents = f.read()
