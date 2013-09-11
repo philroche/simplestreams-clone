@@ -295,7 +295,10 @@ class RequestsUrlReader(UrlReader):
         else:
             auth = (user, password)
 
-        headers = {'Range': 'bytes=%d-' % offset}
+        headers = None
+        if offset is not None:
+            headers = {'Range': 'bytes=%d-' % offset}
+
         self.req = requests.get(url, stream=True, auth=auth, headers=headers)
         self.r_iter = None
         if buflen is None:
