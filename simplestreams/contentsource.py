@@ -52,6 +52,11 @@ except:
     URL_READER_CLASSNAME = "Urllib2UrlReader"
 
 
+class SizeUnknownError(Exception):
+    """ Indicates the size of the object represented by a ContentSource is unknown. """
+    pass
+
+
 class ContentSource(object):
     url = None
 
@@ -62,6 +67,10 @@ class ContentSource(object):
 
     def read(self, size=-1):
         raise NotImplementedError()
+
+    def size(self):
+        """ Return the size of the object represented by this ContentSource, if possible. """
+        raise SizeUnknownError()
 
     def set_start_pos(self, offset):
         """ Implemented if the ContentSource supports seeking within content.
@@ -143,6 +152,11 @@ class UrlContentSource(ContentSource):
 
         return self.fd.read(size)
 
+    def size(self):
+        if self.fd is None:
+            self.open()
+        return self.fd.size()
+
     def set_start_pos(self, offset):
         if self.fd is not None:
             raise Exception("can't set start pos after open()")
@@ -159,6 +173,9 @@ class FdContentSource(ContentSource):
     def __init__(self, fd, url=None):
         self.fd = fd
         self.url = url
+
+    def size(self):
+        return os.fstat(self.fd.fileno()).st_size
 
     def read(self, size=-1):
         return self.fd.read(size)
@@ -237,9 +254,13 @@ class MemoryContentSource(FdContentSource):
         if isinstance(content, str):
             content = content.encode('utf-8')
         fd = io.BytesIO(content)
+        self._size = len(content)
         if url is None:
             url = "MemoryContentSource://undefined"
         super(MemoryContentSource, self).__init__(fd=fd, url=url)
+
+    def size(self):
+        return self._size
 
 
 class UrlReader(object):
@@ -280,6 +301,12 @@ class Urllib2UrlReader(UrlReader):
     def close(self):
         return self.req.close()
 
+    def size(self):
+        try:
+            return int(self.req.info()['Content-Length'])
+        except KeyError:
+            raise SizeUnknownError()
+
 
 class RequestsUrlReader(UrlReader):
     # This provides a url reader that supports deflate/gzip encoding
@@ -315,6 +342,12 @@ class RequestsUrlReader(UrlReader):
             self._read = self.read_compressed
         else:
             self._read = self.read_raw
+
+    def size(self):
+        try:
+            return int(self.req.headers['content-length'])
+        except KeyError:
+            raise SizeUnknownError()
 
     def read(self, size=-1):
         if size < 0:

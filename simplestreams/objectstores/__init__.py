@@ -74,8 +74,9 @@ class MemoryObjectStore(ObjectStore):
 
 class FileStore(ObjectStore):
 
-    def __init__(self, prefix):
+    def __init__(self, prefix, complete_callback: lambda: path, done: None):
         self.prefix = prefix
+        self.complete_callback = complete_callback
 
     def insert(self, path, reader, checksums=None, mutable=True):
         wpath = self._fullpath(path)
@@ -103,9 +104,17 @@ class FileStore(ObjectStore):
                 os.unlink(partfile)
 
         with open(partfile, "ab") as wfp:
+
+            try:
+                filesize = float(reader.size())
+            except cs.SizeUnknownError:
+                filesize = None
+
             while True:
                 buf = reader.read(self.read_size)
                 wfp.write(buf)
+                if filesize is not None:
+                    complete_callback(path, float(wfp.tell()) / filesize
                 cksum.update(buf)
                 if len(buf) != self.read_size:
                     break
