@@ -9,6 +9,27 @@ from subprocess import Popen, PIPE
 from unittest import TestCase
 from nose.tools import raises
 
+class RandomPortServer(object):
+    def __init__(self, path):
+        self.path = path
+
+    def __enter__(self):
+        for _ in range(10):
+            port = random.randrange(40000, 65000)
+            p = Popen(['python', '-u', '-m', 'SimpleHTTPServer', str(port)],
+                      cwd=self.path, stdout=PIPE)
+            # wait for the HTTP server to start up
+            while True:
+                line = p.stdout.readline()  # pylint: disable=E1101
+                if b'Serving HTTP' in line:
+                    started = True
+                    self.port = port
+                    self.process = p
+                    return self
+
+    def __exit__(self, type, value, tb):
+        _pylint = type, value, tb
+        self.process.kill()
 
 class TestResume(TestCase):
     def setUp(self):
@@ -32,23 +53,9 @@ class TestResume(TestCase):
             assert contents == b'hello world\n', contents
 
     def test_url_seek(self):
-        for _ in range(10):
-            port = random.randrange(40000, 65000)
-            p = Popen(['python', '-u', '-m', 'SimpleHTTPServer', str(port)],
-                      cwd=self.source, stdout=PIPE)
-            started = False
-            # wait for the HTTP server to start up
-            while True:
-                line = p.stdout.readline()  # pylint: disable=E1101
-                if b'Serving HTTP' in line:
-                    started = True
-                    break
-            if started:
-                break
-
-        try:
+        with RandomPortServer(self.source) as server:
             tcs = objectstores.FileStore(self.target)
-            loc = 'http://localhost:%d/foo' % port
+            loc = 'http://localhost:%d/foo' % server.port
             scs = contentsource.UrlContentSource(loc)
             tcs.insert('foo', scs)
             with open(join(self.target, 'foo'), 'rb') as f:
@@ -56,11 +63,22 @@ class TestResume(TestCase):
                 # Unfortunately, SimpleHTTPServer doesn't support the Range
                 # header, so we get two 'hello's.
                 assert contents == b'hellohello world\n', contents
-        finally:
-            p.kill()  # pylint: disable=E1101
 
     @raises(Exception)
     def test_post_open_set_start_pos(self):
         cs = contentsource.UrlContentSource('file://%s/foo' % self.source)
         cs.open()
         cs.set_start_pos(1)
+
+    def test_percent_callback(self):
+        with RandomPortServer(self.source) as server:
+            self.done = 0.0
+            def handler(path, percent):
+                _pylint = path
+                self.done = percent
+            tcs = objectstores.FileStore(self.target, complete_callback=handler)
+            loc = 'http://localhost:%d/foo' % server.port
+            scs = contentsource.UrlContentSource(loc)
+            tcs.insert('foo', scs)
+
+            assert self.done > 0.0 # just make sure it was called

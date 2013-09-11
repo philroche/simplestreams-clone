@@ -155,6 +155,8 @@ class UrlContentSource(ContentSource):
     def size(self):
         if self.fd is None:
             self.open()
+        if not hasattr(self.fd, "size"):
+            raise SizeUnknownError()
         return self.fd.size()
 
     def set_start_pos(self, offset):
@@ -173,9 +175,6 @@ class FdContentSource(ContentSource):
     def __init__(self, fd, url=None):
         self.fd = fd
         self.url = url
-
-    def size(self):
-        return os.fstat(self.fd.fileno()).st_size
 
     def read(self, size=-1):
         return self.fd.read(size)

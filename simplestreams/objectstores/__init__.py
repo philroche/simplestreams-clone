@@ -74,7 +74,10 @@ class MemoryObjectStore(ObjectStore):
 
 class FileStore(ObjectStore):
 
-    def __init__(self, prefix, complete_callback: lambda: path, done: None):
+    def __init__(self, prefix, complete_callback=None):
+        """ complete_callback is called periodically to notify users when a
+        file is being inserted. It takes two arguments: the path that is
+        inserted, and a float that represents the percentage complete. """
         self.prefix = prefix
         self.complete_callback = complete_callback
 
@@ -113,8 +116,8 @@ class FileStore(ObjectStore):
             while True:
                 buf = reader.read(self.read_size)
                 wfp.write(buf)
-                if filesize is not None:
-                    complete_callback(path, float(wfp.tell()) / filesize
+                if filesize is not None and self.complete_callback:
+                    self.complete_callback(path, float(wfp.tell()) / filesize)
                 cksum.update(buf)
                 if len(buf) != self.read_size:
                     break
