@@ -73,9 +73,9 @@ class TestResume(TestCase):
     def test_percent_callback(self):
         with RandomPortServer(self.source) as server:
             self.done = 0.0
-            def handler(path, percent):
-                _pylint = path
-                self.done = percent
+            def handler(path, downloaded, total):
+                _pylint = path, total
+                self.done = downloaded
             tcs = objectstores.FileStore(self.target, complete_callback=handler)
             loc = 'http://localhost:%d/foo' % server.port
             scs = contentsource.UrlContentSource(loc)
