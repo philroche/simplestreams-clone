@@ -9,9 +9,12 @@ from subprocess import Popen, PIPE
 from unittest import TestCase
 from nose.tools import raises
 
+
 class RandomPortServer(object):
     def __init__(self, path):
         self.path = path
+        self.process = None
+        self.port = None
 
     def __enter__(self):
         for _ in range(10):
@@ -22,14 +25,14 @@ class RandomPortServer(object):
             while True:
                 line = p.stdout.readline()  # pylint: disable=E1101
                 if b'Serving HTTP' in line:
-                    started = True
                     self.port = port
                     self.process = p
                     return self
 
-    def __exit__(self, type, value, tb):
-        _pylint = type, value, tb
-        self.process.kill()
+    def __exit__(self, _type, value, tb):
+        _pylint = value, tb
+        self.process.kill()  # pylint: disable=E1101
+
 
 class TestResume(TestCase):
     def setUp(self):
@@ -71,14 +74,17 @@ class TestResume(TestCase):
         cs.set_start_pos(1)
 
     def test_percent_callback(self):
+        data = {'dld': 0}
+
+        def handler(path, downloaded, total):
+            _pylint = path, total
+            data['dld'] = downloaded
+
         with RandomPortServer(self.source) as server:
-            self.done = 0
-            def handler(path, downloaded, total):
-                _pylint = path, total
-                self.done = downloaded
-            tcs = objectstores.FileStore(self.target, complete_callback=handler)
+            tcs = objectstores.FileStore(self.target,
+                                         complete_callback=handler)
             loc = 'http://localhost:%d/foo' % server.port
             scs = contentsource.UrlContentSource(loc)
             tcs.insert('foo', scs, size=len('hellohello world'))
 
-            assert self.done > 0 # just make sure it was called
+            assert data['dld'] > 0  # just make sure it was called
