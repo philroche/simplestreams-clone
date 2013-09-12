@@ -54,7 +54,7 @@ class S3ObjectStore(objectstores.ObjectStore):
             self._bucket = self._conn.get_bucket(self.bucketname)
         return self._bucket
 
-    def insert(self, path, reader, checksums=None, mutable=True):
+    def insert(self, path, reader, checksums=None, mutable=True, size=None):
         #store content from reader.read() into path, expecting result checksum
         try:
             tfile = tempfile.TemporaryFile()

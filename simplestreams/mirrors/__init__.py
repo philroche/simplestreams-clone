@@ -363,7 +363,8 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
             return
         LOG.debug("inserting %s to %s", contentsource.url, data['path'])
         self.store.insert(data['path'], contentsource,
-                          checksums=util.item_checksums(data), mutable=False)
+                          checksums=util.item_checksums(data), mutable=False,
+                          size=data.get('size'))
 
     def insert_index_entry(self, data, src, pedigree, contentsource):
         epath = data.get('path', None)

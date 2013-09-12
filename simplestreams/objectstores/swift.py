@@ -68,7 +68,7 @@ class SwiftObjectStore(objectstores.ObjectStore):
                                        headers={'X-Container-Read':
                                                 '.r:*,.rlistings'})
 
-    def insert(self, path, reader, checksums=None, mutable=True):
+    def insert(self, path, reader, checksums=None, mutable=True, size=None):
         #store content from reader.read() into path, expecting result checksum
         self._insert(path=path, contents=reader, checksums=checksums,
                      mutable=mutable)
