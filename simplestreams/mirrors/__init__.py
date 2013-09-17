@@ -304,12 +304,12 @@ class BasicMirrorWriter(MirrorWriter):
                 self.insert_version(version, src, target, (prodname, vername))
 
             if self.config.get('delete_filtered_items', False):
-	        tkeys = tproduct.get('versions', {}).keys()
+                tkeys = tproduct.get('versions', {}).keys()
                 for v in src_filtered_items:
                     if v not in to_remove and v in tkeys:
                         to_remove.append(v)
-		LOG.info("After deletions %s/%s: to_add=%s to_remove=%s",
-                     content_id, prodname, to_add, to_remove)
+                LOG.info("After deletions %s/%s: to_add=%s to_remove=%s",
+                         content_id, prodname, to_add, to_remove)
 
             for vername in to_remove:
                 tversion = tversions[vername]
