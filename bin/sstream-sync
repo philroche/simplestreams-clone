@@ -75,7 +75,9 @@ def main():
     parser.add_argument('--item-skip-download', action='store_true',
                         default=False,
                         help='Do not download items that are to be inserted.')
-
+    parser.add_argument('--delete', action='store_true', default=False,
+                        dest='delete_filtered_items',
+                        help='remove filtered items from the target')
     parser.add_argument('--path', default=None,
                         help='sync from index or products file in mirror')
 
@@ -92,6 +94,7 @@ def main():
     known_cfg = [('--item-skip-download', 'item_skip_download', False),
                  ('--max', 'max_items', False),
                  ('--keep', 'keep_items', False),
+                 ('--delete', 'delete_filtered_items', False),
                  ('mirror_url', 'mirror_url', True),
                  ('--path', 'path', True)]
     known_cfg.extend(hooks)
