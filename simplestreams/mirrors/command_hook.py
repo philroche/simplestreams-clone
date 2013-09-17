@@ -15,14 +15,13 @@
 #   You should have received a copy of the GNU Affero General Public License
 #   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
 
-from simplestreams.log import LOG
 import simplestreams.mirrors as mirrors
 import simplestreams.util as util
 
 import os
+import errno
 import signal
 import subprocess
-import sys
 import tempfile
 
 REQUIRED_FIELDS = ("load_products",)
@@ -286,8 +285,9 @@ def run_command(cmd, env=None, capture=False, rcs=None):
     rc = sp.returncode  # pylint: disable=E1101
 
     if rc == 0x80 | signal.SIGPIPE:
-        LOG.info("Received SIGPIPE. exiting")
-        sys.exit(rc)
+        exc = IOError("Child Received SIGPIPE: %s" % str(cmd))
+        exc.errno = errno.EPIPE
+        raise exc
 
     if rc not in rcs:
         raise subprocess.CalledProcessError(rc, cmd)
