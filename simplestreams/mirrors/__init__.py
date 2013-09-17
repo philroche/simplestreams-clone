@@ -169,10 +169,26 @@ class UrlMirrorReader(MirrorReader):
             mirrors = []
         self.mirrors = mirrors
         self.prefix = prefix
+        self._trailing_slash_checked = False
 
     def source(self, path):
         mirrors = [m + path for m in self.mirrors]
-        return self._cs(self.prefix + path, mirrors=mirrors)
+        # A little hack to fix up the user's path. It's fairly common to
+        # specify URLs without a trailing slash, so we try to that here as
+        # well.
+        try:
+            csource = self._cs(self.prefix + path, mirrors=mirrors)
+            csource.open()
+            return csource
+        except IOError as e:
+            if (e.errno == errno.ENOENT
+                    and not self._trailing_slash_checked
+                    and not self.prefix.endswith('/')):
+                self._trailing_slash_checked = True
+                self.prefix = self.prefix + '/'
+                LOG.debug("fixed up prefix to have a /: %s" % self.prefix)
+                return self.source(path)
+            raise
 
 
 class ObjectStoreMirrorReader(MirrorReader):

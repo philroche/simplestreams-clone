@@ -135,7 +135,8 @@ class UrlContentSource(ContentSource):
         raise myerr
 
     def open(self):  # pylint: disable=E0202
-        self.fd = self._open()
+        if self.fd is None:
+            self.fd = self._open()
 
     def read(self, size=-1):  # pylint: disable=E0202
         if self.fd is None:
@@ -152,7 +153,6 @@ class UrlContentSource(ContentSource):
         if self.fd:
             self.fd.close()
             self.fd = None
-            self.open = self._open
 
 
 class FdContentSource(ContentSource):
