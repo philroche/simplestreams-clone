@@ -19,7 +19,9 @@ import simplestreams.mirrors as mirrors
 import simplestreams.util as util
 
 import os
+import signal
 import subprocess
+import sys
 import tempfile
 
 REQUIRED_FIELDS = ("load_products",)
@@ -281,6 +283,9 @@ def run_command(cmd, env=None, capture=False, rcs=None):
     sp = subprocess.Popen(cmd, env=env, stdout=stdout, shell=False)
     (out, _err) = sp.communicate()
     rc = sp.returncode  # pylint: disable=E1101
+
+    if rc == 0x80 | signal.SIGPIPE:
+        sys.exit(rc)
 
     if rc not in rcs:
         raise subprocess.CalledProcessError(rc, cmd)
