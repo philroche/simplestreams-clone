@@ -172,7 +172,17 @@ class UrlMirrorReader(MirrorReader):
 
     def source(self, path):
         mirrors = [m + path for m in self.mirrors]
-        return self._cs(self.prefix + path, mirrors=mirrors)
+        # A little hack to fix up the user's path. It's fairly common to
+        # specify URLs without a trailing slash, so we try to that here as
+        # well.
+        try:
+            cs = self._cs(self.prefix + path, mirrors=mirrors)
+            cs.open()
+            return cs
+        except IOError as e:
+            if e.errno == errno.ENOENT:
+                return self._cs(self.prefix + '/' + path, mirrors=mirrors)
+            raise
 
 
 class ObjectStoreMirrorReader(MirrorReader):
