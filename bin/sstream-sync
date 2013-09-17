@@ -22,8 +22,10 @@ from simplestreams import log
 from simplestreams import util
 
 import argparse
-import sys
+import errno
 import os
+import signal
+import sys
 import yaml
 
 
@@ -147,7 +149,12 @@ def main():
 
     smirror = mirrors.UrlMirrorReader(cfg['mirror_url'], policy=policy)
     tmirror = command_hook.CommandHookMirror(config=cfg)
-    tmirror.sync(smirror, cfg['path'])
+    try:
+        tmirror.sync(smirror, cfg['path'])
+    except IOError as e:
+        if e.errno == errno.EPIPE:
+            sys.exit(0x80 | signal.SIGPIPE)
+        raise
 
 if __name__ == '__main__':
     main()

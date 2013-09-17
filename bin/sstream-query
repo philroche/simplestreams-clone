@@ -22,7 +22,9 @@ from simplestreams import log
 from simplestreams import util
 
 import argparse
+import errno
 import pprint
+import signal
 import sys
 
 FORMAT_PRETTY = "PRETTY"
@@ -118,7 +120,12 @@ def main():
            'output_format': cmdargs.output_format}
 
     tmirror = FilterMirror(config=cfg)
-    tmirror.sync(smirror, path)
+    try:
+        tmirror.sync(smirror, path)
+    except IOError as e:
+        if e.errno == errno.EPIPE:
+            sys.exit(0x80 | signal.SIGPIPE)
+        raise
 
 if __name__ == '__main__':
     main()
