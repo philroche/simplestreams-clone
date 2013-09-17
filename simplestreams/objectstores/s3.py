@@ -1,3 +1,20 @@
+#   Copyright (C) 2013 Canonical Ltd.
+#
+#   Author: Scott Moser <scott.moser@canonical.com>
+#
+#   Simplestreams is free software: you can redistribute it and/or modify it
+#   under the terms of the GNU Affero General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or (at your
+#   option) any later version.
+#
+#   Simplestreams is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+#   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public
+#   License for more details.
+#
+#   You should have received a copy of the GNU Affero General Public License
+#   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
+
 import boto.exception
 import boto.s3
 import boto.s3.connection
@@ -7,6 +24,7 @@ import tempfile
 
 import simplestreams.objectstores as objectstores
 import simplestreams.contentsource as cs
+
 
 class S3ObjectStore(objectstores.ObjectStore):
 
@@ -36,7 +54,7 @@ class S3ObjectStore(objectstores.ObjectStore):
             self._bucket = self._conn.get_bucket(self.bucketname)
         return self._bucket
 
-    def insert(self, path, reader, checksums=None, mutable=True):
+    def insert(self, path, reader, checksums=None, mutable=True, size=None):
         #store content from reader.read() into path, expecting result checksum
         try:
             tfile = tempfile.TemporaryFile()
@@ -59,7 +77,7 @@ class S3ObjectStore(objectstores.ObjectStore):
         #remove path from store
         self.bucket.delete_key(self.path_prefix + path)
 
-    def reader(self, path):
+    def source(self, path):
         # essentially return an 'open(path, r)'
         key = self.bucket.get_key(self.path_prefix + path)
         if not key:

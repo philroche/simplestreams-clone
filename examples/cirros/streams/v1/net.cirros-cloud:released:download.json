@@ -1,6 +1,6 @@
 {
  "datatype": "image-downloads", 
- "updated": "Fri, 12 Apr 2013 19:44:12 +0000", 
+ "updated": "Sat, 04 May 2013 01:58:57 +0000", 
  "content_id": "net.cirros-cloud:released:download", 
  "products": {
   "net.cirros-cloud:standard:0.3:i386": {
@@ -23,6 +23,13 @@
        "md5": "115ca6afa47089dc083c0dc9f9b7ff03", 
        "size": 6596586
       }, 
+      "rootfs.img.gz": {
+       "ftype": "rootfs.img.gz", 
+       "path": "0.3.0/cirros-0.3.0-i386-rootfs.img.gz", 
+       "sha256": "981eb0be5deed016a6b7d668537a2ca8c7c8f8ac02f265acb63eab9a8adc4b98", 
+       "md5": "174d97541fadaf4e88d526f656c1e0a5", 
+       "size": 8566441
+      }, 
       "lxc.tar.gz": {
        "ftype": "lxc.tar.gz", 
        "path": "0.3.0/cirros-0.3.0-i386-lxc.tar.gz", 
@@ -31,8 +38,8 @@
        "size": 1845928
       }
      }, 
-     "pubname": "cirros-0.3.0-i386", 
-     "version": "0.3.0"
+     "version": "0.3.0", 
+     "pubname": "cirros-0.3.0-i386"
     }, 
     "20130207": {
      "items": {
@@ -50,6 +57,13 @@
        "md5": "52845de5142e58faf211e135d2b45721", 
        "size": 8197543
       }, 
+      "rootfs.img.gz": {
+       "ftype": "rootfs.img.gz", 
+       "path": "0.3.1/cirros-0.3.1-i386-rootfs.img.gz", 
+       "sha256": "27decd793c659063988dbb48ecd159a3f6664f9552d0fda9c58ce8984af5ba54", 
+       "md5": "cf14209217f41ea26844bf0b9cdd20ef", 
+       "size": 11565966
+      }, 
       "lxc.tar.gz": {
        "ftype": "lxc.tar.gz", 
        "path": "0.3.1/cirros-0.3.1-i386-lxc.tar.gz", 
@@ -58,8 +72,8 @@
        "size": 3191593
       }
      }, 
-     "pubname": "cirros-0.3.1-i386", 
-     "version": "0.3.1"
+     "version": "0.3.1", 
+     "pubname": "cirros-0.3.1-i386"
     }
    }
   }, 
@@ -83,6 +97,13 @@
        "md5": "f56d3cffa47b7d209d2b6905628f07b9", 
        "size": 6957349
       }, 
+      "rootfs.img.gz": {
+       "ftype": "rootfs.img.gz", 
+       "path": "0.3.0/cirros-0.3.0-x86_64-rootfs.img.gz", 
+       "sha256": "fb0f51c0ec8cfae9d2cef18e4897142e6a81688378fc52f3836ddb5d027a6761", 
+       "md5": "83cd7edde7c99ae520e26d338d397875", 
+       "size": 9184057
+      }, 
       "lxc.tar.gz": {
        "ftype": "lxc.tar.gz", 
        "path": "0.3.0/cirros-0.3.0-x86_64-lxc.tar.gz", 
@@ -91,8 +112,8 @@
        "size": 2115217
       }
      }, 
-     "pubname": "cirros-0.3.0-x86_64", 
-     "version": "0.3.0"
+     "version": "0.3.0", 
+     "pubname": "cirros-0.3.0-x86_64"
     }, 
     "20130207": {
      "items": {
@@ -110,6 +131,13 @@
        "md5": "e1849016cb71a00808093b7bf986f36a", 
        "size": 8633554
       }, 
+      "rootfs.img.gz": {
+       "ftype": "rootfs.img.gz", 
+       "path": "0.3.1/cirros-0.3.1-x86_64-rootfs.img.gz", 
+       "sha256": "8af2572729827ef89eabcdba36eaa130abb04e83e5910a0c20009ef48f4be237", 
+       "md5": "069f6411ea252bf4b343953017f35968", 
+       "size": 12339939
+      }, 
       "lxc.tar.gz": {
        "ftype": "lxc.tar.gz", 
        "path": "0.3.1/cirros-0.3.1-x86_64-lxc.tar.gz", 
@@ -118,8 +146,8 @@
        "size": 3534564
       }
      }, 
-     "pubname": "cirros-0.3.1-x86_64", 
-     "version": "0.3.1"
+     "version": "0.3.1", 
+     "pubname": "cirros-0.3.1-x86_64"
     }
    }
   }, 
@@ -136,6 +164,13 @@
        "md5": "c31e05f7829ad45f9d9995c35d232769", 
        "size": 5761642
       }, 
+      "rootfs.img.gz": {
+       "ftype": "rootfs.img.gz", 
+       "path": "0.3.0/cirros-0.3.0-arm-rootfs.img.gz", 
+       "sha256": "731821e5293f6b66688a2127094537ce79c103f45a82b27b00a08992e3aa5a7a", 
+       "md5": "b268cfa7e634f070af401f8169adff79", 
+       "size": 7914961
+      }, 
       "lxc.tar.gz": {
        "ftype": "lxc.tar.gz", 
        "path": "0.3.0/cirros-0.3.0-arm-lxc.tar.gz", 
@@ -144,8 +179,8 @@
        "size": 2043822
       }
      }, 
-     "pubname": "cirros-0.3.0-arm", 
-     "version": "0.3.0"
+     "version": "0.3.0", 
+     "pubname": "cirros-0.3.0-arm"
     }, 
     "20130207": {
      "items": {
@@ -156,6 +191,13 @@
        "md5": "d04e6f26aed123bba2c096581b269e7f", 
        "size": 7314471
       }, 
+      "rootfs.img.gz": {
+       "ftype": "rootfs.img.gz", 
+       "path": "0.3.1/cirros-0.3.1-arm-rootfs.img.gz", 
+       "sha256": "9841beefe7a60969585d07cb9f403ce8e73fd56f47b13f8ed111443a0ca50fb3", 
+       "md5": "24205ff08d67b94b13588cee256e83b3", 
+       "size": 10945168
+      }, 
       "lxc.tar.gz": {
        "ftype": "lxc.tar.gz", 
        "path": "0.3.1/cirros-0.3.1-arm-lxc.tar.gz", 
@@ -164,8 +206,8 @@
        "size": 3466149
       }
      }, 
-     "pubname": "cirros-0.3.1-arm", 
-     "version": "0.3.1"
+     "version": "0.3.1", 
+     "pubname": "cirros-0.3.1-arm"
     }
    }
   }

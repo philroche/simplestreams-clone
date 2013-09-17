@@ -19,7 +19,7 @@ setup(
     url='http://launchpad.net/simplestreams/',
     packages=['simplestreams', 'simplestreams.mirrors',
               'simplestreams.objectstores'],
-    scripts=['bin/sstream-sync'],
+    scripts=glob('bin/*'),
     data_files=[
         ('/usr/lib/simplestreams', glob('tools/hook-*')),
         ('/usr/share/doc/simplestreams',

@@ -2,6 +2,7 @@ from unittest import TestCase
 import simplestreams.mirrors.command_hook as chm
 from tests.testutil import get_mirror_reader
 
+
 class TestCommandHookMirror(TestCase):
     """Test of CommandHookMirror."""
 
@@ -12,7 +13,7 @@ class TestCommandHookMirror(TestCase):
         self.assertRaises(TypeError, chm.CommandHookMirror, {})
 
     def test_init_with_load_products_works(self):
-        mirror = chm.CommandHookMirror({'load_products': 'true'})
+        _mirror = chm.CommandHookMirror({'load_products': 'true'})
 
     def test_stream_load_empty(self):
 
@@ -22,7 +23,7 @@ class TestCommandHookMirror(TestCase):
 
         try:
             chm.run_command = self._run_command
-            target.sync(src.reader, "streams/v1/index.js")
+            target.sync(src, "streams/v1/index.json")
 
         finally:
             chm.run_command = oruncmd
@@ -31,12 +32,11 @@ class TestCommandHookMirror(TestCase):
         # in the stream.
         self.assertEqual(self._run_commands, [['true'], ['true']])
 
-
     def _run_command(self, cmd, env=None, capture=False, rcs=None):
+        _pylint = (env, capture, rcs)
         self._run_commands.append(cmd)
         rc = 0
         output = ''
-        print cmd
         return (rc, output)
 
 # vi: ts=4 expandtab syntax=python

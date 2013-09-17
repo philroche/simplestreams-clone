@@ -1,4 +1,24 @@
 #!/usr/bin/python
+#   Copyright (C) 2013 Canonical Ltd.
+#
+#   Author: Scott Moser <scott.moser@canonical.com>
+#
+#   Simplestreams is free software: you can redistribute it and/or modify it
+#   under the terms of the GNU Affero General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or (at your
+#   option) any later version.
+#
+#   Simplestreams is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+#   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public
+#   License for more details.
+#
+#   You should have received a copy of the GNU Affero General Public License
+#   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
+#
+# this is python2 as openstack dependencies (swiftclient, keystoneclient,
+# glanceclient) are not python3.
+#
 import argparse
 import os.path
 import sys
@@ -8,6 +28,7 @@ from simplestreams.objectstores import swift
 from simplestreams import log
 from simplestreams import mirrors
 from simplestreams import openstack
+from simplestreams import util
 from simplestreams.mirrors import glance
 
 
@@ -41,6 +62,9 @@ def main():
                         help='prefix for each published image name')
     parser.add_argument('--cloud-name', metavar="name", default=None,
                         required=True, help='unique name for this cloud')
+    parser.add_argument('--modify-hook', metavar="cmd", default=None,
+                        required=False,
+                        help='invoke cmd on each image prior to upload')
     parser.add_argument('--content-id', metavar="name", default=None,
                         required=True,
                         help='content-id to use for published data.'
@@ -50,14 +74,29 @@ def main():
     parser.add_argument('--log-file', default=sys.stderr,
                         type=argparse.FileType('w'))
 
+    parser.add_argument('--keyring', action='store', default=None,
+                        help='The keyring for gpg --keyring')
+
     parser.add_argument('source_mirror')
-    parser.add_argument('path', nargs='?', default="streams/v1/index.sjs")
+    parser.add_argument('path', nargs='?', default="streams/v1/index.sjson")
     args = parser.parse_args()
 
-    mirror_config = {'max_items': args.max, 'keep_items': args.keep,
-                     'cloud_name': args.cloud_name}
+    modify_hook = None
+    if args.modify_hook:
+        modify_hook = args.modify_hook.split()
 
-    smirror = mirrors.UrlMirrorReader(args.source_mirror, mirrors=args.mirrors)
+    mirror_config = {'max_items': args.max, 'keep_items': args.keep,
+                     'cloud_name': args.cloud_name,
+                     'modify_hook': modify_hook}
+
+    def policy(content, path):  # pylint: disable=W0613
+        if args.path.endswith('sjson'):
+            return util.read_signed(content, keyring=args.keyring)
+        else:
+            return content
+
+    smirror = mirrors.UrlMirrorReader(args.source_mirror, mirrors=args.mirrors,
+                                      policy=policy)
     if args.output_dir and args.output_swift:
         error("--output-dir and --output-swift are mutually exclusive\n")
         sys.exit(1)
@@ -84,7 +123,7 @@ def main():
         tmirror = glance.GlanceMirror(config=mirror_config,
                                       objectstore=tstore, region=region,
                                       name_prefix=args.name_prefix)
-        tmirror.sync(smirror.reader, args.path)
+        tmirror.sync(smirror, args.path)
 
 
 if __name__ == '__main__':

@@ -1,4 +1,20 @@
-#!/usr/bin/python
+#!/usr/bin/python3
+#   Copyright (C) 2013 Canonical Ltd.
+#
+#   Author: Scott Moser <scott.moser@canonical.com>
+#
+#   Simplestreams is free software: you can redistribute it and/or modify it
+#   under the terms of the GNU Affero General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or (at your
+#   option) any later version.
+#
+#   Simplestreams is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+#   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public
+#   License for more details.
+#
+#   You should have received a copy of the GNU Affero General Public License
+#   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
 import json
@@ -91,15 +107,15 @@ def main():
     index = {"index": {}, 'format': 'index:1.0',
              'updated': data['updated']}
 
-    to_write = [("%s/%s" % (streamdir, 'index.js'), index,)]
+    to_write = [("%s/%s" % (streamdir, 'index.json'), index,)]
 
     not_copied_up = ['content_id']
     for content_id in trees:
         util.products_condense(trees[content_id])
         content = trees[content_id]
         index['index'][content_id] = { 
-            'path': "%s/%s.js" % (streamdir, content_id),
-            'products': content['products'].keys(),
+            'path': "%s/%s.json" % (streamdir, content_id),
+            'products': list(content['products'].keys()),
         }
         for k in util.stringitems(content):
             if k not in not_copied_up:
@@ -116,7 +132,7 @@ def main():
 
         if args.sign:
             sys.stderr.write("signing %s\n" % filef)
-            toolutil.signjs_file(filef)
+            toolutil.signjson_file(filef)
 
     return
 

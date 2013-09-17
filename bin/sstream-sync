@@ -1,14 +1,31 @@
-#!/usr/bin/python
+#!/usr/bin/python3
+#   Copyright (C) 2013 Canonical Ltd.
 #
-# client showing use of command_hook_mirror
+#   Author: Scott Moser <scott.moser@canonical.com>
+#
+#   Simplestreams is free software: you can redistribute it and/or modify it
+#   under the terms of the GNU Affero General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or (at your
+#   option) any later version.
+#
+#   Simplestreams is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+#   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public
+#   License for more details.
+#
+#   You should have received a copy of the GNU Affero General Public License
+#   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
 
 from simplestreams import mirrors
 from simplestreams.mirrors import command_hook
 from simplestreams import log
+from simplestreams import util
 
 import argparse
-import sys
+import errno
 import os
+import signal
+import sys
 import yaml
 
 
@@ -61,12 +78,15 @@ def main():
     parser.add_argument('--delete', action='store_true', default=False,
                         dest='delete_filtered_items',
                         help='remove filtered items from the target')
-    parser.add_argument('--path', default="streams/v1/index.sjs",
+    parser.add_argument('--path', default=None,
                         help='sync from index or products file in mirror')
 
     parser.add_argument('--verbose', '-v', action='count', default=0)
     parser.add_argument('--log-file', default=sys.stderr,
                         type=argparse.FileType('w'))
+
+    parser.add_argument('--keyring', action='store', default=None,
+                        help='keyring to be specified to gpg via --keyring')
 
     parser.add_argument('mirror_url')
     cmdargs = parser.parse_args()
@@ -101,15 +121,18 @@ def main():
             cfg[cfgname] = None
 
         if ((cfgname in command_hook.HOOK_NAMES or cfgname == defhook)
-            and cfg.get(cfgname) is not None):
+                and cfg.get(cfgname) is not None):
             if which(cfg[cfgname]) is None:
                 msg = "invalid input for %s. '%s' is not executable\n"
                 sys.stderr.write(msg % (argname, val))
                 sys.exit(1)
 
         if (cfgname in command_hook.REQUIRED_FIELDS and
-            cfg.get(cfgname) is None and not fallback):
+                cfg.get(cfgname) is None and not fallback):
             missing.append((argname, cfgname,))
+
+    pfm = util.path_from_mirror_url
+    (cfg['mirror_url'], cfg['path']) = pfm(cfg['mirror_url'], cfg.get('path'))
 
     if missing:
         sys.stderr.write("must provide input for (--hook/%s for default):\n"
@@ -121,9 +144,20 @@ def main():
     level = (log.ERROR, log.INFO, log.DEBUG)[min(cmdargs.verbose, 2)]
     log.basicConfig(stream=cmdargs.log_file, level=level)
 
-    smirror = mirrors.UrlMirrorReader(cfg['mirror_url'])
+    def policy(content, path):  # pylint: disable=W0613
+        if cfg['path'].endswith('sjson'):
+            return util.read_signed(content, keyring=cmdargs.keyring)
+        else:
+            return content
+
+    smirror = mirrors.UrlMirrorReader(cfg['mirror_url'], policy=policy)
     tmirror = command_hook.CommandHookMirror(config=cfg)
-    tmirror.sync(smirror.reader, cfg['path'])
+    try:
+        tmirror.sync(smirror, cfg['path'])
+    except IOError as e:
+        if e.errno == errno.EPIPE:
+            sys.exit(0x80 | signal.SIGPIPE)
+        raise
 
 if __name__ == '__main__':
     main()

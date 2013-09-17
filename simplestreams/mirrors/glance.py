@@ -1,4 +1,19 @@
-#!/usr/bin/python
+#   Copyright (C) 2013 Canonical Ltd.
+#
+#   Author: Scott Moser <scott.moser@canonical.com>
+#
+#   Simplestreams is free software: you can redistribute it and/or modify it
+#   under the terms of the GNU Affero General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or (at your
+#   option) any later version.
+#
+#   Simplestreams is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+#   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public
+#   License for more details.
+#
+#   You should have received a copy of the GNU Affero General Public License
+#   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
 
 import simplestreams.mirrors as mirrors
 import simplestreams.util as util
@@ -9,7 +24,6 @@ import copy
 import errno
 import glanceclient
 import os
-import re
 
 
 def get_glanceclient(version='1', **kwargs):
@@ -50,11 +64,13 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         self.auth_url = self.keystone_creds['auth_url']
 
         self.content_id = config.get("content_id")
+        self.modify_hook = config.get("modify_hook")
+
         if not self.content_id:
             raise TypeError("content_id is required")
 
     def _cidpath(self, content_id):
-        return "streams/v1/%s.js" % content_id
+        return "streams/v1/%s.json" % content_id
 
     def load_products(self, path=None, content_id=None):
         my_cid = self.content_id
@@ -105,6 +121,8 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
                 item_data = {}
 
             item_data.update({'name': image['name'], 'id': image['id']})
+            if 'owner_id' not in item_data:
+                item_data['owner_id'] = self.tenant_id
 
             util.products_set(glance_t, item_data,
                               (product, version, item,))
@@ -146,8 +164,9 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         if arch:
             props['architecture'] = arch
 
+        fullname = self.name_prefix + name
         create_kwargs = {
-            'name': self.name_prefix + name,
+            'name': fullname,
             'properties': props,
             'disk_format': 'qcow2',
             'container_format': 'bare',
@@ -162,13 +181,21 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         try:
             try:
                 (tmp_path, tmp_del) = util.get_local_copy(contentsource)
+                if self.modify_hook:
+                    (newsize, newmd5) = call_hook(item=t_item, path=tmp_path,
+                                                  cmd=self.modify_hook)
+                    create_kwargs['checksum'] = newmd5
+                    create_kwargs['size'] = newsize
+                    t_item['md5'] = newmd5
+                    t_item['size'] = newsize
+
             finally:
                 contentsource.close()
 
             create_kwargs['data'] = open(tmp_path, 'rb')
             ret = self.gclient.images.create(**create_kwargs)
             t_item['id'] = ret.id
-            print "created %s: %s" % (ret.id, name)
+            print("created %s: %s" % (ret.id, fullname))
 
         finally:
             if tmp_del and os.path.exists(tmp_path):
@@ -176,12 +203,14 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         t_item['region'] = self.region
         t_item['endpoint'] = self.auth_url
+        t_item['owner_id'] = self.tenant_id
+        t_item['name'] = fullname
         util.products_set(target, t_item, pedigree)
 
     def remove_item(self, data, src, target, pedigree):
         util.products_del(target, pedigree)
         if 'id' in data:
-            print "removing %s: %s" % (data['id'], data['name'])
+            print("removing %s: %s" % (data['id'], data['name']))
             self.gclient.images.delete(data['id'])
 
     def filter_index_entry(self, data, src, pedigree):
@@ -205,7 +234,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         self.store.insert_content(dpath, util.dump_data(tree))
 
         # now insert or update an index
-        ipath = "streams/v1/index.js"
+        ipath = "streams/v1/index.json"
         try:
             index = util.load_content(self.store.reader(ipath).read())
         except IOError as exc:
@@ -220,10 +249,36 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             'clouds': [{'region': self.region, 'endpoint': self.auth_url}],
             'cloudname': self.cloudname,
             'path': dpath,
-            'products': tree['products'].keys(),
+            'products': list(tree['products'].keys()),
             'format': tree['format'],
         }
         LOG.info("writing data: %s", ipath)
         self.store.insert_content(ipath, util.dump_data(index))
+
+
+def _checksum_file(fobj, read_size=util.READ_SIZE, checksums=None):
+    if checksums is None:
+        checksums = {'md5': None}
+    cksum = util.checksummer(checksums=checksums)
+    while True:
+        buf = fobj.read(read_size)
+        cksum.update(buf)
+        if len(buf) != read_size:
+            break
+    return cksum.hexdigest()
+
+
+def call_hook(item, path, cmd):
+    env = os.environ.copy()
+    env.update(item)
+    env['IMAGE_PATH'] = path
+    env['FIELDS'] = ' '.join(item.keys()) + ' IMAGE_PATH'
+
+    util.subp(cmd, env=env, capture=False)
+
+    with open(path, "rb") as fp:
+        md5 = _checksum_file(fp, checksums={'md5': None})
+
+    return (os.path.getsize(path), md5)
 
 # vi: ts=4 expandtab syntax=python

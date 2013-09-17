@@ -1,10 +1,25 @@
-#!/usr/bin/python
+#!/usr/bin/python3
+#   Copyright (C) 2013 Canonical Ltd.
+#
+#   Author: Scott Moser <scott.moser@canonical.com>
+#
+#   Simplestreams is free software: you can redistribute it and/or modify it
+#   under the terms of the GNU Affero General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or (at your
+#   option) any later version.
+#
+#   Simplestreams is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+#   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public
+#   License for more details.
+#
+#   You should have received a copy of the GNU Affero General Public License
+#   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
 
-import json
 import os
 import os.path
-import subprocess
 
+from simplestreams import util
 
 REL2VER = {
     "hardy": {'version': "8.04", 'devname': "Hardy Heron"},
@@ -21,6 +36,7 @@ BUILDS = ("server")
 
 NUM_DAILIES = 4
 
+
 def is_expected(repl, fields):
     rel = fields[0]
     serial = fields[3]
@@ -28,25 +44,26 @@ def is_expected(repl, fields):
         if rel in ("lucid", "oneiric"):
             # lucid, oneiric do not have -root.tar.gz
             return False
-        if rel == "precise" and cmp(serial, "20120202") <= 0:
+        if rel == "precise" and serial <= "20120202":
             # precise got -root.tar.gz after alpha2
             return False
 
     if repl == "-disk1.img":
         if rel == "lucid":
             return False
-        if rel == "oneiric" and cmp(serial, "20110802.2") <= 0:
+        if rel == "oneiric" and serial <= "20110802.2":
             # oneiric got -disk1.img after alpha3
             return False
 
     #if some data in /query is not truely available, fill up this array
     #to skip it. ex: export BROKEN="precise/20121212.1 quantal/20130128.1"
-    broken = os.environ.get("BROKEN","").split(" ")
+    broken = os.environ.get("BROKEN", "").split(" ")
     if "%s/%s" % (rel, serial) in broken:
-        print "Known broken: %s/%s" % (rel, serial)
+        print("Known broken: %s/%s" % (rel, serial))
         return False
 
     return True
+
 
 def load_query_download(path, builds=None, rels=None):
     if builds is None:
@@ -55,8 +72,7 @@ def load_query_download(path, builds=None, rels=None):
         rels = RELEASES
 
     streams = [f[0:-len(".latest.txt")]
-               for f in os.listdir(path)
-                   if f.endswith("latest.txt")]
+               for f in os.listdir(path) if f.endswith("latest.txt")]
 
     results = []
     for stream in streams:
@@ -65,22 +81,22 @@ def load_query_download(path, builds=None, rels=None):
         latest_f = "%s/%s.latest.txt" % (path, stream)
 
         # get the builds and releases
-        with open(latest_f) as fp:
+        with open(latest_f, "r") as fp:
             for line in fp.readlines():
                 (rel, build, _stream, _serial) = line.split("\t")
 
                 if ((len(builds) and build not in builds) or
-                    (len(rels) and rel not in rels)):
+                        (len(rels) and rel not in rels)):
                     continue
 
                 dl_files.append("%s/%s/%s/%s-dl.txt" %
-                    (path, rel, build, stream))
+                                (path, rel, build, stream))
 
         field_path = 5
         field_name = 6
         # stream/build/release/arch
         for dl_file in dl_files:
-            olines = open(dl_file).readlines()
+            olines = open(dl_file, "r").readlines()
 
             # download files in /query only contain '.tar.gz' (uec tarball)
             # file.  So we have to make up other entries.
@@ -104,6 +120,7 @@ def load_query_download(path, builds=None, rels=None):
 
     return results
 
+
 def load_query_ec2(path, builds=None, rels=None, max_dailies=NUM_DAILIES):
     if builds is None:
         builds = BUILDS
@@ -111,8 +128,7 @@ def load_query_ec2(path, builds=None, rels=None, max_dailies=NUM_DAILIES):
         rels = RELEASES
 
     streams = [f[0:-len(".latest.txt")]
-               for f in os.listdir(path)
-                   if f.endswith("latest.txt")]
+               for f in os.listdir(path) if f.endswith("latest.txt")]
     results = []
 
     for stream in streams:
@@ -121,19 +137,19 @@ def load_query_ec2(path, builds=None, rels=None, max_dailies=NUM_DAILIES):
         latest_f = "%s/%s.latest.txt" % (path, stream)
 
         # get the builds and releases
-        with open(latest_f) as fp:
+        with open(latest_f, "r") as fp:
             for line in fp.readlines():
                 (rel, build, _stream, _serial) = line.split("\t")
 
                 if ((len(builds) and build not in builds) or
-                    (len(rels) and rel not in rels)):
+                        (len(rels) and rel not in rels)):
                     continue
 
                 id_files.append("%s/%s/%s/%s.txt" %
-                    (path, rel, build, stream))
+                                (path, rel, build, stream))
 
         for id_file in id_files:
-            lines = reversed(open(id_file).readlines())
+            lines = reversed(open(id_file, "r").readlines())
             serials_seen = 0
             last_serial = None
             for line in lines:
@@ -154,88 +170,25 @@ def load_query_ec2(path, builds=None, rels=None, max_dailies=NUM_DAILIES):
     return results
 
 
-def get_sign_cmd(path, output=None, clearsign=False, armor=True):
-    cmd = ['gpg']
-    defkey = os.environ.get('SS_GPG_DEFAULT_KEY')
-    if defkey:
-        cmd.extend(['--default-key', defkey])
-
-    batch = os.environ.get('SS_GPG_BATCH', "1").lower()
-    if batch not in ("0", "false"):
-        cmd.append('--batch')
-
-    if output:
-        cmd.extend(['--output', output])
-
-    if clearsign:
-        cmd.append('--clearsign')
-    else:
-        if armor:
-            cmd.append('--armor')
-        cmd.append('--sign')
-
-    cmd.extend([path])
-    return cmd
-
-
-def signfile(path, output=None):
-    if output is None:
-        output = path + ".gpg"
-
-    if os.path.exists(output):
-        os.unlink(output)
-
-    subprocess.check_output(get_sign_cmd(path, output))
-
-
-def signfile_inline(path, output=None):
-    infile = path
-    tmpfile = None
-    if output is None:
-        # sign "in place" by using a temp file.
-        tmpfile = "%s.tmp" % path
-        os.rename(path, tmpfile)
-        output = path
-        infile = tmpfile
-    elif os.path.exists(output):
-        os.unlink(output)
-
-    subprocess.check_output(get_sign_cmd(infile, output, clearsign=True))
-
-    if tmpfile:
-        os.unlink(tmpfile)
-
-
-def signjs_file(fname, status_cb=None):
+def signjson_file(fname, status_cb=None):
+    # input fname should be .json
+    # creates .json.gpg and .sjson
     content = ""
-    with open(fname) as fp:
+    with open(fname, "r") as fp:
         content = fp.read()
-    data = json.loads(content)
-    fmt = data.get("format")
-    sjs = fname[0:-len(".js")] + ".sjs"
+    (changed, scontent) = util.make_signed_content_paths(content)
 
-    if status_cb is None:
-        def null_cb(fname, fmt):
-            pass
-        status_cb = null_cb
+    if status_cb:
+        status_cb(fname)
 
-    if fmt == "products:1.0":
-        status_cb(fname, fmt)
-        signfile(fname)
-        signfile_inline(fname, sjs)
-    elif fmt == "index:1.0":
-        status_cb(fname, fmt)
-        signfile(fname)
-        for _content_id, content in data.get('index').iteritems():
-            path = content.get('path')
-            if path.endswith(".js"):
-                content['path'] = path[0:-len(".js")] + ".sjs"
-        with open(sjs, "w") as fp:
-            fp.write(json.dumps(data, indent=1))
-        signfile_inline(sjs)
-        return
+    util.sign_file(fname, inline=False)
+    if changed:
+        util.sign_content(scontent, util.signed_fname(fname, inline=True),
+                          inline=True)
     else:
-        status_cb(fname, fmt)
-        return
+        util.sign_file(fname, inline=True)
+
+    return
+
 
 # vi: ts=4 expandtab syntax=python

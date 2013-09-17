@@ -1,0 +1,133 @@
+#!/usr/bin/python3
+#   Copyright (C) 2013 Canonical Ltd.
+#
+#   Author: Scott Moser <scott.moser@canonical.com>
+#
+#   Simplestreams is free software: you can redistribute it and/or modify it
+#   under the terms of the GNU Affero General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or (at your
+#   option) any later version.
+#
+#   Simplestreams is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+#   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public
+#   License for more details.
+#
+#   You should have received a copy of the GNU Affero General Public License
+#   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
+
+from simplestreams import filters
+from simplestreams import mirrors
+from simplestreams import log
+from simplestreams import util
+
+import argparse
+import errno
+import pprint
+import signal
+import sys
+
+FORMAT_PRETTY = "PRETTY"
+
+
+def warn(msg):
+    sys.stderr.write("WARN: %s" % msg)
+
+
+class FilterMirror(mirrors.BasicMirrorWriter):
+    def __init__(self, config=None):
+        super(FilterMirror, self).__init__(config=config)
+        if config is None:
+            config = {}
+        self.config = config
+        self.filters = config.get('filters', [])
+        outfmt = config.get('output_format')
+        if not outfmt:
+            outfmt = "%s"
+        self.output_format = outfmt
+
+    def load_products(self, path=None, content_id=None):
+        return {'content_id': content_id, 'products': {}}
+
+    def filter_item(self, data, src, target, pedigree):
+        return filters.filter_item(self.filters, data, src, pedigree)
+
+    def insert_item(self, data, src, target, pedigree, contentsource):
+        # src and target are top level products:1.0
+        # data is src['products'][ped[0]]['versions'][ped[1]]['items'][ped[2]]
+        # contentsource is a ContentSource if 'path' exists in data or None
+        data = util.products_exdata(src, pedigree)
+        if 'path' in data:
+            data.update({'item_url': contentsource.url})
+
+        if self.output_format == FORMAT_PRETTY:
+            pprint.pprint(data)
+        else:
+            try:
+                print(self.output_format % (data))
+            except KeyError as e:
+                sys.stderr.write("output format failed. Missing %s\n" % e.args)
+                sys.stderr.write("item: %s\n" % data)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--max', type=int, default=None, dest='max_items',
+                        help='store at most MAX items in the target')
+
+    parser.add_argument('--path', default=None,
+                        help='sync from index or products file in mirror')
+
+    fmt_group = parser.add_mutually_exclusive_group()
+    fmt_group.add_argument('--output-format', '-o', action='store',
+                           dest='output_format', default=None,
+                           help="specify output format per python str.format")
+    fmt_group.add_argument('--pretty', action='store_const',
+                           const=FORMAT_PRETTY, dest='output_format',
+                           help="pretty print output")
+    parser.add_argument('--verbose', '-v', action='count', default=0)
+    parser.add_argument('--log-file', default=sys.stderr,
+                        type=argparse.FileType('w'))
+
+    parser.add_argument('--keyring', action='store', default=None,
+                        help='keyring to be specified to gpg via --keyring')
+
+    parser.add_argument('mirror_url')
+    parser.add_argument('filters', nargs='*', default=[])
+
+    cmdargs = parser.parse_args()
+
+    (mirror_url, path) = util.path_from_mirror_url(cmdargs.mirror_url,
+                                                   cmdargs.path)
+
+    level = (log.ERROR, log.INFO, log.DEBUG)[min(cmdargs.verbose, 2)]
+    log.basicConfig(stream=cmdargs.log_file, level=level)
+
+    initial_path = path
+
+    def policy(content, path):  # pylint: disable=W0613
+        if initial_path.endswith('sjson'):
+            return util.read_signed(content, keyring=cmdargs.keyring)
+        else:
+            return content
+
+    smirror = mirrors.UrlMirrorReader(mirror_url, policy=policy)
+
+    filter_list = filters.get_filters(cmdargs.filters)
+    cfg = {'max_items': cmdargs.max_items,
+           'filters': filter_list,
+           'output_format': cmdargs.output_format}
+
+    tmirror = FilterMirror(config=cfg)
+    try:
+        tmirror.sync(smirror, path)
+    except IOError as e:
+        if e.errno == errno.EPIPE:
+            sys.exit(0x80 | signal.SIGPIPE)
+        raise
+
+if __name__ == '__main__':
+    main()
+
+# vi: ts=4 expandtab syntax=python

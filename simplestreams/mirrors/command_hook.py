@@ -1,10 +1,28 @@
+#   Copyright (C) 2013 Canonical Ltd.
+#
+#   Author: Scott Moser <scott.moser@canonical.com>
+#
+#   Simplestreams is free software: you can redistribute it and/or modify it
+#   under the terms of the GNU Affero General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or (at your
+#   option) any later version.
+#
+#   Simplestreams is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+#   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public
+#   License for more details.
+#
+#   You should have received a copy of the GNU Affero General Public License
+#   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
+
 import simplestreams.mirrors as mirrors
 import simplestreams.util as util
 
 import os
+import errno
+import signal
 import subprocess
 import tempfile
-import yaml
 
 REQUIRED_FIELDS = ("load_products",)
 HOOK_NAMES = (
@@ -29,57 +47,54 @@ ENV_HOOK_NAME = "HOOK"
 ENV_FIELDS_NAME = "FIELDS"
 
 
-"""
-CommandHookMirror: invoke commands to implement a SimpleStreamMirror
-
-Available command hooks:
-  load_products:
-    invoked to list items in the products in a given content_id.
-    See product_load_output_format.
-
-  filter_index_entry, filter_item, filter_product, filter_version:
-    invoked to determine if the named entity should be operated on
-    exit 0 for "yes", 1 for "no".
-
-  insert_index, insert_index_entry, insert_item, insert_product,
-  insert_products, insert_version :
-    invoked to insert the given entity.
-
-  remove_product, remove_version, remove_item:
-    invoked to remove the given entity
-
-
-Other Configuration:
-  product_load_output_format: one of [serial_list, yaml]
-    serial_list: The default output should be white space delimited
-                 output of product_name and version.
-    yaml: output should be a yaml formated dictionary formated like
-          products:1.0 content.  Note, json is a proper subset of
-          yaml, so it is acceptable to output json content.
-
-Environments / Variables:
-  When a hook is invoked, data about the relevant entity is
-  made available in the environment.
-
-  In all cases:
-    * a special 'FIELDS' key is available which is a space delimited
-      list of keys
-    * a special 'HOOK' field is available that specifies which
-      hook is being called.
-
-  For an item in a products:1.0 file that has a 'path' item, the item
-  will be downloaded and a 'path_local' field inserted into the metadata
-  which will contain the path to the local file.
-
-  If the configuration setting 'item_skip_download' is set to True, then
-  'path_url' will be set instead to a url where the item can be found.
-"""
-
-
 class CommandHookMirror(mirrors.BasicMirrorWriter):
+    """
+    CommandHookMirror: invoke commands to implement a SimpleStreamMirror
+
+    Available command hooks:
+      load_products:
+        invoked to list items in the products in a given content_id.
+        See product_load_output_format.
+
+      filter_index_entry, filter_item, filter_product, filter_version:
+        invoked to determine if the named entity should be operated on
+        exit 0 for "yes", 1 for "no".
+
+      insert_index, insert_index_entry, insert_item, insert_product,
+      insert_products, insert_version :
+        invoked to insert the given entity.
+
+      remove_product, remove_version, remove_item:
+        invoked to remove the given entity
+
+
+    Other Configuration:
+      product_load_output_format: one of [serial_list, json]
+        serial_list: The default output should be white space delimited
+                     output of product_name and version.
+        json: output should be a json formated dictionary formated like
+              products:1.0 content.
+
+    Environments / Variables:
+      When a hook is invoked, data about the relevant entity is
+      made available in the environment.
+
+      In all cases:
+        * a special 'FIELDS' key is available which is a space delimited
+          list of keys
+        * a special 'HOOK' field is available that specifies which
+          hook is being called.
+
+      For an item in a products:1.0 file that has a 'path' item, the item
+      will be downloaded and a 'path_local' field inserted into the metadata
+      which will contain the path to the local file.
+
+      If the configuration setting 'item_skip_download' is set to True, then
+      'path_url' will be set instead to a url where the item can be found.
+    """
     def __init__(self, config):
         if isinstance(config, str):
-            config = yaml.safe_load(config)
+            config = util.load_content(config)
         check_config(config)
 
         super(CommandHookMirror, self).__init__(config=config)
@@ -182,7 +197,7 @@ class CommandHookMirror(mirrors.BasicMirrorWriter):
         content_file = None
         if content is not None:
             (tfd, content_file) = tempfile.mkstemp()
-            tfile = os.fdopen(tfd, "w")
+            tfile = os.fdopen(tfd, "wb")
             tfile.write(content)
             tfile.close()
             fdata['content_file_path'] = content_file
@@ -250,8 +265,8 @@ def load_product_output(output, content_id, fmt="serial_list"):
             working['products'][product_id]['versions'][version] = {}
         return working
 
-    elif fmt == "yaml":
-        return yaml.safe_load(output)
+    elif fmt == "json":
+        return util.load_content(output)
 
     return
 
@@ -267,13 +282,21 @@ def run_command(cmd, env=None, capture=False, rcs=None):
 
     sp = subprocess.Popen(cmd, env=env, stdout=stdout, shell=False)
     (out, _err) = sp.communicate()
-    rc = sp.returncode
+    rc = sp.returncode  # pylint: disable=E1101
+
+    if rc == 0x80 | signal.SIGPIPE:
+        exc = IOError("Child Received SIGPIPE: %s" % str(cmd))
+        exc.errno = errno.EPIPE
+        raise exc
 
     if rc not in rcs:
         raise subprocess.CalledProcessError(rc, cmd)
 
     if out is None:
         out = ''
+    elif isinstance(out, bytes):
+        out = out.decode('utf-8')
+
     return (rc, out)
 
 # vi: ts=4 expandtab syntax=python

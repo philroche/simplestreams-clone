@@ -1,3 +1,20 @@
+#   Copyright (C) 2013 Canonical Ltd.
+#
+#   Author: Scott Moser <scott.moser@canonical.com>
+#
+#   Simplestreams is free software: you can redistribute it and/or modify it
+#   under the terms of the GNU Affero General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or (at your
+#   option) any later version.
+#
+#   Simplestreams is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+#   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public
+#   License for more details.
+#
+#   You should have received a copy of the GNU Affero General Public License
+#   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
+
 import simplestreams.objectstores as objectstores
 import simplestreams.contentsource as cs
 import simplestreams.openstack as openstack
@@ -14,7 +31,7 @@ def get_swiftclient(**kwargs):
     nmap = {'endpoint': 'preauthurl', 'token': 'preauthtoken'}
     pt = ('insecure', 'cacert')
 
-    connargs = {v: kwargs.get(k) for k, v in nmap.iteritems() if k in kwargs}
+    connargs = {v: kwargs.get(k) for k, v in nmap.items() if k in kwargs}
     connargs.update({k: kwargs.get(k) for k in pt if k in kwargs})
     return Connection(**connargs)
 
@@ -41,16 +58,17 @@ class SwiftObjectStore(objectstores.ObjectStore):
         self.keystone_creds = openstack.load_keystone_creds()
         if region is not None:
             self.keystone_creds['region_name'] = region
-        
+
         conn_info = openstack.get_service_conn_info('object-store',
                                                     **self.keystone_creds)
         self.swiftclient = get_swiftclient(**conn_info)
 
         # http://docs.openstack.org/developer/swift/misc.html#acls
         self.swiftclient.put_container(self.container,
-            headers={'X-Container-Read': '.r:*,.rlistings'})
+                                       headers={'X-Container-Read':
+                                                '.r:*,.rlistings'})
 
-    def insert(self, path, reader, checksums=None, mutable=True):
+    def insert(self, path, reader, checksums=None, mutable=True, size=None):
         #store content from reader.read() into path, expecting result checksum
         self._insert(path=path, contents=reader, checksums=checksums,
                      mutable=mutable)
@@ -63,7 +81,7 @@ class SwiftObjectStore(objectstores.ObjectStore):
         self.swiftclient.delete_object(container=self.container,
                                        obj=self.path_prefix + path)
 
-    def reader(self, path):
+    def source(self, path):
         def itgen():
             (_headers, iterator) = self.swiftclient.get_object(
                 container=self.container, obj=self.path_prefix + path,
@@ -97,7 +115,7 @@ class SwiftObjectStore(objectstores.ObjectStore):
         insargs = {'container': self.container, 'obj': self.path_prefix + path,
                    'contents': contents}
 
-        if size is not None and isinstance(contents, (unicode, str)):
+        if size is not None and isinstance(contents, str):
             size = len(contents)
 
         if size is not None:
@@ -105,7 +123,7 @@ class SwiftObjectStore(objectstores.ObjectStore):
 
         if checksums and checksums.get('md5'):
             insargs['etag'] = checksums.get('md5')
-        elif isinstance(contents, (unicode, str)):
+        elif isinstance(contents, str):
             insargs['etag'] = hashlib.md5(contents).hexdigest()
 
         self.swiftclient.put_object(**insargs)
@@ -114,8 +132,7 @@ class SwiftObjectStore(objectstores.ObjectStore):
 def headers_match_checksums(headers, checksums):
     if not (headers and checksums):
         return False
-    if ('md5' in checksums and
-        headers.get('etag') == checksums.get('md5')):
+    if ('md5' in checksums and headers.get('etag') == checksums.get('md5')):
         return True
     return False
 

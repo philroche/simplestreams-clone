@@ -1,0 +1,152 @@
+#!/bin/bash
+#   Copyright (C) 2013 Canonical Ltd.
+#
+#   Author: Scott Moser <scott.moser@canonical.com>
+#
+#   Simplestreams is free software: you can redistribute it and/or modify it
+#   under the terms of the GNU Affero General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or (at your
+#   option) any later version.
+#
+#   Simplestreams is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+#   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public
+#   License for more details.
+#
+#   You should have received a copy of the GNU Affero General Public License
+#   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
+set -f
+
+RC_FILTER_INCLUDE=0
+RC_FILTER_EXCLUDE=1
+RC_FAIL=2
+VERBOSITY=${VERBOSITY:-0}
+DEFAULT_OUTPUT_FORMAT='${product_name} ${version_name} ${item_name} ${id}'
+
+error() { echo "$@" 1>&2; }
+fail() { [ $# -eq 0 ] || error "$@"; exit "$RC_FAIL"; }
+debug() {
+    [ "${VERBOSITY}" -lt "$1" ] && return
+    shift
+    error "$@"
+}
+
+Usage() {
+   cat <<EOF
+Usage: ${0##*/} [options] url [criteria]
+  Filter and output simple streams data
+
+  options:
+    -f | --fmt F   output format. use 'debug' to see a list.
+                   default: ${DEFAULT_OUTPUT_FORMAT}
+
+  options passed through to sstream-sync:
+    --max M      limit to most recent 'M' items matching
+    --path P     use path 'P'. default: streams/v1/index.sjson
+
+  Example:
+   * ${0##*/} --max=1 http://cloud-images.ubuntu.com/releases/ \\
+        release=raring  region=us-east-1
+EOF
+}
+
+is_excluded() {
+    local _kname _kval _crit _curval
+    for _crit in ${_CRITERIA}; do
+        _kname=${_crit%%=*}
+        _kval=${_crit#*=}
+        _curval=${!_kname}
+        # no key matching kname found
+        [ -z "${_curval}" ] && continue
+        # key existed but didn't match
+        [ "${_kval}" != "${_curval}" ] && return 0
+    done
+    # no criteria excluded this, so return false (not excluded)
+    return 1
+}
+
+noop() {
+    return 0;
+}
+
+call_sync() {
+    local self="${0}"
+    local path="" url="" pt 
+    local short_opts="hf:p:v"
+    local long_opts="fmt:,max:,path:,verbose"
+    local getopt_out="" cur="" next=""
+    local fmt="${DEFAULT_OUTPUT_FORMAT}"
+
+    getopt_out=$(getopt --name "${0##*/}" \
+	    --options "${short_opts}" --long "${long_opts}" -- "$@") &&
+	    eval set -- "${getopt_out}" ||
+        { Usage 1>&2; return 1; }
+
+    pt=( )
+    while [ $# -ne 0 ]; do
+	    cur="$1"; next="$2";
+	    case "$cur" in
+		    -h|--help) Usage ; return 0;;
+		    -v|--verbose) pt[${#pt[@]}]="$cur";;
+		       --max) pt[${#pt[@]}]="--max=${next}"; shift;;
+            -p|--path) path=$next; shift;;
+            -f|--fmt) fmt=$next; shift;;
+		    --) shift; break;;
+	    esac
+	    shift;
+    done
+    
+    url="$1"
+    shift
+
+    [ -n "$url" ] || { Usage 1>&2; error "Must provide url"; return 1; }
+
+    [ -n "$path" ] && pt[${#pt[@]}]="--path=$path"
+    pt[${#pt[@]}]="$url"
+
+    export _OUTPUT_FORMAT="$fmt" _CRITERIA="${*}"
+    sstream-sync \
+        "--hook-load-products=${self}" "--hook-filter-index-entry=${self}" \
+        "--hook-insert-item=${self}" "--hook-filter-item=${self}" "${pt[@]}"
+}
+
+main() {
+    # we only operate on
+    case "$HOOK" in
+        filter_item)
+            is_excluded && return "${RC_FILTER_EXCLUDE}"
+            return "${RC_FILTER_INCLUDE}"
+            ;;
+        filter_index_entry)
+            [ "$format" = "products:1.0" ] &&
+               [ "$datatype" = "image-ids" ] &&
+               return "${RC_FILTER_INCLUDE}"
+            return "$RC_FILTER_EXCLUDE"
+            ;;
+        insert_item)
+            local k="" out=""
+            if [ "$_OUTPUT_FORMAT" = "debug" ]; then
+                for k in ${FIELDS}; do
+                    out="${out} ${k}=${!k}"
+                done
+            else
+                eval out="\"${_OUTPUT_FORMAT}\""
+            fi
+            echo "$out"
+            ;;
+        filter_*) return "${RC_FILTER_INCLUDE}";;
+        *)
+            if [ -n "$HOOK" ]; then
+                noop
+            else
+                [ "$1" = "--help" -o "$1" = "-h" -o "$1" = "usage" ] &&
+                    { Usage; return 0; }
+
+                call_sync "$@"
+            fi
+    esac
+}
+main "$@"
+exit $?
+
+# vi: ts=4 expandtab

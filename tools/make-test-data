@@ -1,12 +1,37 @@
 #!/usr/bin/python
+#   Copyright (C) 2013 Canonical Ltd.
+#
+#   Author: Scott Moser <scott.moser@canonical.com>
+#
+#   Simplestreams is free software: you can redistribute it and/or modify it
+#   under the terms of the GNU Affero General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or (at your
+#   option) any later version.
+#
+#   Simplestreams is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+#   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public
+#   License for more details.
+#
+#   You should have received a copy of the GNU Affero General Public License
+#   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
 import json
 import os
 import os.path
-import urllib2
 import sys
 from simplestreams import util
+
+try:
+    # this is just python2 or python3 compatible prepping for get_url_len
+    import urllib.request
+    url_request = urllib.request.Request
+    url_open = urllib.request.urlopen
+except ImportError as e:
+    import urllib2
+    url_request = urllib2.Request
+    url_open = urllib2.urlopen
 
 import toolutil
 
@@ -79,7 +104,7 @@ def get_cloud_images_file_hash(path):
             try:
                 url = dir_url + "/%sSUMS" % cksum.upper()
                 sys.stderr.write("reading %s\n" % url)
-                content = util.read_url(url)
+                content = util.read_url(url).decode("utf-8")
                 break
             except Exception as error:
                 pass
@@ -109,9 +134,9 @@ def get_url_len(url):
 
     # http://stackoverflow.com/questions/4421170/python-head-request-with-urllib2
     sys.stderr.write("getting size for %s\n" % url)
-    request = urllib2.Request(url)
+    request = url_request(url)
     request.get_method = lambda : 'HEAD'
-    response = urllib2.urlopen(request)
+    response = url_open(request)
     return int(response.headers.get('content-length', 0))
 
 
@@ -141,7 +166,7 @@ def create_fake_file(prefix, item):
     data = FAKE_DATA[item['ftype']]
 
     util.mkdir_p(os.path.dirname(fpath))
-    print "creating %s" % fpath
+    print("creating %s" % fpath)
     with open(fpath, "w") as fp:
         fp.truncate(data['size'])
 
@@ -295,14 +320,15 @@ def ec2_load_query(path):
 def printitem(item, exdata):
     full = exdata.copy()
     full.update(item)
-    print full
+    print(full)
 
 
 def create_image_data(query_tree, out_d, streamdir):
+    license = 'http://www.canonical.com/intellectual-property-policy'
     hashcache = os.path.join(query_tree, "FILE_DATA_CACHE")
     FILE_DATA['filename'] = hashcache
     if os.path.isfile(hashcache):
-        FILE_DATA.update(json.loads(open(hashcache).read()))
+        FILE_DATA.update(json.loads(open(hashcache, "r").read()))
 
     ts = util.timestamp()
     tree = dl_load_query(query_tree)
@@ -328,8 +354,10 @@ def create_image_data(query_tree, out_d, streamdir):
         tree[stream]['format'] = "products:1.0"
         tree[stream]['updated'] = ts
         tree[stream]['content_id'] = cid
+        tree[stream]['datatype'] = 'image-downloads'
+        tree[stream]['license'] = license
 
-        outfile = os.path.join(out_d, stream, streamdir, cid + ".js")
+        outfile = os.path.join(out_d, stream, streamdir, cid + ".json")
         util.mkdir_p(os.path.dirname(outfile))
         with open(outfile, "w") as fp:
             sys.stderr.write("writing %s\n" % outfile)
@@ -357,13 +385,14 @@ def create_aws_data(query_tree, out_d, streamdir):
         tree[stream]['_aliases'] = {'crsn': {}}
         for region in regions:
             tree[stream]['_aliases']['crsn'][region] = {
-                'endpoint': 'http://ec2.%s.amazonaws.com' % region,
+                'endpoint': 'https://ec2.%s.amazonaws.com' % region,
                 'region': region}
 
         tree[stream]['format'] = "products:1.0"
+        tree[stream]['datatype'] = "image-ids"
         tree[stream]['updated'] = ts
         tree[stream]['content_id'] = cid
-        outfile = os.path.join(out_d, stream, streamdir, cid + ".js")
+        outfile = os.path.join(out_d, stream, streamdir, cid + ".json")
         util.mkdir_p(os.path.dirname(outfile))
         with open(outfile, "w") as fp:
             sys.stderr.write("writing %s\n" % outfile)
@@ -396,38 +425,38 @@ def main():
         index = {"index": {}, 'format': 'index:1.0',
                  'updated': util.timestamp()}
 
-        clouds = aws_tree[streamname]['_aliases']['crsn'].values()
+        clouds = list(aws_tree[streamname]['_aliases']['crsn'].values())
         index['index'][aws_tree[streamname]['content_id']] = {
             'updated': aws_tree[streamname]['updated'],
-            'datatype': 'image-ids',
+            'datatype': aws_tree[streamname]['datatype'],
             'clouds': clouds,
             'cloudname': "aws",
             'path': '/'.join((streamdir,
-                             "%s.js" % aws_tree[streamname]['content_id'],)),
-            'products': aws_tree[streamname]['products'].keys(),
+                             "%s.json" % aws_tree[streamname]['content_id'],)),
+            'products': list(aws_tree[streamname]['products'].keys()),
             'format': aws_tree[streamname]['format'],
         }
         index['index'][dltree[streamname]['content_id']] = {
             'updated': dltree[streamname]['updated'],
-            'datatype': 'image-downloads',
+            'datatype': dltree[streamname]['datatype'],
             'path': '/'.join((streamdir,
-                             "%s.js" % dltree[streamname]['content_id'],)),
-            'products': dltree[streamname]['products'].keys(),
+                             "%s.json" % dltree[streamname]['content_id'],)),
+            'products': list(dltree[streamname]['products'].keys()),
             'format': dltree[streamname]['format']
         }
 
-        outfile = os.path.join(args.out_d, streamname, streamdir, 'index.js')
+        outfile = os.path.join(args.out_d, streamname, streamdir, 'index.json')
         util.mkdir_p(os.path.dirname(outfile))
         with open(outfile, "w") as fp:
             sys.stderr.write("writing %s\n" % outfile)
             fp.write(json.dumps(index, indent=1) + "\n")
 
     if args.sign:
-        def printstatus(name, fmt):
-            sys.stderr.write("signing %s: %s\n" % (name, fmt))
+        def printstatus(name):
+            sys.stderr.write("signing %s\n" % name)
         for root, dirs, files in os.walk(args.out_d):
-            for f in [f for f in files if f.endswith(".js")]:
-                toolutil.signjs_file(os.path.join(root, f),
+            for f in [f for f in files if f.endswith(".json")]:
+                toolutil.signjson_file(os.path.join(root, f),
                                      status_cb=printstatus)
 
     return

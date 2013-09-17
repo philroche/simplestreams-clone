@@ -1,3 +1,20 @@
+#   Copyright (C) 2013 Canonical Ltd.
+#
+#   Author: Scott Moser <scott.moser@canonical.com>
+#
+#   Simplestreams is free software: you can redistribute it and/or modify it
+#   under the terms of the GNU Affero General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or (at your
+#   option) any later version.
+#
+#   Simplestreams is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+#   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public
+#   License for more details.
+#
+#   You should have received a copy of the GNU Affero General Public License
+#   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
+
 import errno
 import hashlib
 import os
@@ -6,17 +23,19 @@ import simplestreams.contentsource as cs
 import simplestreams.util as util
 from simplestreams.log import LOG
 
-READ_BUFFER_SIZE = 1024 * 50
+READ_BUFFER_SIZE = 1024 * 10
 
 
 class ObjectStore(object):
     read_size = READ_BUFFER_SIZE
 
-    def insert(self, path, reader, checksums=None, mutable=True):
+    def insert(self, path, reader, checksums=None, mutable=True, size=None):
         #store content from reader.read() into path, expecting result checksum
         raise NotImplementedError()
 
     def insert_content(self, path, content, checksums=None, mutable=True):
+        if not isinstance(content, bytes):
+            content = content.encode('utf-8')
         self.insert(path=path, reader=cs.MemoryContentSource(content=content),
                     checksums=checksums, mutable=mutable)
 
@@ -24,12 +43,12 @@ class ObjectStore(object):
         #remove path from store
         raise NotImplementedError()
 
-    def reader(self, path):
+    def source(self, path):
         # return a ContentSource for the provided path
         raise NotImplementedError()
 
     def exists_with_checksum(self, path, checksums=None):
-        return has_valid_checksum(path=path, reader=self.reader,
+        return has_valid_checksum(path=path, reader=self.source,
                                   checksums=checksums,
                                   read_size=self.read_size)
 
@@ -41,30 +60,35 @@ class MemoryObjectStore(ObjectStore):
             data = {}
         self.data = data
 
-    def insert(self, path, reader, checksums=None, mutable=True):
+    def insert(self, path, reader, checksums=None, mutable=True, size=None):
         self.data[path] = reader.read()
 
     def remove(self, path):
         #remove path from store
         del self.data[path]
 
-    def reader(self, path):
+    def source(self, path):
         return cs.MemoryContentSource(content=self.data['path'],
                                       url="%s://%s" % (self.__class__, path))
 
 
 class FileStore(ObjectStore):
 
-    def __init__(self, prefix):
+    def __init__(self, prefix, complete_callback=None):
+        """ complete_callback is called periodically to notify users when a
+        file is being inserted. It takes three arguments: the path that is
+        inserted, the number of bytes downloaded, and the number of total
+        bytes. """
         self.prefix = prefix
+        self.complete_callback = complete_callback
 
-    def insert(self, path, reader, checksums=None, mutable=True):
+    def insert(self, path, reader, checksums=None, mutable=True, size=None):
         wpath = self._fullpath(path)
         if os.path.isfile(wpath):
             if not mutable:
                 # if the file exists, and not mutable, return
                 return
-            if has_valid_checksum(path=path, reader=self.reader,
+            if has_valid_checksum(path=path, reader=self.source,
                                   checksums=checksums,
                                   read_size=self.read_size):
                 return
@@ -72,27 +96,39 @@ class FileStore(ObjectStore):
         cksum = util.checksummer(checksums)
         out_d = os.path.dirname(wpath)
         partfile = os.path.join(out_d, "%s.part" % os.path.basename(wpath))
-        try:
-            util.mkdir_p(out_d)
-            with open(partfile, "w") as wfp:
-                while True:
-                    buf = reader.read(self.read_size)
-                    wfp.write(buf)
-                    cksum.update(buf)
-                    if len(buf) != self.read_size:
-                        break
-            if not cksum.check():
-                msg = "unexpected checksum '%s' on %s (found: %s expected: %s"
-                raise Exception(msg % (cksum.algorithm, path,
-                                       cksum.hexdigest(), cksum.expected))
-            os.rename(partfile, wpath)
 
-        except Exception as e:
+        util.mkdir_p(out_d)
+
+        if os.path.exists(partfile):
             try:
+                reader.set_start_pos(os.path.getsize(partfile))
+            except NotImplementedError:
+                # continuing not supported, just delete and retry
                 os.unlink(partfile)
-            except IOError:
-                pass
-            raise e
+
+        with open(partfile, "ab") as wfp:
+
+            while True:
+                buf = reader.read(self.read_size)
+                wfp.write(buf)
+                cksum.update(buf)
+
+                if size is not None:
+                    if self.complete_callback:
+                        self.complete_callback(path, wfp.tell(), size)
+                    if wfp.tell() > size:
+                        # file is too big, so the checksum won't match; we
+                        # might as well stop downloading.
+                        break
+
+                if len(buf) != self.read_size:
+                    break
+
+        if not cksum.check():
+            msg = "unexpected checksum '%s' on %s (found: %s expected: %s)"
+            raise Exception(msg % (cksum.algorithm, path,
+                                   cksum.hexdigest(), cksum.expected))
+        os.rename(partfile, wpath)
 
     def remove(self, path):
         try:
@@ -111,7 +147,7 @@ class FileStore(ObjectStore):
             prev_d = cur_d
             cur_d = os.path.dirname(path)
 
-    def reader(self, path):
+    def source(self, path):
         return cs.UrlContentSource(url=self._fullpath(path))
 
     def _fullpath(self, path):

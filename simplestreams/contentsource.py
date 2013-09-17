@@ -1,9 +1,38 @@
+#   Copyright (C) 2013 Canonical Ltd.
+#
+#   Author: Scott Moser <scott.moser@canonical.com>
+#
+#   Simplestreams is free software: you can redistribute it and/or modify it
+#   under the terms of the GNU Affero General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or (at your
+#   option) any later version.
+#
+#   Simplestreams is distributed in the hope that it will be useful, but
+#   WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+#   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public
+#   License for more details.
+#
+#   You should have received a copy of the GNU Affero General Public License
+#   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
+
 import errno
+import io
 import os
-import StringIO
-import urlparse
+import sys
+
+if sys.version_info > (3, 0):
+    import urllib.parse as urlparse  # pylint: disable=F0401,E0611
+else:
+    import urlparse
+
+READ_BUFFER_SIZE = 1024 * 10
+
+READ_BUFFER_SIZE = 1024 * 10
 
 try:
+    # We try to use requests because we can do gzip encoding with it.
+    # however requests < 1.1 didn't have 'stream' argument to 'get'
+    # making it completely unsuitable for downloading large files.
     import requests
     from distutils.version import LooseVersion
     import pkg_resources
@@ -13,7 +42,13 @@ try:
         raise Exception("Couldn't use requests")
     URL_READER_CLASSNAME = "RequestsUrlReader"
 except:
-    import urllib2
+    if sys.version_info > (3, 0):
+        import urllib.request as urllib_request  # pylint: disable=F0401, E0611
+        import urllib.error as urllib_error  # pylint: disable=F0401, E0611
+    else:
+        import urllib2 as urllib_request
+        urllib_error = urllib_request
+
     URL_READER_CLASSNAME = "Urllib2UrlReader"
 
 
@@ -27,6 +62,18 @@ class ContentSource(object):
 
     def read(self, size=-1):
         raise NotImplementedError()
+
+    def set_start_pos(self, offset):
+        """ Implemented if the ContentSource supports seeking within content.
+        Used to resume failed transfers. """
+
+        class SetStartPosNotImplementedError(NotImplementedError):
+            # This is only here to satisfy pylint W0223.  Users
+            # have to accept that it may NotImplementedError
+            pass
+
+        _pylint = offset
+        raise SetStartPosNotImplementedError()
 
     def __enter__(self):
         self.open()
@@ -48,6 +95,8 @@ class UrlContentSource(ContentSource):
         self.mirrors = mirrors
         self.input_url = url
         self.url = url
+        self.offset = None
+        self.fd = None
 
     def _urlinfo(self, url):
         parsed = urlparse.urlparse(url)
@@ -59,7 +108,14 @@ class UrlContentSource(ContentSource):
             parsed = urlparse.urlparse(url)
 
         if parsed.scheme == "file":
-            return (url, open, (parsed.path,))
+
+            def binopen(path, offset=None):
+                f = open(path, "rb")
+                if offset is not None:
+                    f.seek(offset)
+                return f
+
+            return (url, binopen, (parsed.path,))
         else:
             return (url, URL_READER, (url,))
 
@@ -68,7 +124,7 @@ class UrlContentSource(ContentSource):
             try:
                 (normurl, opener, oargs) = self._urlinfo(url)
                 self.url = normurl
-                return opener(*oargs)
+                return opener(*oargs, offset=self.offset)
             except IOError as e:
                 if e.errno != errno.ENOENT:
                     raise
@@ -78,24 +134,25 @@ class UrlContentSource(ContentSource):
         myerr.errno = errno.ENOENT
         raise myerr
 
-    def open(self):
-        self.fd = self._open()
-        self.read = self._read
+    def open(self):  # pylint: disable=E0202
+        if self.fd is None:
+            self.fd = self._open()
 
-    def read(self, size=-1):
+    def read(self, size=-1):  # pylint: disable=E0202
         if self.fd is None:
             self.open()
 
-        return self._read(size)
-
-    def _read(self, size=-1):
         return self.fd.read(size)
+
+    def set_start_pos(self, offset):
+        if self.fd is not None:
+            raise Exception("can't set start pos after open()")
+        self.offset = offset
 
     def close(self):
         if self.fd:
             self.fd.close()
             self.fd = None
-            self.open = self._open
 
 
 class FdContentSource(ContentSource):
@@ -161,7 +218,7 @@ class IteratorContentSource(ContentSource):
 
         while True:
             try:
-                ret += self.r_iter.next()
+                ret += next(self.r_iter)
                 if len(ret) >= size:
                     self.leftover = ret[size:]
                     ret = ret[0:size]
@@ -171,22 +228,21 @@ class IteratorContentSource(ContentSource):
                 break
         return ret
 
-    def close():
+    def close(self):
         pass
 
 
 class MemoryContentSource(FdContentSource):
     def __init__(self, url=None, content=""):
-        fd = StringIO.StringIO(content)
+        if isinstance(content, str):
+            content = content.encode('utf-8')
+        fd = io.BytesIO(content)
         if url is None:
             url = "MemoryContentSource://undefined"
         super(MemoryContentSource, self).__init__(fd=fd, url=url)
 
 
 class UrlReader(object):
-    def __init__(self, url):
-        raise NotImplementedError()
-
     def read(self, size=-1):
         raise NotImplementedError()
 
@@ -195,20 +251,23 @@ class UrlReader(object):
 
 
 class Urllib2UrlReader(UrlReader):
-    def __init__(self, url):
+    def __init__(self, url, offset=None):
         (url, username, password) = parse_url_auth(url)
         self.url = url
         if username is None:
-            opener = urllib2.urlopen
+            opener = urllib_request.urlopen
         else:
-            mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
+            mgr = urllib_request.HTTPPasswordMgrWithDefaultRealm()
             mgr.add_password(None, url, username, password)
-            handler = urllib2.HTTPBasicAuthHandler(mgr)
-            opener = urllib2.build_opener(handler).open
+            handler = urllib_request.HTTPBasicAuthHandler(mgr)
+            opener = urllib_request.build_opener(handler).open
 
         try:
-            self.req = opener(url)
-        except urllib2.HTTPError as e:
+            req = urllib_request.Request(url)
+            if offset is not None:
+                req.add_header('Range', 'bytes=%d-' % offset)
+            self.req = opener(req)
+        except urllib_error.HTTPError as e:
             if e.code == 404:
                 myerr = IOError("Unable to open %s" % url)
                 myerr.errno = errno.ENOENT
@@ -228,7 +287,7 @@ class RequestsUrlReader(UrlReader):
     # r = RequestsUrlReader(http://example.com)
     # r.read(10)
     # r.close()
-    def __init__(self, url, buflen=None):
+    def __init__(self, url, buflen=None, offset=None):
         self.url = url
         (url, user, password) = parse_url_auth(url)
         if user is None:
@@ -236,10 +295,14 @@ class RequestsUrlReader(UrlReader):
         else:
             auth = (user, password)
 
-        self.req = requests.get(url, stream=True, auth=auth)
+        headers = None
+        if offset is not None:
+            headers = {'Range': 'bytes=%d-' % offset}
+
+        self.req = requests.get(url, stream=True, auth=auth, headers=headers)
         self.r_iter = None
         if buflen is None:
-            buflen = 1024 * 50
+            buflen = READ_BUFFER_SIZE
         self.buflen = buflen
         self.leftover = bytes()
         self.consumed = False
@@ -289,7 +352,7 @@ class RequestsUrlReader(UrlReader):
 
         while True:
             try:
-                ret += self.r_iter.next()
+                ret += next(self.r_iter)
                 if len(ret) >= size:
                     self.leftover = ret[size:]
                     ret = ret[0:size]
