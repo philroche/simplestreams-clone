@@ -177,9 +177,9 @@ class UrlMirrorReader(MirrorReader):
         # specify URLs without a trailing slash, so we try to that here as
         # well.
         try:
-            cs = self._cs(self.prefix + path, mirrors=mirrors)
-            cs.open()
-            return cs
+            source = self._cs(self.prefix + path, mirrors=mirrors)
+            source.open()
+            return source
         except IOError as e:
             if (e.errno == errno.ENOENT
                     and not self._trailing_slash_checked
