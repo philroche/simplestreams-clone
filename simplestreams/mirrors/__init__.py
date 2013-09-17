@@ -169,6 +169,7 @@ class UrlMirrorReader(MirrorReader):
             mirrors = []
         self.mirrors = mirrors
         self.prefix = prefix
+        self._trailing_slash_checked = False
 
     def source(self, path):
         mirrors = [m + path for m in self.mirrors]
@@ -180,8 +181,13 @@ class UrlMirrorReader(MirrorReader):
             cs.open()
             return cs
         except IOError as e:
-            if e.errno == errno.ENOENT:
-                return self._cs(self.prefix + '/' + path, mirrors=mirrors)
+            if (e.errno == errno.ENOENT
+                    and not self._trailing_slash_checked
+                    and not self.prefix.endswith('/')):
+                self._trailing_slash_checked = True
+                self.prefix = self.prefix + '/'
+                LOG.debug("fixed up prefix to have a /: %s" % self.prefix)
+                return self.source(path)
             raise
 
 
