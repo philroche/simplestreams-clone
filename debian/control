@@ -40,12 +40,22 @@ Architecture: all
 Priority: extra
 Depends: gnupg,
          python-boto,
-         python-glanceclient,
-         python-keystoneclient,
          python-requests (>= 0.8.2),
-         python-swiftclient,
          ${misc:Depends},
          ${python:Depends}
 Description: Library and tools for using Simple Streams data
  This package provides a client for interacting with simple
  streams data as is produced to describe Ubuntu's cloud images.
+
+Package: python-simplestreams-openstack
+Architecture: all
+Priority: extra
+Depends: python-glanceclient,
+         python-keystoneclient,
+         python-simplestreams,
+         python-swiftclient,
+         ${misc:Depends}
+Description: Library and tools for using Simple Streams data
+ This package depends on libraries necessary to use the openstack dependent
+ functionality in simplestreams.  That includes interacting with glance,
+ swift and keystone.
