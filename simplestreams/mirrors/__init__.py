@@ -175,11 +175,13 @@ class UrlMirrorReader(MirrorReader):
         mirrors = [m + path for m in self.mirrors]
         # A little hack to fix up the user's path. It's fairly common to
         # specify URLs without a trailing slash, so we try to that here as
-        # well.
+        # well. We open, then close and then get a new one (so the one we
+        # returned is not yet open (LP: #1237658)
         try:
             csource = self._cs(self.prefix + path, mirrors=mirrors)
             csource.open()
-            return csource
+            csource.close()
+            return self._cs(self.prefix + path, mirrors=mirrors)
         except IOError as e:
             if (e.errno == errno.ENOENT
                     and not self._trailing_slash_checked
