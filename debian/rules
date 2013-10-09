@@ -8,9 +8,10 @@ PY3VERS := $(shell py3versions -r)
 override_dh_auto_install:
 	dh_auto_install
 	set -ex; for python in $(PY3VERS) $(PYVERS); do \
+		$$python setup.py build --executable=/usr/bin/python3 && \
 		$$python setup.py install --root=$(CURDIR)/debian/tmp --install-layout=deb; \
-        done
-	# there are no packages for python3-{boto, swiftclient,
+	done
+	# there:are no packages for python3-{boto, swiftclient,
 	# glanceclient, keystonclient}, so do not package the bits
 	# that would depend on them.
 	for bad in openstack mirrors/glance objectstores/swift objectstores/s3; do \
