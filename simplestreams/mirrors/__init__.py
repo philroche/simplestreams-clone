@@ -286,16 +286,20 @@ class BasicMirrorWriter(MirrorWriter):
                      to_add, to_remove)
 
             tversions = tproduct['versions']
+            skipped_versions = []
             for vername in to_add:
                 version = product['versions'][vername]
 
                 if vername not in tversions:
                     tversions[vername] = util.stringitems(version)
 
+                added_items = []
                 for itemname, item in version.get('items', {}).items():
                     pgree = (prodname, vername, itemname)
                     if not self.filter_item(item, src, target, pgree):
                         continue
+
+                    added_items.append(itemname)
 
                     ipath = item.get('path', None)
                     ipath_cs = None
@@ -303,8 +307,17 @@ class BasicMirrorWriter(MirrorWriter):
                         ipath_cs = reader.source(ipath) if reader else None
                     self.insert_item(item, src, target, pgree, ipath_cs)
 
-                self.insert_version(version, src, target, (prodname, vername))
+                if len(added_items):
+                    # do not insert versions that had all items filtered
+                    self.insert_version(version, src, target,
+                                        (prodname, vername))
+                else:
+                    skipped_versions.append(vername)
 
+            for vername in skipped_versions:
+                if vername in tproduct['versions']:
+                    del tproduct['versions'][vername]
+                
             if self.config.get('delete_filtered_items', False):
                 tkeys = tproduct.get('versions', {}).keys()
                 for v in src_filtered_items:
