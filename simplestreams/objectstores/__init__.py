@@ -98,12 +98,25 @@ class FileStore(ObjectStore):
         partfile = os.path.join(out_d, "%s.part" % os.path.basename(wpath))
 
         util.mkdir_p(out_d)
+        orig_part_size = 0
 
         if os.path.exists(partfile):
             try:
-                reader.set_start_pos(os.path.getsize(partfile))
+                orig_part_size = os.path.getsize(partfile)
+                reader.set_start_pos(orig_part_size)
+
+                LOG.debug("resuming partial (%s) download of '%s' from '%s'",
+                          orig_part_size, path, partfile)
+                with open(partfile, "rb") as fp:
+                    while True:
+                        buf = fp.read(self.read_size)
+                        cksum.update(buf)
+                        if len(buf) != self.read_size:
+                            break
+
             except NotImplementedError:
                 # continuing not supported, just delete and retry
+                orig_part_size = 0
                 os.unlink(partfile)
 
         with open(partfile, "ab") as wfp:
@@ -125,6 +138,10 @@ class FileStore(ObjectStore):
                     break
 
         if not cksum.check():
+            os.unlink(partfile)
+            if orig_part_size:
+                LOG.warn("resumed download of '%s' had bad checksum.", path)
+
             msg = "unexpected checksum '%s' on %s (found: %s expected: %s)"
             raise Exception(msg % (cksum.algorithm, path,
                                    cksum.hexdigest(), cksum.expected))
