@@ -317,7 +317,7 @@ class BasicMirrorWriter(MirrorWriter):
             for vername in skipped_versions:
                 if vername in tproduct['versions']:
                     del tproduct['versions'][vername]
-                
+
             if self.config.get('delete_filtered_items', False):
                 tkeys = tproduct.get('versions', {}).keys()
                 for v in src_filtered_items:
