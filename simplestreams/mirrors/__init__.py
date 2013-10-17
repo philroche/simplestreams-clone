@@ -169,28 +169,35 @@ class UrlMirrorReader(MirrorReader):
             mirrors = []
         self.mirrors = mirrors
         self.prefix = prefix
-        self._trailing_slash_checked = False
+        self._trailing_slash_checked = self.prefix.endswith("/")
 
     def source(self, path):
         mirrors = [m + path for m in self.mirrors]
+        if self._trailing_slash_checked:
+            return self._cs(self.prefix + path, mirrors=mirrors)
+
         # A little hack to fix up the user's path. It's fairly common to
         # specify URLs without a trailing slash, so we try to that here as
         # well. We open, then close and then get a new one (so the one we
         # returned is not yet open (LP: #1237658)
+        self._trailing_slash_checked = True
         try:
-            csource = self._cs(self.prefix + path, mirrors=mirrors)
+            csource = self._cs(self.prefix + path, mirrors=None)
             csource.open()
+            csource.read(1024)
             csource.close()
-            return self._cs(self.prefix + path, mirrors=mirrors)
-        except IOError as e:
-            if (e.errno == errno.ENOENT
-                    and not self._trailing_slash_checked
-                    and not self.prefix.endswith('/')):
-                self._trailing_slash_checked = True
+        except Exception as e:
+            if isinstance(e, IOError) and (e.errno == errno.ENOENT):
+                LOG.warn("got ENOENT for (%s, %s), trying with trailing /",
+                         self.prefix, path)
                 self.prefix = self.prefix + '/'
-                LOG.debug("fixed up prefix to have a /: %s" % self.prefix)
-                return self.source(path)
-            raise
+            else:
+                # this raised exception, but it was sneaky to do it
+                # so just ignore it.
+                LOG.debug("trailing / check on (%s, %s) resulted in %s",
+                          self.prefix, path, e)
+
+        return self._cs(self.prefix + path, mirrors=mirrors)
 
 
 class ObjectStoreMirrorReader(MirrorReader):
