@@ -68,6 +68,8 @@ def stringitems(data):
 
 
 def products_exdata(tree, pedigree, include_top=True, insert_fieldnames=True):
+    # given 'tree' and 'pedigree' return a 'flattened' dict that contains
+    # entries for all attributes of this item those that apply to its pedigree
     harchy = PRODUCTS_TREE_DATA
 
     exdata = {}
