@@ -81,7 +81,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         if self.store:
             try:
                 path = self._cidpath(my_cid)
-                store_t = util.load_content(self.store.reader(path).read())
+                store_t = util.load_content(self.store.source(path).read())
             except IOError as e:
                 if e.errno != errno.ENOENT:
                     raise
@@ -236,7 +236,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         # now insert or update an index
         ipath = "streams/v1/index.json"
         try:
-            index = util.load_content(self.store.reader(ipath).read())
+            index = util.load_content(self.store.source(ipath).read())
         except IOError as exc:
             if exc.errno != errno.ENOENT:
                 raise
