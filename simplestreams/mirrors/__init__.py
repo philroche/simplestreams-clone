@@ -440,6 +440,9 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
 def _get_data_content(path, data, content, reader):
     if content is None and path:
         _, content = reader.read(path)
+        if isinstance(content, bytes):
+            content = content.decode('utf-8')
+
     if data is None and content:
         data = util.load_content(content)
 
