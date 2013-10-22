@@ -392,11 +392,11 @@ def assert_safe_path(path):
     bad = (".." + os.path.sep, "..." + os.path.sep)
     for tok in bad:
         if path.startswith(tok):
-            raise TypeError("Path '%s' starts with %s" % (path, tok))
+            raise TypeError("Path '%s' starts with '%s'" % (path, tok))
     bad = (os.path.sep + ".." + os.path.sep, os.path.sep + "..." + os.path.sep)
     for tok in bad:
         if tok in path:
-            raise TypeError("Path '%s' contains with %s" % (path, tok))
+            raise TypeError("Path '%s' contains '%s'" % (path, tok))
 
 
 def read_url(url):
