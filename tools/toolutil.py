@@ -41,6 +41,7 @@ NUM_DAILIES = 4
 def is_expected(repl, fields):
     rel = fields[0]
     serial = fields[3]
+    arch = fields[4]
     if repl == "-root.tar.gz":
         if rel in ("lucid", "oneiric"):
             # lucid, oneiric do not have -root.tar.gz
@@ -54,6 +55,13 @@ def is_expected(repl, fields):
             return False
         if rel == "oneiric" and serial <= "20110802.2":
             # oneiric got -disk1.img after alpha3
+            return False
+
+    if repl == "-uefi1.img":
+        # uefi images were released with trusty and for amd64 right now
+        if arch != "amd64":
+            return False
+        if rel < "trusty":
             return False
 
     #if some data in /query is not truely available, fill up this array
@@ -72,6 +80,7 @@ def load_query_download(path, builds=None, rels=None):
     if rels is None:
         rels = RELEASES
 
+    suffixes = (".tar.gz", "-root.tar.gz", "-disk1.img", "-uefi1.img")
     streams = [f[0:-len(".latest.txt")]
                for f in os.listdir(path) if f.endswith("latest.txt")]
 
@@ -103,7 +112,7 @@ def load_query_download(path, builds=None, rels=None):
             # file.  So we have to make up other entries.
             lines = []
             for oline in olines:
-                for repl in (".tar.gz", "-root.tar.gz", "-disk1.img"):
+                for repl in suffixes:
                     fields = oline.rstrip().split("\t")
                     if not is_expected(repl, fields):
                         continue
