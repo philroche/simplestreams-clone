@@ -64,6 +64,12 @@ def is_expected(repl, fields):
         if rel < "trusty":
             return False
 
+    if arch == "ppc64el":
+        if rel < "trusty" or serial <= "20140122":
+            return False
+        if repl not in (".tar.gz", "-root.tar.gz"):
+            return False
+
     #if some data in /query is not truely available, fill up this array
     #to skip it. ex: export BROKEN="precise/20121212.1 quantal/20130128.1"
     broken = os.environ.get("BROKEN", "").split(" ")
