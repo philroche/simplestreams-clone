@@ -27,14 +27,21 @@ OS_ENV_VARS = (
 
 
 def load_keystone_creds(**kwargs):
+    # either via arguments or OS_* values in environment, the kwargs
+    # that are required are:
+    #   'username', 'auth_url',
+    #   ('auth_token' or 'password')
+    #   ('tenant_id' or 'tenant_name')
     ret = {}
     for name in OS_ENV_VARS:
         lc = name.lower()
-        if lc in kwargs:
+        # take off 'os_'
+        short = lc[3:]
+        if short in kwargs:
             ret[lc] = kwargs.get(lc)
         elif name in os.environ:
             # take off 'os_'
-            ret[lc[3:]] = os.environ[name]
+            ret[short] = os.environ[name]
 
     if 'insecure' in ret:
         if isinstance(ret['insecure'], str):
