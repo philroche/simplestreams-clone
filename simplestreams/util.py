@@ -210,6 +210,12 @@ def resolve_work(src, target, maxnum=None, keep=False, itemfilter=None,
     if maxnum is None and keep:
         raise TypeError("maxnum(%s) cannot be None if keep is True" % maxnum)
 
+    if not (maxnum is None or isinstance(maxnum, int)):
+        raise TypeError("maxnum(%s) must be integer or None" % maxnum)
+
+    if not (keep is None or isinstance(keep, int)):
+        raise TypeError("keep(%s) must be integer or None" % keep)
+
     # Ensure that all source items are passed through filters
     # In case the filters have changed from the last run
     for item in sorted(src, reverse=reverse):
