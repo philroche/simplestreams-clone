@@ -63,8 +63,13 @@ except NameError:
 
 
 def stringitems(data):
-    return {k: v for k, v in data.items() if
-            isinstance(v, _STRING_TYPES)}
+    f = {}
+    for k, v in data.items():
+        if isinstance(v, _STRING_TYPES):
+            f[k] = v
+        elif isinstance(v, (int, float)):
+            f[k] = str(v)
+    return f
 
 
 def products_exdata(tree, pedigree, include_top=True, insert_fieldnames=True):
