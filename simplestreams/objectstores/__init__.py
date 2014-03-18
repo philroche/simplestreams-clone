@@ -82,7 +82,14 @@ class FileStore(ObjectStore):
         self.prefix = prefix
         self.complete_callback = complete_callback
 
-    def insert(self, path, reader, checksums=None, mutable=True, size=None):
+    def insert(self, path, reader, checksums=None, mutable=True, size=None,
+               sparse=False):
+
+        zeros = None
+        if sparse is True:
+            zeros = '\0' * self.read_size
+
+
         wpath = self._fullpath(path)
         if os.path.isfile(wpath):
             if not mutable:
@@ -123,7 +130,14 @@ class FileStore(ObjectStore):
 
             while True:
                 buf = reader.read(self.read_size)
-                wfp.write(buf)
+                buflen = len(buf)
+                if (buflen != self.read_size and zeros is not None
+                    and zeros[0:buflen] == buf):
+                    wfp.seek(wfp.tell() + buflen)
+                elif buf == zeros:
+                    wfp.seek(wfp.tell() + buflen)
+                else:
+                    wfp.write(buf)
                 cksum.update(buf)
 
                 if size is not None:
@@ -134,8 +148,11 @@ class FileStore(ObjectStore):
                         # might as well stop downloading.
                         break
 
-                if len(buf) != self.read_size:
+                if buflen != self.read_size:
                     break
+
+            if zeros is not None:
+                wfp.truncate(wfp.tell())
 
         if not cksum.check():
             os.unlink(partfile)
