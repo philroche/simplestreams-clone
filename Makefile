@@ -14,7 +14,9 @@ endif
 build:
 	@echo nothing to do for $@
 
-test: examples-sign
+test: test2 test3
+
+test3: examples-sign
 	$(TENV) nosetests3 -v tests/
 test2: examples-sign
 	$(TENV) nosetests -v tests/
@@ -24,7 +26,7 @@ lint:
 pep8:
 	./tools/run-pep8
 
-check: lint pep8 test test2
+check: lint pep8 test
 
 exdata: exdata/fake exdata/data
 
@@ -61,4 +63,4 @@ examples-sign: gnupg
 	done
 
 
-.PHONY: check exdata/fake exdata/data exdata-query examples-sign test test2
+.PHONY: check exdata/fake exdata/data exdata-query examples-sign test test2 test3
