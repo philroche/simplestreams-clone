@@ -16,6 +16,8 @@
 #   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
 
 import errno
+import io
+import json
 
 import simplestreams.util as util
 import simplestreams.contentsource as cs
@@ -374,6 +376,50 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
     def products_data_path(self, content_id):
         return ".data/%s" % content_id
 
+    def _reference_count_data_path(self):
+        return ".data/references.json"
+
+    def _load_rc_dict(self):
+        try:
+            raw = self.source(self._reference_count_data_path()).read()
+            return json.load(io.StringIO(raw.decode('utf-8')))
+        except IOError as e:
+            if e.errno == errno.ENOENT:
+                return {}
+            raise
+
+    def _persist_rc_dict(self, rc):
+        source = cs.MemoryContentSource(content=json.dumps(rc))
+        self.store.insert(self._reference_count_data_path(), source)
+
+    def _build_rc_id(self, src, pedigree):
+        KEYS = ['content_id', 'product_name', 'version_name', 'name']
+        data = util.products_exdata(src, pedigree)
+        return '/'.join([data[k] for k in KEYS])
+
+    def _inc_rc(self, path, src, pedigree):
+        rc = self._load_rc_dict()
+        id_ = self._build_rc_id(src, pedigree)
+        if path not in rc:
+            rc[path] = [id_]
+        else:
+            rc[path].append(id_)
+        self._persist_rc_dict(rc)
+
+    def _dec_rc(self, path, src, pedigree):
+        rc = self._load_rc_dict()
+        id_ = self._build_rc_id(src, pedigree)
+        entry = rc.get(path, None)
+        ok_to_delete = False
+        if entry is not None:
+            if len(entry) == 1:
+                del rc[path]
+                ok_to_delete = True
+            else:
+                rc[path] = list(filter(lambda x: x != id_, rc[path]))
+            self._persist_rc_dict(rc)
+        return ok_to_delete
+
     def load_products(self, path=None, content_id=None):
         if content_id:
             try:
@@ -406,6 +452,7 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
         self.store.insert(data['path'], contentsource,
                           checksums=util.item_checksums(data), mutable=False,
                           size=data.get('size'))
+        self._inc_rc(data['path'], src, pedigree)
 
     def insert_index_entry(self, data, src, pedigree, contentsource):
         epath = data.get('path', None)
@@ -434,7 +481,8 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
         util.products_del(target, pedigree)
         if 'path' not in data:
             return
-        self.store.remove(data['path'])
+        if self._dec_rc(data['path'], src, pedigree):
+            self.store.remove(data['path'])
 
 
 def _get_data_content(path, data, content, reader):
