@@ -1,3 +1,4 @@
+# pylint: disable=C0301
 from simplestreams import util
 
 from copy import deepcopy
@@ -144,6 +145,21 @@ class TestProductsCondense(TestCase):
                                                  '2': {'A': 'B'}}}}}
         exp = {'products': {'P1': {'versions': {'1': {}, '2': {}},
                                    'A': 'B'}}}
+
+        util.products_condense(tree)
+        self.assertEqual(tree, exp)
+
+    def test_condense_different_arch(self):
+        tree = {'products': {'P1': {'versions': {'1': {'items': {'thing1': {'arch': 'amd64'},
+                                                                 'thing2': {'arch': 'amd64'}}},
+                                                 '2': {'items': {'thing3': {'arch': 'i3867'}}}}}}}
+
+        exp  = {'products': {'P1': {'versions': {'1': {'arch': 'amd64',
+                                                       'items': {'thing1': {},
+                                                                 'thing2': {}}},
+                                                 '2': {'arch': 'i3867',
+                                                       'items': {'thing3': {}}}}}}}
+
 
         util.products_condense(tree)
         self.assertEqual(tree, exp)
