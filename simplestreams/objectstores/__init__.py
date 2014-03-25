@@ -70,7 +70,8 @@ class MemoryObjectStore(ObjectStore):
     def source(self, path):
         try:
             return cs.MemoryContentSource(content=self.data[path],
-                                          url="%s://%s" % (self.__class__, path))
+                                          url="%s://%s" %
+                                          (self.__class__, path))
         except KeyError:
             raise IOError(errno.ENOENT, '%s not found' % path)
 
@@ -91,7 +92,6 @@ class FileStore(ObjectStore):
         zeros = None
         if sparse is True:
             zeros = '\0' * self.read_size
-
 
         wpath = self._fullpath(path)
         if os.path.isfile(wpath):
@@ -135,7 +135,7 @@ class FileStore(ObjectStore):
                 buf = reader.read(self.read_size)
                 buflen = len(buf)
                 if (buflen != self.read_size and zeros is not None
-                    and zeros[0:buflen] == buf):
+                        and zeros[0:buflen] == buf):
                     wfp.seek(wfp.tell() + buflen)
                 elif buf == zeros:
                     wfp.seek(wfp.tell() + buflen)
