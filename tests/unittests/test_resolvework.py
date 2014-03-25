@@ -1,5 +1,5 @@
 from unittest import TestCase
-from simplestreams.util import resolve_work, products_exdata
+from simplestreams.util import resolve_work
 
 from simplestreams.objectstores import MemoryObjectStore
 from simplestreams.mirrors import ObjectStoreMirrorWriter
@@ -94,24 +94,20 @@ class TestStreamResolveWork(TestCase):
         memory = ObjectStoreMirrorWriter(config, MemoryObjectStore(None))
         foocloud = get_mirror_reader("foocloud")
         memory.sync(foocloud, "streams/v1/index.json")
-        assert len(memory.store.data.keys()) > 0
 
         # We sync'd, now we'll sync everything that doesn't have the samepaths
         # tag. samepaths reuses some paths, and so if we try and delete
         # anything here that would be wrong.
         filters = [ItemFilter("version_name!=samepaths")]
-        def no_samepaths(data, src, target, pedigree):
+        def no_samepaths(data, src, _target, pedigree):
             return filter_item(filters, data, src, pedigree)
-        def dont_remove(*args):
+        def dont_remove(*_args):
+            # This shouldn't be called, because we are smart and do "reference
+            # counting".
             assert False
-        assert memory.filter_item
         memory.filter_version = no_samepaths
-        memory.remove_item = dont_remove
+        memory.store.remove = dont_remove
 
         memory.sync(foocloud, "streams/v1/index.json")
-
-        import pprint
-        pprint.pprint(memory.store.data)
-        pprint.pprint(list(memory.store.data.keys()))
 
 # vi: ts=4 expandtab
