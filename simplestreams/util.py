@@ -452,6 +452,10 @@ def subp(args, data=None, capture=True, shell=False, env=None):
         data = data.encode('utf-8')
 
     (out, err) = sp.communicate(data)
+    if isinstance(out, bytes):
+        out = out.decode('utf-8')
+    if isinstance(err, bytes):
+        err = err.decode('utf-8')
 
     rc = sp.returncode  # pylint: disable=E1101
     if rc != 0:
