@@ -1,6 +1,11 @@
 from unittest import TestCase
-from simplestreams.util import resolve_work
+from simplestreams.util import resolve_work, products_exdata
 
+from simplestreams.objectstores import MemoryObjectStore
+from simplestreams.mirrors import ObjectStoreMirrorWriter
+from simplestreams.filters import filter_item, ItemFilter
+
+from tests.testutil import get_mirror_reader
 
 class TestStreamResolveWork(TestCase):
 
@@ -83,5 +88,30 @@ class TestStreamResolveWork(TestCase):
         self.tryit(src=[9, 5, 8, 4, 7, 3, 6, 2, 1],
                    target=[9, 8, 7, 6, 5], maxnum=4, keep=False,
                    add=[], remove=[5])
+
+    def test_foocloud_multiple_paths_remove(self):
+        config = {'delete_filtered_items': True}
+        memory = ObjectStoreMirrorWriter(config, MemoryObjectStore(None))
+        foocloud = get_mirror_reader("foocloud")
+        memory.sync(foocloud, "streams/v1/index.json")
+        assert len(memory.store.data.keys()) > 0
+
+        # We sync'd, now we'll sync everything that doesn't have the samepaths
+        # tag. samepaths reuses some paths, and so if we try and delete
+        # anything here that would be wrong.
+        filters = [ItemFilter("version_name!=samepaths")]
+        def no_samepaths(data, src, target, pedigree):
+            return filter_item(filters, data, src, pedigree)
+        def dont_remove(*args):
+            assert False
+        assert memory.filter_item
+        memory.filter_version = no_samepaths
+        memory.remove_item = dont_remove
+
+        memory.sync(foocloud, "streams/v1/index.json")
+
+        import pprint
+        pprint.pprint(memory.store.data)
+        pprint.pprint(list(memory.store.data.keys()))
 
 # vi: ts=4 expandtab

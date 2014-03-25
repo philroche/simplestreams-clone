@@ -166,8 +166,34 @@
       }
      }, 
      "label": "release"
+    },
+    "samepaths": {
+     "items": {
+      "tar.gz": {
+       "name": "foovendor-pinky-6.1-i386-server-20121001.tar.gz", 
+       "path": "files/release-20121001/foovendor-6.1-server-cloudimg-i386.tar.gz",
+       "md5": "1534e487730c8162131dde430aa5fa5a",
+       "size": 56,
+       "ftype": "tar.gz"
+      }, 
+      "disk1.img": {
+       "name": "foovendor-pinky-6.1-i386-server-20121001-disk1.img", 
+       "path": "files/release-20121001/foovendor-6.1-server-cloudimg-i386-disk1.img", 
+       "md5": "d8fa9a536e8cf1bebcee1e26875060bb",
+       "size": 59,
+       "ftype": "disk1.img"
+      }, 
+      "root.tar.gz": {
+       "name": "foovendor-pinky-6.1-i386-server-20121001-root.tar.gz", 
+       "path": "files/release-20121001/foovendor-6.1-server-cloudimg-i386-root.tar.gz", 
+       "md5": "de2b46e0fe2ce8c6eda2b4cd809505a9",
+       "size": 61,
+       "ftype": "root.tar.gz"
+      }
+     }, 
+     "label": "release"
     }
-   }, 
+   },
    "release": "pinky", 
    "arch": "i386"
   }

@@ -68,8 +68,11 @@ class MemoryObjectStore(ObjectStore):
         del self.data[path]
 
     def source(self, path):
-        return cs.MemoryContentSource(content=self.data['path'],
-                                      url="%s://%s" % (self.__class__, path))
+        try:
+            return cs.MemoryContentSource(content=self.data[path],
+                                          url="%s://%s" % (self.__class__, path))
+        except KeyError:
+            raise IOError(errno.ENOENT, '%s not found' % path)
 
 
 class FileStore(ObjectStore):
