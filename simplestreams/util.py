@@ -263,7 +263,12 @@ def read_signed(content, keyring=None):
         if keyring:
             cmd.append("--keyring=%s" % keyring)
         cmd.append("-")
-        _outerr = subp(cmd, data=content)
+        try:
+            _outerr = subp(cmd, data=content)
+        except subprocess.CalledProcessError as e:
+            LOG.debug("failed: %s\n out=%s\n err=%s" %
+                      (' '.join(cmd), e.output[0], e.output[1]))
+            raise e
 
         ret = {'body': '', 'signature': '', 'garbage': ''}
         lines = content.splitlines()
@@ -452,6 +457,10 @@ def subp(args, data=None, capture=True, shell=False, env=None):
         data = data.encode('utf-8')
 
     (out, err) = sp.communicate(data)
+    if isinstance(out, bytes):
+        out = out.decode('utf-8')
+    if isinstance(err, bytes):
+        err = err.decode('utf-8')
 
     rc = sp.returncode  # pylint: disable=E1101
     if rc != 0:

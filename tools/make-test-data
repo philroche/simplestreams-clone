@@ -54,7 +54,7 @@ FAKE_DATA = {
         'sha256': 'f3cc103136423a57975750907ebc1d367e2985ac6338976d4d5a439f50323f4a'},
     'uefi1.img': {
         'size': 12421, 'md5': 'd41d8cd98f00b204e9800998ecf8427e',
-        'sha256': 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'},
+        'sha256': '8ca9c39f2200d299b011f5018c9d27a5a70f5a6b4c24f2fe06a94bc0e8c1213f'},
 }
 
 UBUNTU_RDNS = "com.ubuntu.cloud"
