@@ -383,7 +383,7 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
         try:
             raw = self.source(self._reference_count_data_path()).read()
             return json.load(io.StringIO(raw.decode('utf-8')))
-        except OSError as e:
+        except IOError as e:
             if e.errno == errno.ENOENT:
                 return {}
             raise
