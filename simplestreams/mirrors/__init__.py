@@ -394,9 +394,7 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
         self.store.insert(self._reference_count_data_path(), source)
 
     def _build_rc_id(self, src, pedigree):
-        KEYS = ['content_id', 'product_name', 'version_name', 'name']
-        data = util.products_exdata(src, pedigree)
-        return '/'.join([data[k] for k in KEYS])
+        return '/'.join([src['content_id']] + list(pedigree))
 
     def _inc_rc(self, path, src, pedigree):
         rc = self._load_rc_dict()
