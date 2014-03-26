@@ -17,12 +17,45 @@
 #   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
 import argparse
 import sys
+import time
 
 from simplestreams import filters
 from simplestreams import log
 from simplestreams import mirrors
 from simplestreams import objectstores
 from simplestreams import util
+
+
+class DotProgress(object):
+    def __init__(self, expected=None, columns=80):
+        self.curpath = None
+        self.printed = None
+        self.expected = expected
+        self.bytes_read = 0
+        self.columns = columns
+
+    def write_progress(self, path, cur, total):
+        if self.curpath != path:
+            self.printed = 0
+            self.curpath = path
+            status = ""
+            if self.expected:
+                status = (" %02s%%" %
+                          (int(self.bytes_read * 100 / self.expected)))
+            sys.stderr.write('=> %s [%s]%s\n' % (path, total, status))
+
+        if cur == total:
+            sys.stderr.write("\n")
+            if self.expected:
+                self.bytes_read += total
+            return
+
+        toprint = int(cur * self.columns / total) - self.printed
+        if toprint <= 0:
+            return
+        sys.stderr.write('.' * toprint)
+        sys.stderr.flush()
+        self.printed += toprint
 
 
 def main():
@@ -40,6 +73,8 @@ def main():
                         help='do not download items with a "path"')
     parser.add_argument('--dry-run', action='store_true', default=False,
                         help='only report what would be done')
+    parser.add_argument('--progress', action='store_true', default=False,
+                        help='show progress for downloading files')
     parser.add_argument('--mirror', action='append', default=[],
                         dest="mirrors",
                         help='additional mirrors to find referenced files')
@@ -93,6 +128,13 @@ def main():
 
     if args.dry_run:
         return True
+
+    if args.progress:
+        callback = DotProgress(expected=drmirror.size).write_progress
+    else:
+        callback = None
+
+    tstore = objectstores.FileStore(args.output_d, complete_callback=callback)
 
     tmirror = mirrors.ObjectFilterMirror(config=mirror_config,
                                          objectstore=tstore)
