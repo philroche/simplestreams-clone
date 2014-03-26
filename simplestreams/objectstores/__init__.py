@@ -69,9 +69,8 @@ class MemoryObjectStore(ObjectStore):
 
     def source(self, path):
         try:
-            return cs.MemoryContentSource(content=self.data[path],
-                                          url="%s://%s" %
-                                          (self.__class__, path))
+            url = "%s://%s" % (self.__class__, path)
+            return cs.MemoryContentSource(content=self.data[path], url=url)
         except KeyError:
             raise IOError(errno.ENOENT, '%s not found' % path)
 

@@ -8,4 +8,4 @@ def test_DryRunMirrorWriter_foocloud_no_filters():
     objectstore = MemoryObjectStore(None)
     target = DryRunMirrorWriter(config, objectstore)
     target.sync(src, "streams/v1/index.json")
-    assert target.size == 710
+    assert target.size == 886
