@@ -25,15 +25,6 @@ from simplestreams import objectstores
 from simplestreams import util
 
 
-class ObjectFilterMirror(mirrors.ObjectStoreMirrorWriter):
-    def __init__(self, *args, **kwargs):
-        super(ObjectFilterMirror, self).__init__(*args, **kwargs)
-        self.filters = self.config.get('filters', [])
-
-    def filter_item(self, data, src, target, pedigree):
-        return filters.filter_item(self.filters, data, src, pedigree)
-
-
 def main():
     parser = argparse.ArgumentParser()
 
@@ -84,7 +75,12 @@ def main():
     smirror = mirrors.UrlMirrorReader(mirror_url, mirrors=args.mirrors,
                                       policy=policy)
     tstore = objectstores.FileStore(args.output_d)
-    tmirror = ObjectFilterMirror(config=mirror_config, objectstore=tstore)
+    drmirror = mirrors.DryRunMirrorWriter(config=mirror_config,
+                                          objectstore=tstore)
+    drmirror.sync(smirror, initial_path)
+    print("syncing %d Mb..." % (drmirror.size / (1024 * 1024)))
+    tmirror = mirrors.ObjectFilterMirror(config=mirror_config,
+                                         objectstore=tstore)
 
     tmirror.sync(smirror, initial_path)
 

@@ -17,6 +17,7 @@
 
 import errno
 
+import simplestreams.filters as filters
 import simplestreams.util as util
 import simplestreams.contentsource as cs
 from simplestreams.log import LOG
@@ -435,6 +436,37 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
         if 'path' not in data:
             return
         self.store.remove(data['path'])
+
+
+class ObjectFilterMirror(ObjectStoreMirrorWriter):
+    def __init__(self, *args, **kwargs):
+        super(ObjectFilterMirror, self).__init__(*args, **kwargs)
+        self.filters = self.config.get('filters', [])
+
+    def filter_item(self, data, src, target, pedigree):
+        return filters.filter_item(self.filters, data, src, pedigree)
+
+
+class DryRunMirrorWriter(ObjectFilterMirror):
+    def __init__(self, *args, **kwargs):
+        super(DryRunMirrorWriter, self).__init__(*args, **kwargs)
+        self.size = 0
+
+    # All insert operations are noops.
+    def noop(*args):
+        pass
+
+    insert_index = noop
+    insert_index_entry = noop
+    insert_products = noop
+    insert_product = noop
+    insert_version = noop
+    insert_item = noop
+
+    def insert_item(self, data, src, target, pedigree, contentsource):
+        data = util.products_exdata(src, pedigree)
+        if 'size' in data:
+            self.size += int(data['size'])
 
 
 def _get_data_content(path, data, content, reader):
