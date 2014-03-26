@@ -19,6 +19,7 @@ import errno
 import io
 import json
 
+import simplestreams.filters as filters
 import simplestreams.util as util
 import simplestreams.contentsource as cs
 from simplestreams.log import LOG
@@ -483,6 +484,51 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
             return
         if self._dec_rc(data['path'], src, pedigree):
             self.store.remove(data['path'])
+
+
+class ObjectFilterMirror(ObjectStoreMirrorWriter):
+    def __init__(self, *args, **kwargs):
+        super(ObjectFilterMirror, self).__init__(*args, **kwargs)
+        self.filters = self.config.get('filters', [])
+
+    def filter_item(self, data, src, target, pedigree):
+        return filters.filter_item(self.filters, data, src, pedigree)
+
+
+class DryRunMirrorWriter(ObjectFilterMirror):
+    def __init__(self, *args, **kwargs):
+        super(DryRunMirrorWriter, self).__init__(*args, **kwargs)
+        self.downloading = []
+        self.removing = []
+
+    # All insert/remove operations are noops.
+    def noop(*args):
+        pass
+
+    insert_index = noop
+    insert_index_entry = noop
+    insert_products = noop
+    insert_product = noop
+    insert_version = noop
+    remove_product = noop
+    remove_version = noop
+
+    def insert_item(self, data, src, target, pedigree, contentsource):
+        data = util.products_exdata(src, pedigree)
+        if 'size' in data and 'path' in data:
+            self.downloading.append(
+                (pedigree, data['path'], int(data['size'])))
+
+    def remove_item(self, data, src, target, pedigree):
+        data = util.products_exdata(src, pedigree)
+        if 'size' in data and 'path' in data:
+            self.removing.append(
+                (pedigree, data['path'], int(data['size'])))
+    @property
+    def size(self):
+        downloading = sum([size for _, _, size in self.downloading])
+        removing = sum([size for _, _, size in self.removing])
+        return int(downloading - removing)
 
 
 def _get_data_content(path, data, content, reader):
