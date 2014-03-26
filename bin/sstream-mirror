@@ -38,6 +38,8 @@ def main():
     parser.add_argument('--no-item-download', action='store_true',
                         default=False,
                         help='do not download items with a "path"')
+    parser.add_argument('--dry-run', action='store_true', default=False,
+                        help='only report what would be done')
     parser.add_argument('--mirror', action='append', default=[],
                         dest="mirrors",
                         help='additional mirrors to find referenced files')
@@ -88,6 +90,9 @@ def main():
     print_diff('+', drmirror.downloading)
     print_diff('-', drmirror.removing)
     print("%d Mb change" % (drmirror.size / (1024 * 1024)))
+
+    if args.dry_run:
+        return True
 
     tmirror = mirrors.ObjectFilterMirror(config=mirror_config,
                                          objectstore=tstore)
