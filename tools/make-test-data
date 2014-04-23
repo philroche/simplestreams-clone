@@ -60,7 +60,7 @@ FAKE_DATA = {
 EC2_ENDPOINTS = {
     'default': 'https://ec2.%s.amazonaws.com',
     'cn-north-1': 'https://ec2.cn-north-1.amazonaws.com.cn',
-    'us-gov-west-1': 'ec2.us-gov-west-1.amazonaws.com'
+    'us-gov-west-1': 'https://ec2.us-gov-west-1.amazonaws.com'
 }
 
 UBUNTU_RDNS = "com.ubuntu.cloud"
