@@ -57,6 +57,12 @@ FAKE_DATA = {
         'sha256': '8ca9c39f2200d299b011f5018c9d27a5a70f5a6b4c24f2fe06a94bc0e8c1213f'},
 }
 
+EC2_ENDPOINTS = {
+    'default': 'https://ec2.%s.amazonaws.com',
+    'cn-north-1': 'https://ec2.cn-north-1.amazonaws.com.cn',
+    'us-gov-west-1': 'https://ec2.us-gov-west-1.amazonaws.com'
+}
+
 UBUNTU_RDNS = "com.ubuntu.cloud"
 
 REAL_DATA = os.environ.get("REAL_DATA", False)
@@ -387,8 +393,12 @@ def create_aws_data(query_tree, out_d, streamdir):
 
         tree[stream]['_aliases'] = {'crsn': {}}
         for region in regions:
+            epoint = EC2_ENDPOINTS['default'] % region
+            if region in EC2_ENDPOINTS:
+                epoint = EC2_ENDPOINTS[region]
+
             tree[stream]['_aliases']['crsn'][region] = {
-                'endpoint': 'https://ec2.%s.amazonaws.com' % region,
+                'endpoint': epoint,
                 'region': region}
 
         tree[stream]['format'] = "products:1.0"
