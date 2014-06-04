@@ -159,9 +159,10 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             del t_item[n]
 
         arch = flat.get('arch')
-        if arch == "amd64":
-            arch = "x86_64"
         if arch:
+            t_item['arch'] = arch
+            if arch == "amd64":
+                arch = "x86_64"
             props['architecture'] = arch
 
         fullname = self.name_prefix + name
