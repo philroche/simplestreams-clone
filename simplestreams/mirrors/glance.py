@@ -15,6 +15,7 @@
 #   You should have received a copy of the GNU Affero General Public License
 #   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
 
+import simplestreams.filters as filters
 import simplestreams.mirrors as mirrors
 import simplestreams.util as util
 import simplestreams.openstack as openstack
@@ -43,6 +44,12 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
     def __init__(self, config, objectstore=None, region=None,
                  name_prefix=None):
         super(GlanceMirror, self).__init__(config=config)
+
+        self.item_filters = self.config.get(
+            'item_filters', filters.get_filters(
+                ['ftype~=(disk1.img|disk.img)', 'arch~-(x86_64|amd64|i386)']))
+        self.index_filters = self.config.get(
+            'index_filters', filters.get_filters(['datatype=image-downloads']))
 
         self.loaded_content = {}
         self.store = objectstore
@@ -134,9 +141,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         return glance_t
 
     def filter_item(self, data, src, target, pedigree):
-        flat = util.products_exdata(src, pedigree, include_top=False)
-        return (flat.get('ftype') in ('disk1.img', 'disk.img') and
-                flat.get('arch') in ('x86_64', 'amd64', 'i386'))
+        return filters.filter_item(self.item_filters, data, src, pedigree)
 
     def insert_item(self, data, src, target, pedigree, contentsource):
         flat = util.products_exdata(src, pedigree, include_top=False)
@@ -214,7 +219,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             self.gclient.images.delete(data['id'])
 
     def filter_index_entry(self, data, src, pedigree):
-        return data.get('datatype') in ("image-downloads", None)
+        return filters.filter_item(self.index_filters, data, src, pedigree)
 
     def insert_products(self, path, target, content):
         if not self.store:
