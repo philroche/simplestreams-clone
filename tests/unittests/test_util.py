@@ -149,6 +149,15 @@ class TestProductsCondense(TestCase):
         util.products_condense(tree)
         self.assertEqual(tree, exp)
 
+    def test_condense_unicode(self):
+        tree = {'products': {'P1': {'versions': {'1': {'A': u'B'},
+                                                 '2': {'A': u'B'}}}}}
+        exp = {'products': {'P1': {'versions': {'1': {}, '2': {}},
+                                   'A': u'B'}}}
+
+        util.products_condense(tree)
+        self.assertEqual(tree, exp)
+
     def test_condense_different_arch(self):
         tree = {'products': {'P1': {'versions': {'1': {'items': {'thing1': {'arch': 'amd64'},
                                                                  'thing2': {'arch': 'amd64'}}},
