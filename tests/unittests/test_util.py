@@ -191,9 +191,7 @@ class TestProductsCondense(TestCase):
                'products': {'P1': {'versions': {'1': {'A': 'B'},
                                                 '2': {'A': 'B'}}}}}
 
-        import pprint
         util.products_condense(tree)
-        pprint.pprint(tree)
         self.assertEqual(tree, exp)
 
 # vi: ts=4 expandtab
