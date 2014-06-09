@@ -397,6 +397,7 @@ def products_condense(ptree, sticky=None):
 
     walk_products(ptree, cb_version=call_move_dups)
     walk_products(ptree, cb_product=call_move_dups)
+    move_dups(ptree['products'], ptree)
 
 
 def assert_safe_path(path):
