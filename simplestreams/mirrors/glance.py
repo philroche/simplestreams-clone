@@ -224,7 +224,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             self.gclient.images.delete(data['id'])
 
     def filter_index_entry(self, data, src, pedigree):
-        return filters.filter_index_item(self.index_filters, data)
+        return filters.filter_dict(self.index_filters, data)
 
     def insert_products(self, path, target, content):
         if not self.store:
