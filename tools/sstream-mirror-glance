@@ -20,6 +20,7 @@
 # glanceclient) are not python3.
 #
 import argparse
+import logging
 import os.path
 import sys
 
@@ -79,6 +80,14 @@ def main():
 
     parser.add_argument('source_mirror')
     parser.add_argument('path', nargs='?', default="streams/v1/index.sjson")
+    parser.add_argument('--item-filter', action='append', default=[],
+                        dest="item_filters",
+                        help="Filter expression for mirrored items. "
+                        "Multiple filter arguments can be specified"
+                        "and will be combined with logical AND. "
+                        "Expressions are key[!]=literal_string "
+                        "or key[!]~regexp.")
+
     args = parser.parse_args()
 
     modify_hook = None
@@ -87,7 +96,8 @@ def main():
 
     mirror_config = {'max_items': args.max, 'keep_items': args.keep,
                      'cloud_name': args.cloud_name,
-                     'modify_hook': modify_hook}
+                     'modify_hook': modify_hook,
+                     'item_filters': args.item_filters}
 
     def policy(content, path):  # pylint: disable=W0613
         if args.path.endswith('sjson'):

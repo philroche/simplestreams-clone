@@ -64,7 +64,12 @@ def get_filters(filters, noneval=""):
 
 
 def filter_item(filters, data, src, pedigree):
-    data = util.products_exdata(src, pedigree)
+    "Apply filter list to a products entity.  Flatten before doing so."
+    return filter_dict(filters, util.products_exdata(src, pedigree))
+
+
+def filter_dict(filters, data):
+    "Apply filter list to dict. Does not flatten."
     for f in filters:
         if not f.matches(data):
             return False
