@@ -264,6 +264,7 @@ def ec2_load_query(path):
         "southwest": "sw",
         "west": "ww",
         "northwest": "nw",
+        "govwest": "gw",
     }
     itmap = {
         'pv': {'instance': "pi", "ebs": "pe"},
@@ -314,7 +315,14 @@ def ec2_load_query(path):
         #  - 1 digit number
         #  - 1 char for virt type
         #  - 1 char for root-store type
-        (cc, direction, num) = region.split("-")
+
+        # Handle special case of 'gov' regions
+        _region = region
+        if 'gov' in region:
+            _region = region.replace('gov-', 'gov')
+
+        (cc, direction, num) = _region.split("-")
+
         ikey = cc + dmap[direction] + num + itmap[vtype][store]
 
         items[ikey] = {
