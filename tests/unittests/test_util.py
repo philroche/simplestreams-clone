@@ -143,8 +143,17 @@ class TestProductsCondense(TestCase):
     def test_condense_1(self):
         tree = {'products': {'P1': {'versions': {'1': {'A': 'B'},
                                                  '2': {'A': 'B'}}}}}
-        exp = {'products': {'P1': {'versions': {'1': {}, '2': {}},
-                                   'A': 'B'}}}
+        exp = {'A': 'B',
+               'products': {'P1': {'versions': {'1': {}, '2': {}}}}}
+
+        util.products_condense(tree)
+        self.assertEqual(tree, exp)
+
+    def test_condense_unicode(self):
+        tree = {'products': {'P1': {'versions': {'1': {'A': u'B'},
+                                                 '2': {'A': u'B'}}}}}
+        exp = {'A': u'B',
+               'products': {'P1': {'versions': {'1': {}, '2': {}}}}}
 
         util.products_condense(tree)
         self.assertEqual(tree, exp)
@@ -168,8 +177,8 @@ class TestProductsCondense(TestCase):
         tree = {'products': {'P1': {'A': 'B',
                                     'versions': {'1': {'A': 'B'},
                                                  '2': {'A': 'B'}}}}}
-        exp = {'products': {'P1': {'versions': {'1': {}, '2': {}},
-                                   'A': 'B'}}}
+        exp = {'A': 'B',
+               'products': {'P1': {'versions': {'1': {}, '2': {}}}}}
 
         util.products_condense(tree)
         self.assertEqual(tree, exp)
@@ -178,8 +187,8 @@ class TestProductsCondense(TestCase):
         tree = {'products': {'P1': {'A': 'C',
                                     'versions': {'1': {'A': 'B'},
                                                  '2': {'A': 'B'}}}}}
-        exp = {'products': {'P1': {'A': 'C',
-                                   'versions': {'1': {'A': 'B'},
+        exp = {'A': 'C',
+               'products': {'P1': {'versions': {'1': {'A': 'B'},
                                                 '2': {'A': 'B'}}}}}
 
         util.products_condense(tree)

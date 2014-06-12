@@ -190,7 +190,7 @@ def expand_data(data, refs=None, delete=False):
                 if not ref:
                     continue
                 value = data.get(key)
-                if value and isinstance(value, str):
+                if value and isinstance(value, _STRING_TYPES):
                     data.update(ref[value])
                     if delete:
                         del data[key]
@@ -370,11 +370,11 @@ def move_dups(src, target, sticky=None):
             if k not in candidates:
                 continue
             if k in updates:
-                if v != updates[k] or not isinstance(v, str):
+                if v != updates[k] or not isinstance(v, _STRING_TYPES):
                     del updates[k]
                     candidates.remove(k)
             else:
-                if isinstance(v, str) and target.get(k, v) == v:
+                if isinstance(v, _STRING_TYPES) and target.get(k, v) == v:
                     updates[k] = v
                 else:
                     candidates.remove(k)
@@ -397,6 +397,7 @@ def products_condense(ptree, sticky=None):
 
     walk_products(ptree, cb_version=call_move_dups)
     walk_products(ptree, cb_product=call_move_dups)
+    move_dups(ptree['products'], ptree)
 
 
 def assert_safe_path(path):
