@@ -309,13 +309,22 @@ def ec2_load_query(path):
             vtype = "pv"
 
         # create the item key:
-        #  - 2 letter country code (us)
+        #  - 2 letter country code (us) . 3 for govcloud (gww)
         #  - 2 letter direction ('nn' for north, 'nw' for northwest)
         #  - 1 digit number
         #  - 1 char for virt type
         #  - 1 char for root-store type
-        (cc, direction, num) = region.split("-")
-        ikey = cc + dmap[direction] + num + itmap[vtype][store]
+
+        # Handle special case of 'gov' regions
+        _region = region
+        pre_cc = ""
+        if '-gov-' in region:
+            _region = region.replace('gov-', '')
+            pre_cc = "g"
+
+        (cc, direction, num) = _region.split("-")
+
+        ikey = pre_cc + cc + dmap[direction] + num + itmap[vtype][store]
 
         items[ikey] = {
             'id': iid,
