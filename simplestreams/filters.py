@@ -69,3 +69,11 @@ def filter_item(filters, data, src, pedigree):
         if not f.matches(data):
             return False
     return True
+
+
+def filter_index_item(filters, data):
+    "Apply filter list to un-flattened index item"
+    for f in filters:
+        if not f.matches(data):
+            return False
+    return True

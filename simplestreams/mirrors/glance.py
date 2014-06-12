@@ -45,11 +45,16 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
                  name_prefix=None):
         super(GlanceMirror, self).__init__(config=config)
 
-        self.item_filters = self.config.get(
-            'item_filters', filters.get_filters(
-                ['ftype~=(disk1.img|disk.img)', 'arch~-(x86_64|amd64|i386)']))
-        self.index_filters = self.config.get(
-            'index_filters', filters.get_filters(['datatype=image-downloads']))
+        self.item_filters = self.config.get('item_filters', [])
+        if len(self.item_filters) == 0:
+            self.item_filters = ['ftype~(disk1.img|disk.img)',
+                                 'arch~(x86_64|amd64|i386)']
+        self.item_filters = filters.get_filters(self.item_filters)
+
+        self.index_filters = self.config.get('index_filters', [])
+        if len(self.index_filters) == 0:
+            self.index_filters = ['datatype=image-downloads']
+        self.index_filters = filters.get_filters(self.index_filters)
 
         self.loaded_content = {}
         self.store = objectstore
@@ -219,7 +224,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             self.gclient.images.delete(data['id'])
 
     def filter_index_entry(self, data, src, pedigree):
-        return filters.filter_item(self.index_filters, data, src, pedigree)
+        return filters.filter_index_item(self.index_filters, data)
 
     def insert_products(self, path, target, content):
         if not self.store:
