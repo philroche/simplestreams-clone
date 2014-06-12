@@ -80,7 +80,7 @@ def main():
 
     parser.add_argument('source_mirror')
     parser.add_argument('path', nargs='?', default="streams/v1/index.sjson")
-    parser.add_argument('--item_filter', action='append', default=[],
+    parser.add_argument('--item-filter', action='append', default=[],
                         dest="item_filters",
                         help="Filter expression for mirrored items. "
                         "Multiple filter arguments can be specified"
