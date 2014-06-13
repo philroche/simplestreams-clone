@@ -235,6 +235,11 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         util.products_prune(tree)
         # stop these items from copying up when we call condense
         sticky = ['ftype', 'md5', 'sha256', 'size', 'name', 'id']
+
+        # LP: #1329805. Juju expects these on the item.
+        if self.config.get('sticky_endpoint_region', True):
+            sticky += ['endpoint', 'region']
+
         util.products_condense(tree, sticky=sticky)
 
         tsnow = util.timestamp()

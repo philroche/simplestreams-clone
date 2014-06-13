@@ -146,7 +146,7 @@ class TestProductsCondense(TestCase):
         exp = {'A': 'B',
                'products': {'P1': {'versions': {'1': {}, '2': {}}}}}
 
-        util.products_condense(tree)
+        util.products_condense(tree, top='products')
         self.assertEqual(tree, exp)
 
     def test_condense_unicode(self):
@@ -155,7 +155,7 @@ class TestProductsCondense(TestCase):
         exp = {'A': u'B',
                'products': {'P1': {'versions': {'1': {}, '2': {}}}}}
 
-        util.products_condense(tree)
+        util.products_condense(tree, top='products')
         self.assertEqual(tree, exp)
 
     def test_condense_different_arch(self):
@@ -180,7 +180,7 @@ class TestProductsCondense(TestCase):
         exp = {'A': 'B',
                'products': {'P1': {'versions': {'1': {}, '2': {}}}}}
 
-        util.products_condense(tree)
+        util.products_condense(tree, top='products')
         self.assertEqual(tree, exp)
 
     def test_nonrepeats_stay(self):
@@ -190,6 +190,16 @@ class TestProductsCondense(TestCase):
         exp = {'A': 'C',
                'products': {'P1': {'versions': {'1': {'A': 'B'},
                                                 '2': {'A': 'B'}}}}}
+
+        util.products_condense(tree, top='products')
+        self.assertEqual(tree, exp)
+
+    def test_default_top_is_version(self):
+        # default top has to be version for backwards compat
+        tree = {'products': {'P1': {'versions': {'1': {'A': 'B'},
+                                                 '2': {'A': 'B'}}}}}
+        exp = {'products': {'P1': {'A': 'B',
+                                   'versions': {'1': {}, '2': {}}}}}
 
         util.products_condense(tree)
         self.assertEqual(tree, exp)

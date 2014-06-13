@@ -387,8 +387,14 @@ def move_dups(src, target, sticky=None):
     target.update(updates)
 
 
-def products_condense(ptree, sticky=None):
+def products_condense(ptree, sticky=None, top='versions'):
     # walk a products tree, copying up item keys as far as they'll go
+    # only move items to a sibling of the 'top'.
+
+    top_values = ('versions', 'products', None)
+    if top not in ('versions', 'products'):
+        raise ValueError("'top' must be one of: %s" %
+                         ','.join(PRODUCTS_TREE_HIERARCHY))
 
     def call_move_dups(cur, _tree, pedigree):
         (_mtype, stname) = (("product", "versions"),
@@ -397,6 +403,8 @@ def products_condense(ptree, sticky=None):
 
     walk_products(ptree, cb_version=call_move_dups)
     walk_products(ptree, cb_product=call_move_dups)
+    if top == 'versions':
+        return
     move_dups(ptree['products'], ptree)
 
 
