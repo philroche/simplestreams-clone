@@ -266,10 +266,8 @@ def ec2_load_query(path):
         "northwest": "nw",
     }
     itmap = {
-        'pv': {'instance': "pi", "ebs": "pe", "ebs-ssd": "es",
-               "ebs-io1": "eo"},
-        'hvm': {'instance': "hi", "ebs": "he", "hvm-ssd": "hs",
-                "hvm-io1": "ho"}
+        'pv': {'instance': "pi", "ebs": "pe", "ssd": "es", "io1": "eo"},
+        'hvm': {'instance': "hi", "ebs": "he", "ssd": "hs", "io1": "ho"}
     }
 
     for rline in toolutil.load_query_ec2(path):
@@ -307,6 +305,8 @@ def ec2_load_query(path):
 
         if store == "instance-store":
             store = 'instance'
+        elif '-' in store:
+            store = store.split('-')[-1]
         if vtype == "paravirtual":
             vtype = "pv"
 
