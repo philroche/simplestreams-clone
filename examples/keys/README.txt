@@ -11,3 +11,11 @@ cloud-images.pub:
 
   This is the public key for the entity that signs data on
   cloud-images.ubuntu.com data.
+
+cirros.pub:
+  pub  4096R/8F4CE6D0 2013-02-26 Cirros Signing Key <signing@cirros-cloud.net>
+  sub  4096R/0B2CED65 2013-02-26
+  sub  4096R/A5DDB840 2013-02-26 [expires: 2020-02-25]
+
+  This is the public key for the entity that signs simplestream
+  data for http://download.cirros-cloud.net/ .
