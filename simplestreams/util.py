@@ -437,13 +437,15 @@ def mkdir_p(path):
     return
 
 
-def get_local_copy(contentsource, read_size=READ_SIZE):
+def get_local_copy(contentsource, read_size=READ_SIZE, progress_callback=None):
     (tfd, tpath) = tempfile.mkstemp()
     tfile = os.fdopen(tfd, "wb")
     try:
         LOG.debug("getting local copy of %s", contentsource.url)
         while True:
             buf = contentsource.read(read_size)
+            if progress_callback:
+                progress_callback(read_size)
             tfile.write(buf)
             if len(buf) != read_size:
                 break
@@ -564,5 +566,41 @@ def path_from_mirror_url(mirror, path):
         path = "streams/v1/index.sjson"
 
     return (mirror, path)
+
+
+class ProgressAggregator(object):
+    def __init__(self, remaining_items=None):
+        self.last_emitted = 0
+        self.current_written = 0
+        self.current_file = None
+        self.remaining_items = remaining_items
+        if self.remaining_items:
+            self.total_image_count = len(self.remaining_items)
+            self.total_size = sum(self.remaining_items.values())
+        else:
+            self.total_image_count = 0
+            self.total_size = 0
+        self.total_written = 0
+
+    def progress_callback(self, progress):
+        if self.current_file != progress['name']:
+            if self.remaining_items and self.current_file is not None:
+                del self.remaining_items[self.current_file]
+            self.current_file = progress['name']
+            self.last_emitted = 0
+            self.current_written = 0
+
+        size = float(progress['size'])
+        written = float(progress['written'])
+        self.current_written += written
+        self.total_written += written
+        interval = self.current_written - self.last_emitted
+        if interval > size / 100:
+            self.last_emitted = self.current_written
+            progress['written'] = self.current_written
+            self.emit(progress)
+
+    def emit(self, progress):
+        raise NotImplementedError()
 
 # vi: ts=4 expandtab

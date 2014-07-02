@@ -42,7 +42,7 @@ def empty_iid_products(content_id):
 # if provided an object store, it will produce a 'image-ids' mirror
 class GlanceMirror(mirrors.BasicMirrorWriter):
     def __init__(self, config, objectstore=None, region=None,
-                 name_prefix=None):
+                 name_prefix=None, progress_callback=None):
         super(GlanceMirror, self).__init__(config=config)
 
         self.item_filters = self.config.get('item_filters', [])
@@ -64,6 +64,8 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         self.name_prefix = name_prefix or ""
         if region is not None:
             self.keystone_creds['region_name'] = region
+        
+        self.progress_callback = progress_callback
 
         conn_info = openstack.get_service_conn_info('image',
                                                     **self.keystone_creds)
@@ -189,9 +191,22 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         if 'md5' in data:
             create_kwargs['checksum'] = data.get('md5')
 
+        if self.progress_callback:
+            def progress_wrapper(written):
+                self.progress_callback(dict(status="Downloading",
+                                            name=flat.get('pubname'),
+                                            size=data.get('size', 0),
+                                            written=written))
+        else:
+            def progress_wrapper(written):
+                pass
+
         try:
             try:
-                (tmp_path, tmp_del) = util.get_local_copy(contentsource)
+                kwargs = dict(progress_callback=progress_wrapper)
+                (tmp_path, tmp_del) = util.get_local_copy(contentsource,
+                                                          **kwargs)
+
                 if self.modify_hook:
                     (newsize, newmd5) = call_hook(item=t_item, path=tmp_path,
                                                   cmd=self.modify_hook)
@@ -270,6 +285,29 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         }
         LOG.info("writing data: %s", ipath)
         self.store.insert_content(ipath, util.dump_data(index))
+
+
+class ItemInfoDryRunMirror(GlanceMirror):
+    def __init__(self, config, objectstore):
+        super(ItemInfoDryRunMirror, self).__init__(config, objectstore)
+        self.items = {}
+
+    def noop(*args):
+        pass
+    
+    insert_index = noop
+    insert_index_entry = noop
+    insert_products = noop
+    insert_product = noop
+    insert_version = noop
+    remove_item = noop
+    remove_product = noop
+    remove_version = noop
+
+    def insert_item(self, data, src, target, pedigree, contentsource):
+        data = util.products_exdata(src, pedigree)
+        if 'size' in data and 'path' in data and 'pubname' in data:
+            self.items[data['pubname']] = int(data['size'])
 
 
 def _checksum_file(fobj, read_size=util.READ_SIZE, checksums=None):

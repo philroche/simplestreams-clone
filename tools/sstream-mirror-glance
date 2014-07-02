@@ -26,6 +26,7 @@ import sys
 
 from simplestreams import objectstores
 from simplestreams.objectstores import swift
+from simplestreams import filters
 from simplestreams import log
 from simplestreams import mirrors
 from simplestreams import openstack
@@ -35,6 +36,20 @@ from simplestreams.mirrors import glance
 
 def error(msg):
     sys.stderr.write(msg)
+
+class StdoutProgressAggregator(util.ProgressAggregator):
+    def __init__(self, remaining_items):
+        super(StdoutProgressAggregator, self).__init__(remaining_items)
+
+    def emit(self, progress):
+        size = float(progress['size'])
+        written = float(progress['written'])
+        print("%.2f %s (%d of %d images)"
+              " - %.2f" % (written / size,
+                           progress['name'], 
+                           self.total_image_count - len(self.remaining_items) + 1,
+                           self.total_image_count,
+                           float(self.total_written) / self.total_size))
 
 
 def main():
@@ -130,9 +145,14 @@ def main():
 
         mirror_config['content_id'] = args.content_id % {'region': region}
 
+        drmirror = glance.ItemInfoDryRunMirror(config=mirror_config, objectstore=tstore)
+        drmirror.sync(smirror, args.path)
+        p = StdoutProgressAggregator(drmirror.items)
+
         tmirror = glance.GlanceMirror(config=mirror_config,
                                       objectstore=tstore, region=region,
-                                      name_prefix=args.name_prefix)
+                                      name_prefix=args.name_prefix,
+                                      progress_callback=p.progress_callback)
         tmirror.sync(smirror, args.path)
 
 
