@@ -89,7 +89,7 @@ class MirrorWriter(object):
         else:
             raise TypeError("Unknown format '%s' in '%s'" % (fmt, path))
 
-    ## Index Operations ##
+    # Index Operations
     def filter_index_entry(self, data, src, pedigree):
         # src is source index tree.
         # data is src['index'][ped[0]]
@@ -107,7 +107,7 @@ class MirrorWriter(object):
         # contentsource is a ContentSource if 'path' exists in data or None
         _pylint = (data, src, pedigree, contentsource)
 
-    ## Products Operations ##
+    # Products Operations
     def filter_product(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]
@@ -347,10 +347,10 @@ class BasicMirrorWriter(MirrorWriter):
 
             self.insert_product(tproduct, src, target, (prodname,))
 
-        ## FIXME: below will remove products if they're in target
-        ## (result of load_products) but not in the source products.
-        ## that could accidentally delete a lot.
-        ##
+        # FIXME: below will remove products if they're in target
+        # (result of load_products) but not in the source products.
+        # that could accidentally delete a lot.
+        #
         del_products = []
         if self.config.get('delete_products', False):
             del_products.extend([p for p in list(tproducts.keys())
@@ -360,8 +360,8 @@ class BasicMirrorWriter(MirrorWriter):
                                  if p not in stree])
 
         for prodname in del_products:
-            ## FIXME: we remove a product here, but unless that acts
-            ## recursively, nothing will remove the items in that product
+            # FIXME: we remove a product here, but unless that acts
+            # recursively, nothing will remove the items in that product
             self.remove_product(tproducts[prodname], src, target, (prodname,))
             del tproducts[prodname]
 
@@ -522,6 +522,7 @@ class DryRunMirrorWriter(ObjectFilterMirror):
         if 'size' in data and 'path' in data:
             self.removing.append(
                 (pedigree, data['path'], int(data['size'])))
+
     @property
     def size(self):
         downloading = sum([size for _, _, size in self.downloading])
