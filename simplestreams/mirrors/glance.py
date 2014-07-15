@@ -64,7 +64,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         self.name_prefix = name_prefix or ""
         if region is not None:
             self.keystone_creds['region_name'] = region
-        
+
         self.progress_callback = progress_callback
 
         conn_info = openstack.get_service_conn_info('image',
@@ -294,7 +294,7 @@ class ItemInfoDryRunMirror(GlanceMirror):
 
     def noop(*args):
         pass
-    
+
     insert_index = noop
     insert_index_entry = noop
     insert_products = noop
