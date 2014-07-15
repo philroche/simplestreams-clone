@@ -30,7 +30,7 @@ class ObjectStore(object):
     read_size = READ_BUFFER_SIZE
 
     def insert(self, path, reader, checksums=None, mutable=True, size=None):
-        #store content from reader.read() into path, expecting result checksum
+        # store content from reader.read() into path, expecting result checksum
         raise NotImplementedError()
 
     def insert_content(self, path, content, checksums=None, mutable=True):
@@ -40,7 +40,7 @@ class ObjectStore(object):
                     checksums=checksums, mutable=mutable)
 
     def remove(self, path):
-        #remove path from store
+        # remove path from store
         raise NotImplementedError()
 
     def source(self, path):
@@ -64,7 +64,7 @@ class MemoryObjectStore(ObjectStore):
         self.data[path] = reader.read()
 
     def remove(self, path):
-        #remove path from store
+        # remove path from store
         del self.data[path]
 
     def source(self, path):
