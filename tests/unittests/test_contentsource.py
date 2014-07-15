@@ -30,7 +30,6 @@ class RandomPortServer(object):
                     return self
 
     def __exit__(self, _type, value, tb):
-        _pylint = value, tb
         self.process.kill()  # pylint: disable=E1101
 
 
@@ -77,7 +76,6 @@ class TestResume(TestCase):
         data = {'dld': 0}
 
         def handler(path, downloaded, total):
-            _pylint = path, total
             data['dld'] = downloaded
 
         with RandomPortServer(self.source) as server:
