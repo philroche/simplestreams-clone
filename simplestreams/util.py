@@ -30,7 +30,7 @@ from simplestreams.log import LOG
 try:
     ALGORITHMS = list(getattr(hashlib, 'algorithms'))
 except AttributeError:
-    ALGORITHMS = list(hashlib.algorithms_available)  # pylint: disable=E1101
+    ALGORITHMS = list(hashlib.algorithms_available)
 
 ALIASNAME = "_aliases"
 
@@ -249,7 +249,7 @@ def resolve_work(src, target, maxnum=None, keep=False, itemfilter=None,
     return(add, remove)
 
 
-def policy_read_signed(content, path, keyring=None):  # pylint: disable=W0613
+def policy_read_signed(content, path, keyring=None):
     # convenience wrapper around 'read_signed' for use MirrorReader policy
     return read_signed(content=content, keyring=keyring)
 
@@ -470,7 +470,7 @@ def subp(args, data=None, capture=True, shell=False, env=None):
     if isinstance(err, bytes):
         err = err.decode('utf-8')
 
-    rc = sp.returncode  # pylint: disable=E1101
+    rc = sp.returncode
     if rc != 0:
         raise subprocess.CalledProcessError(rc, args, output=(out, err))
 

@@ -21,7 +21,7 @@ import os
 import sys
 
 if sys.version_info > (3, 0):
-    import urllib.parse as urlparse  # pylint: disable=F0401,E0611
+    import urllib.parse as urlparse
 else:
     import urlparse
 
@@ -37,14 +37,14 @@ try:
     from distutils.version import LooseVersion
     import pkg_resources
     _REQ = pkg_resources.get_distribution('requests')
-    _REQ_VER = LooseVersion(_REQ.version)  # pylint: disable=E1103
+    _REQ_VER = LooseVersion(_REQ.version)
     if _REQ_VER < LooseVersion('1.1'):
         raise Exception("Couldn't use requests")
     URL_READER_CLASSNAME = "RequestsUrlReader"
 except:
     if sys.version_info > (3, 0):
-        import urllib.request as urllib_request  # pylint: disable=F0401, E0611
-        import urllib.error as urllib_error  # pylint: disable=F0401, E0611
+        import urllib.request as urllib_request
+        import urllib.error as urllib_error
     else:
         import urllib2 as urllib_request
         urllib_error = urllib_request
@@ -68,8 +68,6 @@ class ContentSource(object):
         Used to resume failed transfers. """
 
         class SetStartPosNotImplementedError(NotImplementedError):
-            # This is only here to satisfy pylint W0223.  Users
-            # have to accept that it may NotImplementedError
             pass
 
         raise SetStartPosNotImplementedError()
@@ -133,11 +131,11 @@ class UrlContentSource(ContentSource):
         myerr.errno = errno.ENOENT
         raise myerr
 
-    def open(self):  # pylint: disable=E0202
+    def open(self):
         if self.fd is None:
             self.fd = self._open()
 
-    def read(self, size=-1):  # pylint: disable=E0202
+    def read(self, size=-1):
         if self.fd is None:
             self.open()
 
@@ -306,8 +304,7 @@ class RequestsUrlReader(UrlReader):
         self.leftover = bytes()
         self.consumed = False
 
-        if (self.req.status_code ==
-                requests.codes.NOT_FOUND):  # pylint: disable=E1101
+        if (self.req.status_code == requests.codes.NOT_FOUND):
             myerr = IOError("Unable to open %s" % url)
             myerr.errno = errno.ENOENT
             raise myerr
