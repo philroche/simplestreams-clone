@@ -20,13 +20,11 @@
 # glanceclient) are not python3.
 #
 import argparse
-import logging
 import os.path
 import sys
 
 from simplestreams import objectstores
 from simplestreams.objectstores import swift
-from simplestreams import filters
 from simplestreams import log
 from simplestreams import mirrors
 from simplestreams import openstack
