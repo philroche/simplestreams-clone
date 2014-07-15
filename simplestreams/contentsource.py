@@ -72,7 +72,6 @@ class ContentSource(object):
             # have to accept that it may NotImplementedError
             pass
 
-        _pylint = offset
         raise SetStartPosNotImplementedError()
 
     def __enter__(self):
