@@ -7,6 +7,7 @@ from simplestreams.filters import filter_item, ItemFilter
 
 from tests.testutil import get_mirror_reader
 
+
 class TestStreamResolveWork(TestCase):
 
     def tryit(self, src, target, maxnum=None, keep=False,
@@ -99,12 +100,15 @@ class TestStreamResolveWork(TestCase):
         # tag. samepaths reuses some paths, and so if we try and delete
         # anything here that would be wrong.
         filters = [ItemFilter("version_name!=samepaths")]
+
         def no_samepaths(data, src, _target, pedigree):
             return filter_item(filters, data, src, pedigree)
+
         def dont_remove(*_args):
             # This shouldn't be called, because we are smart and do "reference
             # counting".
             assert False
+
         memory.filter_version = no_samepaths
         memory.store.remove = dont_remove
 
