@@ -84,6 +84,8 @@ def main():
                         help='content-id to use for published data.'
                              '  may contain "%%(region)s"')
 
+    parser.add_argument('--progress', action='store_true', default=False,
+                        help='display per-item download progress')
     parser.add_argument('--verbose', '-v', action='count', default=0)
     parser.add_argument('--log-file', default=sys.stderr,
                         type=argparse.FileType('w'))
@@ -143,14 +145,18 @@ def main():
 
         mirror_config['content_id'] = args.content_id % {'region': region}
 
-        drmirror = glance.ItemInfoDryRunMirror(config=mirror_config, objectstore=tstore)
-        drmirror.sync(smirror, args.path)
-        p = StdoutProgressAggregator(drmirror.items)
+        if args.progress:
+            drmirror = glance.ItemInfoDryRunMirror(config=mirror_config, objectstore=tstore)
+            drmirror.sync(smirror, args.path)
+            p = StdoutProgressAggregator(drmirror.items)
+            progress_callback = p.progress_callback
+        else:
+            progress_callback = None
 
         tmirror = glance.GlanceMirror(config=mirror_config,
                                       objectstore=tstore, region=region,
                                       name_prefix=args.name_prefix,
-                                      progress_callback=p.progress_callback)
+                                      progress_callback=progress_callback)
         tmirror.sync(smirror, args.path)
 
 
