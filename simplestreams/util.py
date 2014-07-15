@@ -264,7 +264,7 @@ def read_signed(content, keyring=None):
             cmd.append("--keyring=%s" % keyring)
         cmd.append("-")
         try:
-            _outerr = subp(cmd, data=content)
+            subp(cmd, data=content)
         except subprocess.CalledProcessError as e:
             LOG.debug("failed: %s\n out=%s\n err=%s" %
                       (' '.join(cmd), e.output[0], e.output[1]))
@@ -391,7 +391,6 @@ def products_condense(ptree, sticky=None, top='versions'):
     # walk a products tree, copying up item keys as far as they'll go
     # only move items to a sibling of the 'top'.
 
-    top_values = ('versions', 'products', None)
     if top not in ('versions', 'products'):
         raise ValueError("'top' must be one of: %s" %
                          ','.join(PRODUCTS_TREE_HIERARCHY))
