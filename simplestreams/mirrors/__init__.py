@@ -89,79 +89,75 @@ class MirrorWriter(object):
         else:
             raise TypeError("Unknown format '%s' in '%s'" % (fmt, path))
 
-    ## Index Operations ##
+    # Index Operations
     def filter_index_entry(self, data, src, pedigree):
         # src is source index tree.
         # data is src['index'][ped[0]]
-        _pylint = (data, src, pedigree)
         return True
 
     def insert_index(self, path, src, content):
         # src is the source index tree
         # content is None or a json rendering (possibly signed) of src
-        _pylint = (path, src, content)
+        pass
 
     def insert_index_entry(self, data, src, pedigree, contentsource):
         # src is the top level index (index:1.0 format)
         # data is src['index'][pedigree[0]]
         # contentsource is a ContentSource if 'path' exists in data or None
-        _pylint = (data, src, pedigree, contentsource)
+        pass
 
-    ## Products Operations ##
+    # Products Operations
     def filter_product(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]
-        _pylint = (data, src, target, pedigree)
         return True
 
     def filter_version(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]
-        _pylint = (data, src, target, pedigree)
         return True
 
     def filter_item(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]['items'][ped[2]]
-        _pylint = (data, src, target, pedigree)
         return True
 
     def insert_products(self, path, target, content):
         # path is the path to store data (where it came from on source mirror)
         # target is the target products:1.0 tree
         # content is None or a json rendering (possibly signed) of src
-        _pylint = (path, target, content)
+        pass
 
     def insert_product(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]
-        _pylint = (data, src, target, pedigree)
+        pass
 
     def insert_version(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]
-        _pylint = (data, src, target, pedigree)
+        pass
 
     def insert_item(self, data, src, target, pedigree, contentsource):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]['items'][ped[2]]
         # contentsource is a ContentSource if 'path' exists in data or None
-        _pylint = (data, src, target, pedigree, contentsource)
+        pass
 
     def remove_product(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]
-        _pylint = (data, src, target, pedigree)
+        pass
 
     def remove_version(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]
-        _pylint = (data, src, target, pedigree)
+        pass
 
     def remove_item(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]['items'][ped[2]]
-        _pylint = (data, src, target, pedigree)
+        pass
 
 
 class UrlMirrorReader(MirrorReader):
@@ -347,10 +343,10 @@ class BasicMirrorWriter(MirrorWriter):
 
             self.insert_product(tproduct, src, target, (prodname,))
 
-        ## FIXME: below will remove products if they're in target
-        ## (result of load_products) but not in the source products.
-        ## that could accidentally delete a lot.
-        ##
+        # FIXME: below will remove products if they're in target
+        # (result of load_products) but not in the source products.
+        # that could accidentally delete a lot.
+        #
         del_products = []
         if self.config.get('delete_products', False):
             del_products.extend([p for p in list(tproducts.keys())
@@ -360,8 +356,8 @@ class BasicMirrorWriter(MirrorWriter):
                                  if p not in stree])
 
         for prodname in del_products:
-            ## FIXME: we remove a product here, but unless that acts
-            ## recursively, nothing will remove the items in that product
+            # FIXME: we remove a product here, but unless that acts
+            # recursively, nothing will remove the items in that product
             self.remove_product(tproducts[prodname], src, target, (prodname,))
             del tproducts[prodname]
 
@@ -522,6 +518,7 @@ class DryRunMirrorWriter(ObjectFilterMirror):
         if 'size' in data and 'path' in data:
             self.removing.append(
                 (pedigree, data['path'], int(data['size'])))
+
     @property
     def size(self):
         downloading = sum([size for _, _, size in self.downloading])
@@ -549,7 +546,6 @@ def check_tree_paths(tree, fmt=None):
         fmt = tree.get('format')
     if fmt == "products:1.0":
         def check_path(item, tree, pedigree):
-            _pylint = (tree, pedigree)
             util.assert_safe_path(item.get('path'))
         util.walk_products(tree, cb_item=check_path)
     elif fmt == "index:1.0":

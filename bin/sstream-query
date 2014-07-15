@@ -106,7 +106,7 @@ def main():
 
     initial_path = path
 
-    def policy(content, path):  # pylint: disable=W0613
+    def policy(content, path):
         if initial_path.endswith('sjson'):
             return util.read_signed(content, keyring=cmdargs.keyring)
         else:

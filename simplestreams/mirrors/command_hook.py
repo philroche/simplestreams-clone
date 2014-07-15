@@ -282,7 +282,7 @@ def run_command(cmd, env=None, capture=False, rcs=None):
 
     sp = subprocess.Popen(cmd, env=env, stdout=stdout, shell=False)
     (out, _err) = sp.communicate()
-    rc = sp.returncode  # pylint: disable=E1101
+    rc = sp.returncode
 
     if rc == 0x80 | signal.SIGPIPE:
         exc = IOError("Child Received SIGPIPE: %s" % str(cmd))

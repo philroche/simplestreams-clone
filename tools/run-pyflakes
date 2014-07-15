@@ -7,21 +7,16 @@ else
    files=( "$@" );
 fi
 
-RC_FILE="pylintrc"
-if [ ! -f $RC_FILE ]; then
-    RC_FILE="../pylintrc"
+PYTHON_VERSION=${PYTHON_VERSION:-3}
+
+if [ "$PYTHON_VERSION" = "2" ]; then
+    pyflakes="pyflakes"
+else
+    pyflakes="pyflakes3"
 fi
 
-cmd=(
-    pylint
-    --rcfile=$RC_FILE
-    --disable=R
-    --disable=I
-    --dummy-variables-rgx="_"
-    "${files[@]}"
-)
+cmd=( $pyflakes "${files[@]}" )
 
 echo -e "\nRunning pylint:"
 echo "${cmd[@]}"
 "${cmd[@]}"
-
