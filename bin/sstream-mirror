@@ -116,12 +116,14 @@ def main():
     drmirror = mirrors.DryRunMirrorWriter(config=mirror_config,
                                           objectstore=tstore)
     drmirror.sync(smirror, initial_path)
+
     def print_diff(char, items):
         for pedigree, path, size in items:
             fmt = "{char} {pedigree} {path} {size} Mb"
             size = int(size / (1024 * 1024))
             print(fmt.format(
                 char=char, pedigree=' '.join(pedigree), path=path, size=size))
+
     print_diff('+', drmirror.downloading)
     print_diff('-', drmirror.removing)
     print("%d Mb change" % (drmirror.size / (1024 * 1024)))
