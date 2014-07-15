@@ -16,7 +16,6 @@
 #   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
 
 import errno
-import hashlib
 import os
 
 import simplestreams.contentsource as cs
