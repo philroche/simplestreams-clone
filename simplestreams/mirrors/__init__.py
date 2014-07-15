@@ -93,75 +93,71 @@ class MirrorWriter(object):
     def filter_index_entry(self, data, src, pedigree):
         # src is source index tree.
         # data is src['index'][ped[0]]
-        _pylint = (data, src, pedigree)
         return True
 
     def insert_index(self, path, src, content):
         # src is the source index tree
         # content is None or a json rendering (possibly signed) of src
-        _pylint = (path, src, content)
+        pass
 
     def insert_index_entry(self, data, src, pedigree, contentsource):
         # src is the top level index (index:1.0 format)
         # data is src['index'][pedigree[0]]
         # contentsource is a ContentSource if 'path' exists in data or None
-        _pylint = (data, src, pedigree, contentsource)
+        pass
 
     # Products Operations
     def filter_product(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]
-        _pylint = (data, src, target, pedigree)
         return True
 
     def filter_version(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]
-        _pylint = (data, src, target, pedigree)
         return True
 
     def filter_item(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]['items'][ped[2]]
-        _pylint = (data, src, target, pedigree)
         return True
 
     def insert_products(self, path, target, content):
         # path is the path to store data (where it came from on source mirror)
         # target is the target products:1.0 tree
         # content is None or a json rendering (possibly signed) of src
-        _pylint = (path, target, content)
+        pass
 
     def insert_product(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]
-        _pylint = (data, src, target, pedigree)
+        pass
 
     def insert_version(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]
-        _pylint = (data, src, target, pedigree)
+        pass
 
     def insert_item(self, data, src, target, pedigree, contentsource):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]['items'][ped[2]]
         # contentsource is a ContentSource if 'path' exists in data or None
-        _pylint = (data, src, target, pedigree, contentsource)
+        pass
 
     def remove_product(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]
-        _pylint = (data, src, target, pedigree)
+        pass
 
     def remove_version(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]
-        _pylint = (data, src, target, pedigree)
+        pass
 
     def remove_item(self, data, src, target, pedigree):
         # src and target are top level products:1.0
         # data is src['products'][ped[0]]['versions'][ped[1]]['items'][ped[2]]
-        _pylint = (data, src, target, pedigree)
+        pass
 
 
 class UrlMirrorReader(MirrorReader):
@@ -550,7 +546,6 @@ def check_tree_paths(tree, fmt=None):
         fmt = tree.get('format')
     if fmt == "products:1.0":
         def check_path(item, tree, pedigree):
-            _pylint = (tree, pedigree)
             util.assert_safe_path(item.get('path'))
         util.walk_products(tree, cb_item=check_path)
     elif fmt == "index:1.0":
