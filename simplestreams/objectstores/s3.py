@@ -55,7 +55,7 @@ class S3ObjectStore(objectstores.ObjectStore):
         return self._bucket
 
     def insert(self, path, reader, checksums=None, mutable=True, size=None):
-        #store content from reader.read() into path, expecting result checksum
+        # store content from reader.read() into path, expecting result checksum
         try:
             tfile = tempfile.TemporaryFile()
             with reader(path) as rfp:
@@ -74,7 +74,7 @@ class S3ObjectStore(objectstores.ObjectStore):
             key.set_contents_from_string(content)
 
     def remove(self, path):
-        #remove path from store
+        # remove path from store
         self.bucket.delete_key(self.path_prefix + path)
 
     def source(self, path):

@@ -20,8 +20,16 @@ test3: examples-sign
 	$(TENV) nosetests3 -v tests/
 test2: examples-sign
 	$(TENV) nosetests -v tests/
-lint:
-	$(TENV) ./tools/run-pylint
+
+lint: pyflakes
+
+pyflakes: pyflakes2 pyflakes3
+
+pyflakes2:
+	$(TENV) env ./tools/run-pyflakes
+
+pyflakes3:
+	$(TENV) env ./tools/run-pyflakes3
 
 pep8:
 	./tools/run-pep8
@@ -63,4 +71,4 @@ examples-sign: gnupg
 	done
 
 
-.PHONY: check exdata/fake exdata/data exdata-query examples-sign test test2 test3
+.PHONY: check exdata/fake exdata/data exdata-query examples-sign test test2 test3 lint lint2 lint3

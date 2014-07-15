@@ -16,8 +16,14 @@
 #   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-from logging import (DEBUG, ERROR, FATAL, INFO,  # pylint: disable=W0611
-                     NOTSET, WARN, WARNING)
+
+DEBUG = logging.DEBUG
+ERROR = logging.ERROR
+FATAL = logging.FATAL
+INFO = logging.INFO
+NOTSET = logging.NOTSET
+WARN = logging.WARN
+WARNING = logging.WARNING
 
 
 class NullHandler(logging.Handler):

@@ -17,7 +17,6 @@
 #   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
 import argparse
 import sys
-import time
 
 from simplestreams import filters
 from simplestreams import log
@@ -95,7 +94,7 @@ def main():
     (mirror_url, initial_path) = util.path_from_mirror_url(args.source_mirror,
                                                            args.path)
 
-    def policy(content, path):  # pylint: disable=W0613
+    def policy(content, path):
         if initial_path.endswith('sjson'):
             return util.read_signed(content, keyring=args.keyring)
         else:
@@ -116,12 +115,14 @@ def main():
     drmirror = mirrors.DryRunMirrorWriter(config=mirror_config,
                                           objectstore=tstore)
     drmirror.sync(smirror, initial_path)
+
     def print_diff(char, items):
         for pedigree, path, size in items:
             fmt = "{char} {pedigree} {path} {size} Mb"
             size = int(size / (1024 * 1024))
             print(fmt.format(
                 char=char, pedigree=' '.join(pedigree), path=path, size=size))
+
     print_diff('+', drmirror.downloading)
     print_diff('-', drmirror.removing)
     print("%d Mb change" % (drmirror.size / (1024 * 1024)))
