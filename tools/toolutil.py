@@ -71,8 +71,8 @@ def is_expected(repl, fields):
         if repl not in (".tar.gz", "-root.tar.gz"):
             return False
 
-    #if some data in /query is not truely available, fill up this array
-    #to skip it. ex: export BROKEN="precise/20121212.1 quantal/20130128.1"
+    # if some data in /query is not truely available, fill up this array
+    # to skip it. ex: export BROKEN="precise/20121212.1 quantal/20130128.1"
     broken = os.environ.get("BROKEN", "").split(" ")
     if "%s/%s" % (rel, serial) in broken:
         print("Known broken: %s/%s" % (rel, serial))
