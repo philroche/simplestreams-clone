@@ -203,9 +203,8 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         try:
             try:
-                kwargs = dict(progress_callback=progress_wrapper)
-                (tmp_path, tmp_del) = util.get_local_copy(contentsource,
-                                                          **kwargs)
+                (tmp_path, tmp_del) = util.get_local_copy(
+                    contentsource, progress_callback=progress_wrapper)
 
                 if self.modify_hook:
                     (newsize, newmd5) = call_hook(item=t_item, path=tmp_path,
