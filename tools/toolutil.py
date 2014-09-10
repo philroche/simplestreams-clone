@@ -87,7 +87,8 @@ def load_query_download(path, builds=None, rels=None):
     if rels is None:
         rels = RELEASES
 
-    suffixes = (".tar.gz", "-root.tar.gz", "-disk1.img", "-uefi1.img")
+    suffixes = (".tar.gz", "-root.tar.gz", "-disk1.img", "-uefi1.img",
+                ".manifest")
     streams = [f[0:-len(".latest.txt")]
                for f in os.listdir(path) if f.endswith("latest.txt")]
 
