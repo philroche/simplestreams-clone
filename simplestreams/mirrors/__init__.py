@@ -303,6 +303,7 @@ class BasicMirrorWriter(MirrorWriter):
                 for itemname, item in version.get('items', {}).items():
                     pgree = (prodname, vername, itemname)
                     if not self.filter_item(item, src, target, pgree):
+                        LOG.debug("Filtered out item: %s/%s", itemname, item)
                         continue
 
                     added_items.append(itemname)
