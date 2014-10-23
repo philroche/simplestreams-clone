@@ -267,6 +267,7 @@ def ec2_load_query(path):
         "southwest": "sw",
         "west": "ww",
         "northwest": "nw",
+        "central": "cc",
     }
     itmap = {
         'pv': {'instance': "pi", "ebs": "pe", "ssd": "es", "io1": "eo"},
@@ -315,7 +316,7 @@ def ec2_load_query(path):
 
         # create the item key:
         #  - 2 letter country code (us) . 3 for govcloud (gww)
-        #  - 2 letter direction ('nn' for north, 'nw' for northwest)
+        #  - 2 letter direction (nn=north, nw=northwest, cc=central)
         #  - 1 digit number
         #  - 1 char for virt type
         #  - 1 char for root-store type
