@@ -17,6 +17,7 @@
 #   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
+import hashlib
 import json
 import os
 import os.path
@@ -100,6 +101,32 @@ def save_cache():
             hfp.write(json.dumps(FILE_DATA, indent=1))
 
 
+def get_checksums_from_url(path, base_urls=None, hashes=None):
+    if hashes is None:
+        hashes = ["sha256", "md5"]
+    if base_urls is None:
+        base_urls = [""]
+
+    error = None
+    for burl in base_urls:
+        url = burl + path
+        try:
+            content = util.read_url(url).decode("utf-8")
+            break
+        except Exception as error:
+            pass
+
+    if error:
+        raise error
+
+    ret = {}
+    for hashname in ("md5", "sha256"):
+        t = hashlib.new(hashname)
+        t.update(content)
+        ret[hashname] = t.hexdigest()
+    return ret
+
+
 def get_cloud_images_file_hash(path):
     md5 = get_cache_data(path, 'md5')
     sha256 = get_cache_data(path, 'sha256')
@@ -110,6 +137,9 @@ def get_cloud_images_file_hash(path):
     dirname = os.path.dirname(path)
     for cksum in ("md5", "sha256"):
         content = None
+        if get_cache_data(dirname + "/" + cksum.upper(), 'size'):
+            continue
+
         for burl in BASE_URLS:
             dir_url = burl + dirname
 
@@ -131,10 +161,25 @@ def get_cloud_images_file_hash(path):
             found[cksum] = hexsum
             store_cache_data(dirname + "/" + fname, cksum, hexsum)
 
-    md5 = get_cache_data(path, 'md5')
-    sha256 = get_cache_data(path, 'sha256')
+        store_cache_data(dirname + "/" + cksum.upper(), "size", len(content))
+
+    ret = {'md5': get_cache_data(path, 'md5'),
+           'sha256': get_cache_data(path, 'sha256')}
+
+    if path.endswith(".manifest") and None in ret.values():
+        sys.stderr.write("getting manifest url %s\n" % path)
+        ret = get_checksums_from_url(path, base_urls=BASE_URLS)
+        for cksum in ret:
+            store_cache_data(dirname + "/" + os.path.basename(path),
+                             cksum, ret[cksum])
+
+    missing = [h for h in ret if not ret[h]]
+    if missing:
+        raise Exception("Unable to get checksums (%s) for %s" %
+                        (missing, path))
+
     save_cache()
-    return {'md5': md5, 'sha256': sha256}
+    return ret
 
 
 def get_url_len(url):
