@@ -31,6 +31,7 @@ REL2VER = {
     "saucy": {'version': "13.10", 'devname': "Saucy Salamander"},
     "trusty": {'version': "14.04", 'devname': "Trusty Tahr"},
     "utopic": {'version': "14.10", 'devname': "Utopic Unicorn"},
+    "vivid": {'version': "15.04", 'devname': "Vivid Vervet"},
 }
 
 RELEASES = [k for k in REL2VER if k != "hardy"]
