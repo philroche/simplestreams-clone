@@ -20,21 +20,10 @@ import os
 import os.path
 
 from simplestreams import util
+from ubuntu_versions import REL2VER
 
-REL2VER = {
-    "hardy": {'version': "8.04", 'devname': "Hardy Heron"},
-    "lucid": {'version': "10.04", 'devname': "Lucid Lynx"},
-    "oneiric": {'version': "11.10", 'devname': "Oneiric Ocelot"},
-    "precise": {'version': "12.04", 'devname': "Precise Pangolin"},
-    "quantal": {'version': "12.10", 'devname': "Quantal Quetzal"},
-    "raring": {'version': "13.04", 'devname': "Raring Ringtail"},
-    "saucy": {'version': "13.10", 'devname': "Saucy Salamander"},
-    "trusty": {'version': "14.04", 'devname': "Trusty Tahr"},
-    "utopic": {'version': "14.10", 'devname': "Utopic Unicorn"},
-    "vivid": {'version': "15.04", 'devname': "Vivid Vervet"},
-}
-
-RELEASES = [k for k in REL2VER if k != "hardy"]
+BLACKLIST_RELS = ('hardy', 'intrepid', 'jaunty', 'karmic', 'maverick', 'natty')
+RELEASES = [k for k in REL2VER if k not in BLACKLIST_RELS]
 BUILDS = ("server")
 
 NUM_DAILIES = 4
