@@ -21,8 +21,8 @@ setup(
               'simplestreams.objectstores'],
     scripts=glob('bin/*'),
     data_files=[
-        ('/usr/lib/simplestreams', glob('tools/hook-*')),
-        ('/usr/share/doc/simplestreams',
+        ('lib/simplestreams', glob('tools/hook-*')),
+        ('share/doc/simplestreams',
          [f for f in glob('doc/*') if is_f(f)]),
     ]
 )
