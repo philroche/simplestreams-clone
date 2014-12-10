@@ -119,17 +119,4 @@ def _get_endpoint(client, service, **kwargs):
         endpoint_kwargs['filter_value'] = kwargs.get('region_name')
 
     endpoint = client.service_catalog.url_for(**endpoint_kwargs)
-    return _strip_version(endpoint)
-
-
-def _strip_version(endpoint):
-    """Strip a version from the last component of an endpoint if present"""
-
-    # Get rid of trailing '/' if present
-    if endpoint.endswith('/'):
-        endpoint = endpoint[:-1]
-    url_bits = endpoint.split('/')
-    # regex to match 'v1' or 'v2.0' etc
-    if re.match(r'v\d+\.?\d*', url_bits[-1]):
-        endpoint = '/'.join(url_bits[:-1])
     return endpoint
