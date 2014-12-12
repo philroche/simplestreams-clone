@@ -17,7 +17,6 @@
 
 from keystoneclient.v2_0 import client as ksclient
 import os
-import re
 
 OS_ENV_VARS = (
     'OS_AUTH_TOKEN', 'OS_AUTH_URL', 'OS_CACERT', 'OS_IMAGE_API_VERSION',
