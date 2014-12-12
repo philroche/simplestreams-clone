@@ -31,6 +31,7 @@ from simplestreams import openstack
 from simplestreams import util
 from simplestreams.mirrors import glance
 
+DEFAULT_FILTERS = ['ftype~(disk1.img|disk.img)', 'arch~(x86_64|amd64|i386)']
 
 def error(msg):
     sys.stderr.write(msg)
@@ -67,6 +68,8 @@ def main():
     parser.add_argument('--mirror', action='append', default=[],
                         dest="mirrors",
                         help='additional mirrors to find referenced files')
+    parser.add_argument('--path', default=None,
+                        help='sync from index or products file in mirror')
     parser.add_argument('--output-dir', metavar="DIR", default=False,
                         help='write image data to storage in dir')
     parser.add_argument('--output-swift', metavar="prefix", default=False,
@@ -94,9 +97,7 @@ def main():
                         help='The keyring for gpg --keyring')
 
     parser.add_argument('source_mirror')
-    parser.add_argument('path', nargs='?', default="streams/v1/index.sjson")
-    parser.add_argument('--item-filter', action='append', default=[],
-                        dest="item_filters",
+    parser.add_argument('item_filters', nargs='*', default=DEFAULT_FILTERS,
                         help="Filter expression for mirrored items. "
                         "Multiple filter arguments can be specified"
                         "and will be combined with logical AND. "
@@ -114,6 +115,8 @@ def main():
                      'modify_hook': modify_hook,
                      'item_filters': args.item_filters}
 
+    (mirror_url, args.path) = util.path_from_mirror_url(args.source_mirror,
+                                                        args.path)
     def policy(content, path):  # pylint: disable=W0613
         if args.path.endswith('sjson'):
             return util.read_signed(content, keyring=args.keyring)
