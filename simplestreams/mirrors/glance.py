@@ -25,9 +25,13 @@ import copy
 import errno
 import glanceclient
 import os
+import re
 
 
 def get_glanceclient(version='1', **kwargs):
+    # newer versions of the glanceclient will do this 'strip_version' for
+    # us, but older versions do not.
+    kwargs['endpoint'] = _strip_version(kwargs['endpoint'])
     pt = ('endpoint', 'token', 'insecure', 'cacert')
     kskw = {k: kwargs.get(k) for k in pt if k in kwargs}
     return glanceclient.Client(version, **kskw)
@@ -333,5 +337,18 @@ def call_hook(item, path, cmd):
         md5 = _checksum_file(fp, checksums={'md5': None})
 
     return (os.path.getsize(path), md5)
+
+
+def _strip_version(endpoint):
+    """Strip a version from the last component of an endpoint if present"""
+
+    # Get rid of trailing '/' if present
+    if endpoint.endswith('/'):
+        endpoint = endpoint[:-1]
+    url_bits = endpoint.split('/')
+    # regex to match 'v1' or 'v2.0' etc
+    if re.match(r'v\d+\.?\d*', url_bits[-1]):
+        endpoint = '/'.join(url_bits[:-1])
+    return endpoint
 
 # vi: ts=4 expandtab syntax=python
