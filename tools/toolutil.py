@@ -58,7 +58,9 @@ def is_expected(repl, fields):
     if arch == "ppc64el":
         if rel < "trusty" or serial <= "20140122":
             return False
-        if repl not in (".tar.gz", "-root.tar.gz"):
+        if repl == "uefi1.img":
+            return False
+        if repl == "-disk1.img" and serial <= "20140122.1":
             return False
 
     # if some data in /query is not truely available, fill up this array
