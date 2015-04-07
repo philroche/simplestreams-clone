@@ -58,7 +58,10 @@ FAKE_DATA = {
         'sha256': '8ca9c39f2200d299b011f5018c9d27a5a70f5a6b4c24f2fe06a94bc0e8c1213f'},
     'manifest': {
         'size': 10241, 'md5': 'd570918d26da051cf77f6544b79bbf15',
-        'sha256': '232a9fa5dfa39c75f9c30a4a4292466515134ef734e926ffcae7de455ac5255d'}
+        'sha256': '232a9fa5dfa39c75f9c30a4a4292466515134ef734e926ffcae7de455ac5255d'},
+    'ova': {
+        'size': 12399, 'md5': '65b6348179a464fb0a6a1c2ed4d9aa19',
+        'sha256': '102c1cba2e133efd81b597ef8ee30af629e4d7d77b9ca07ca2feb6e958ffaa67'}
 }
 
 EC2_ENDPOINTS = {

@@ -63,6 +63,12 @@ def is_expected(repl, fields):
         if repl == "-disk1.img" and serial <= "20140122.1":
             return False
 
+    if repl == "ova":
+        # OVA images become available after 20150406 and only
+        # for trusty and later
+        if rel < "trusty" or serial <= "20150406":
+            return False
+
     # if some data in /query is not truely available, fill up this array
     # to skip it. ex: export BROKEN="precise/20121212.1 quantal/20130128.1"
     broken = os.environ.get("BROKEN", "").split(" ")
@@ -80,7 +86,7 @@ def load_query_download(path, builds=None, rels=None):
         rels = RELEASES
 
     suffixes = (".tar.gz", "-root.tar.gz", "-disk1.img", "-uefi1.img",
-                ".manifest")
+                ".manifest", ".ova")
     streams = [f[0:-len(".latest.txt")]
                for f in os.listdir(path) if f.endswith("latest.txt")]
 
