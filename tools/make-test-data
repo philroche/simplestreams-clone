@@ -18,11 +18,13 @@
 
 import argparse
 import hashlib
+import errno
 import json
 import os
 import os.path
 import sys
 from simplestreams import util
+from simplestreams import contentsource as cs
 
 try:
     # this is just python2 or python3 compatible prepping for get_url_len
@@ -41,7 +43,9 @@ import toolutil
 #   http://cloud-images-archive.ubuntu.com/
 #   file:///srv/ec2-images
 #
-BASE_URLS = ("http://cloud-images.ubuntu.com/",)
+BASE_URLS = (
+  "http://cloud-images.ubuntu.com/",
+)
 
 FAKE_DATA = {
     'root.tar.gz': {
@@ -96,6 +100,10 @@ def store_cache_data(path, field, value):
         FILE_DATA[dirname][bname] = {}
     FILE_DATA[dirname][bname][field] = value
 
+def store_cache_entry(path, data):
+    for k, v in data.items():
+        store_cache_data(path, k, v)
+
 
 def save_cache():
     if FILE_DATA:
@@ -104,23 +112,11 @@ def save_cache():
             hfp.write(json.dumps(FILE_DATA, indent=1))
 
 
-def get_checksums_from_url(path, base_urls=None, hashes=None):
+def get_checksums_from_url(path, hashes=None):
     if hashes is None:
         hashes = ["sha256", "md5"]
-    if base_urls is None:
-        base_urls = [""]
 
-    error = None
-    for burl in base_urls:
-        url = burl + path
-        try:
-            content = util.read_url(url).decode("utf-8")
-            break
-        except Exception as error:
-            pass
-
-    if error:
-        raise error
+    content = load_url(path).decode("utf-8")
 
     ret = {}
     for hashname in ("md5", "sha256"):
@@ -130,48 +126,65 @@ def get_checksums_from_url(path, base_urls=None, hashes=None):
     return ret
 
 
+def load_sums_from_sumfiles(path):
+    for cksum in ("md5", "sha256"):
+        content = None
+        if get_cache_data(path + "/" + cksum.upper(), 'size'):
+            continue
+
+        sfile_url = path + "/%sSUMS" % cksum.upper()
+        content = load_url(sfile).decode("utf-8")
+
+        for line in content.splitlines():
+            (hexsum, fname) = line.split()
+            if fname.startswith("*"):
+                fname = fname[1:]
+            store_cache_data(path + "/" + fname, cksum, hexsum)
+
+        store_cache_data(path + "/" + cksum.upper(), "size", len(content))
+
+
+def load_url(path):
+    url = BASE_URLS[0] + path
+    mirrors = [u + path for u in BASE_URLS[1:]]
+    data = cs.UrlContentSource(url, mirrors=mirrors).read()
+    sys.stderr.write("read url %s\n" % path)
+    return data
+
+
+def load_data_in_dir(path):
+    qfile = "qindex.json"
+    try:
+        content = load_url(path + "/" + qfile).decode("utf-8")
+        for fpath, data in json.loads(content).items():
+            store_cache_entry(path + "/" + fpath, data)
+        return
+    except IOError as e:
+        if e.errno != errno.ENOENT:
+            raise
+        sys.stderr.write("no '%s' in %s\n" % (qfile, path))
+
+    load_sums_from_sumfiles(path)
+
+
 def get_cloud_images_file_hash(path):
     md5 = get_cache_data(path, 'md5')
     sha256 = get_cache_data(path, 'sha256')
     if md5 and sha256:
         return {'md5': md5, 'sha256': sha256}
 
-    found = {}
     dirname = os.path.dirname(path)
-    for cksum in ("md5", "sha256"):
-        content = None
-        if get_cache_data(dirname + "/" + cksum.upper(), 'size'):
-            continue
 
-        for burl in BASE_URLS:
-            dir_url = burl + dirname
-
-            try:
-                url = dir_url + "/%sSUMS" % cksum.upper()
-                sys.stderr.write("reading %s\n" % url)
-                content = util.read_url(url).decode("utf-8")
-                break
-            except Exception as error:
-                pass
-
-        if not content:
-            raise error
-
-        for line in content.splitlines():
-            (hexsum, fname) = line.split()
-            if fname.startswith("*"):
-                fname = fname[1:]
-            found[cksum] = hexsum
-            store_cache_data(dirname + "/" + fname, cksum, hexsum)
-
-        store_cache_data(dirname + "/" + cksum.upper(), "size", len(content))
+    load_data_in_dir(dirname)
 
     ret = {'md5': get_cache_data(path, 'md5'),
            'sha256': get_cache_data(path, 'sha256')}
 
+    # if we were missing an md5 or a sha256 for the manifest
+    # file, then get them ourselves.
     if path.endswith(".manifest") and None in ret.values():
         sys.stderr.write("getting manifest url %s\n" % path)
-        ret = get_checksums_from_url(path, base_urls=BASE_URLS)
+        ret = get_checksums_from_url(path)
         for cksum in ret:
             store_cache_data(dirname + "/" + os.path.basename(path),
                              cksum, ret[cksum])
