@@ -30,9 +30,7 @@ NUM_DAILIES = 4
 
 
 def is_expected(repl, fields):
-    rel = fields[0]
-    serial = fields[3]
-    arch = fields[4]
+    rel, bname, label, serial, arch, path, pubname = fields
     if repl == "-root.tar.gz":
         if rel in ("lucid", "oneiric"):
             # lucid, oneiric do not have -root.tar.gz
@@ -63,10 +61,12 @@ def is_expected(repl, fields):
         if repl == "-disk1.img" and serial <= "20140122.1":
             return False
 
-    if repl == "ova":
-        # OVA images become available after 20150406 and only
-        # for trusty and later
-        if rel < "trusty" or serial <= "20150406":
+    if repl == ".ova":
+        # OVA images become available after 20150408 and only
+        # for trusty and later and x86
+        if rel < "trusty" or serial <= "20150408":
+            return False
+        if arch not in ('i386', 'amd64'):
             return False
 
     # if some data in /query is not truely available, fill up this array
