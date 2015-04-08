@@ -60,9 +60,9 @@ def is_expected(repl, fields):
             return False
 
     if repl == ".ova":
-        # OVA images become available after 20150408 and only
-        # for trusty and later and x86
-        if rel < "trusty" or serial <= "20150408":
+        # OVA images become available after 20150407.4 (vivid beta-3)
+        # and only for trusty and later x86
+        if rel < "trusty" or serial < "20150407.4":
             return False
         if arch not in ('i386', 'amd64'):
             return False
