@@ -156,9 +156,14 @@ def load_data_in_dir(path):
     qfile = ".qindex.json"
     try:
         content = load_url(path + "/" + qfile).decode("utf-8")
-        for fpath, data in json.loads(content).items():
-            store_cache_entry(path + "/" + fpath, data)
-        return
+        try:
+            for fpath, data in json.loads(content).items():
+                store_cache_entry(path + "/" + fpath, data)
+            return
+        except ValueError as e:
+            if '403 Forbidden' in content:
+                exc = IOError("s3 403 in %s" % path)
+                exc.errno = errno.ENOENT
     except IOError as e:
         if e.errno != errno.ENOENT:
             raise
