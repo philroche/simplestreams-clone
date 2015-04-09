@@ -145,7 +145,7 @@ def load_url(path, hashes=None):
     mirrors = [u + path for u in BASE_URLS[1:]]
     try:
         data = cs.UrlContentSource(url, mirrors=mirrors).read()
-        if b'403 Forbidden' in content:
+        if b'403 Forbidden' in data:
             raise NonExistingUrl("%s: 403 Forbidden (s3 404)" % path)
     except url_error.HTTPError as e:
         if e.code == 403:
