@@ -102,7 +102,8 @@ def store_cache_data(path, field, value):
 
 def store_cache_entry(path, data):
     for k, v in data.items():
-        store_cache_data(path, k, v)
+        if k in ('size', 'md5', 'sha256'):
+            store_cache_data(path, k, v)
 
 
 def save_cache():
@@ -115,61 +116,85 @@ def save_cache():
 def get_checksums_from_url(path, hashes=None):
     if hashes is None:
         hashes = ["sha256", "md5"]
-
-    content = load_url(path).decode("utf-8")
-
-    ret = {}
-    for hashname in ("md5", "sha256"):
-        t = hashlib.new(hashname)
-        t.update(content)
-        ret[hashname] = t.hexdigest()
-    return ret
+    x = load_url(path)
+    return {k: x[k] for k in hashes}
 
 
 def load_sums_from_sumfiles(path):
     for cksum in ("md5", "sha256"):
         content = None
-        if get_cache_data(path + "/" + cksum.upper(), 'size'):
+        sfile_url = path + "/%sSUMS" % cksum.upper()
+        if get_cache_data(sfile_url, 'size'):
             continue
 
-        sfile_url = path + "/%sSUMS" % cksum.upper()
-        content = load_url(sfile_url).decode("utf-8")
+        sfile_info = load_url(sfile_url)
+        content = sfile_info['content'].decode('utf-8')
 
         for line in content.splitlines():
             (hexsum, fname) = line.split()
             if fname.startswith("*"):
                 fname = fname[1:]
-            store_cache_data(path + "/" + fname, cksum, hexsum)
+            fpath = path + "/" + fname
+            store_cache_data(fpath, cksum, hexsum)
+            get_cloud_images_file_size(fpath, save=False)
 
-        store_cache_data(path + "/" + cksum.upper(), "size", len(content))
+        store_cache_entry(sfile_url, sfile_info)
 
 
-def load_url(path):
+def load_url(path, hashes=None):
     url = BASE_URLS[0] + path
     mirrors = [u + path for u in BASE_URLS[1:]]
     data = cs.UrlContentSource(url, mirrors=mirrors).read()
     sys.stderr.write("read url %s\n" % path)
-    return data
+
+    raw_content = data
+
+    ret = {'size': len(raw_content)}
+    ret['content'] = raw_content
+
+    if hashes is None:
+        hashes = ["sha256", "md5"]
+    for hashname in hashes:
+        t = hashlib.new(hashname)
+        t.update(raw_content)
+        ret[hashname] = t.hexdigest()
+    return ret
 
 
 def load_data_in_dir(path):
     qfile = ".qindex.json"
+    qpath_loaded = False
+    qpath = path + "/" + qfile
+
+    if get_cache_data(qpath, "size"):
+        sys.stderr.write("dir[cache]: %s\n" % path)
+        return
+
     try:
-        content = load_url(path + "/" + qfile).decode("utf-8")
+        ret = load_url(path + "/" + qfile)
+        content = ret['content'].decode("utf-8")
         try:
             for fpath, data in json.loads(content).items():
                 store_cache_entry(path + "/" + fpath, data)
-            return
+            qpath_loaded = True
+            store_cache_entry(qpath, ret)
         except ValueError as e:
             if '403 Forbidden' in content:
-                exc = IOError("s3 403 in %s" % path)
-                exc.errno = errno.ENOENT
+                sys.stderr.write("qindex 403: %s/%s\n" % (path, qfile))
     except IOError as e:
+        sys.stderr.write("qindex 404: %s/%s\n" % (path, qfile))
         if e.errno != errno.ENOENT:
             raise
-        sys.stderr.write("no '%s' in %s\n" % (qfile, path))
 
-    load_sums_from_sumfiles(path)
+    # fall back to loading sumfiles and statting sizes
+    if qpath_loaded:
+        sys.stderr.write("dir[qindex]: %s\n" % path)
+    else:
+        load_sums_from_sumfiles(path)
+        sys.stderr.write("dir[sumfiles]: %s\n" % path)
+
+    save_cache()
+    return
 
 
 def get_cloud_images_file_hash(path):
@@ -188,18 +213,15 @@ def get_cloud_images_file_hash(path):
     # if we were missing an md5 or a sha256 for the manifest
     # file, then get them ourselves.
     if path.endswith(".manifest") and None in ret.values():
-        sys.stderr.write("getting manifest url %s\n" % path)
-        ret = get_checksums_from_url(path)
-        for cksum in ret:
-            store_cache_data(dirname + "/" + os.path.basename(path),
-                             cksum, ret[cksum])
+        ret = load_url(path)
+        store_cache_entry(path, ret)
+        save_cache()
 
     missing = [h for h in ret if not ret[h]]
     if missing:
         raise Exception("Unable to get checksums (%s) for %s" %
                         (missing, path))
 
-    save_cache()
     return ret
 
 
@@ -211,29 +233,32 @@ def get_url_len(url):
         return os.stat(url).st_size
 
     # http://stackoverflow.com/questions/4421170/python-head-request-with-urllib2
-    sys.stderr.write("getting size for %s\n" % url)
     request = url_request(url)
     request.get_method = lambda : 'HEAD'
     response = url_open(request)
     return int(response.headers.get('content-length', 0))
 
 
-def get_cloud_images_file_size(path):
+def get_cloud_images_file_size(path, save=True):
     size = get_cache_data(path, 'size')
     if size:
         return size
 
+    error = None
+    sys.stderr.write(" size: %s\n" % path)
     for burl in BASE_URLS:
         try:
             size = int(get_url_len(burl + path))
             break
         except Exception as error:
+            sys.stderr.write("  size stat failed: %s" % burl + path)
             pass
 
     if not size:
         raise error
     store_cache_data(path, 'size', size)
-    save_cache()
+    if save:
+        save_cache()
     return size
 
 
