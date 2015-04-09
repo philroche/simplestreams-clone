@@ -197,25 +197,24 @@ def load_data_in_dir(path):
     return
 
 
-def get_cloud_images_file_hash(path):
-    md5 = get_cache_data(path, 'md5')
-    sha256 = get_cache_data(path, 'sha256')
-    if md5 and sha256:
-        return {'md5': md5, 'sha256': sha256}
+def get_cloud_images_file_info(path):
+    keys = ('md5', 'sha256', 'size')
+    cached = {k: get_cache_data(path, k) for k in keys}
+    if all(cached.values()):
+        return cached
 
     dirname = os.path.dirname(path)
 
     load_data_in_dir(dirname)
 
-    ret = {'md5': get_cache_data(path, 'md5'),
-           'sha256': get_cache_data(path, 'sha256')}
-
     # if we were missing an md5 or a sha256 for the manifest
     # file, then get them ourselves.
-    if path.endswith(".manifest") and None in ret.values():
-        ret = load_url(path)
-        store_cache_entry(path, ret)
+    ret = {k: get_cache_data(path, k) for k in keys}
+    if path.endswith(".manifest") and not all(ret.values()):
+        loaded = load_url(path)
+        store_cache_entry(path, loaded)
         save_cache()
+        ret = {k: loaded[k] for k in keys}
 
     missing = [h for h in ret if not ret[h]]
     if missing:
@@ -448,11 +447,8 @@ def create_image_data(query_tree, out_d, streamdir):
     ts = util.timestamp()
     tree = dl_load_query(query_tree)
 
-    def update_hashes(item, tree, pedigree):
-        item.update(get_cloud_images_file_hash(item['path']))
-
-    def update_sizes(item, tree, pedigree):
-        item.update({'size': get_cloud_images_file_size(item['path'])})
+    def update_data(item, tree, pedigree):
+        item.update(get_cloud_images_file_info(item['path']))
 
     cid_fmt = "com.ubuntu.cloud:%s:download"
     for stream in tree:
@@ -461,8 +457,7 @@ def create_image_data(query_tree, out_d, streamdir):
 
         cid = cid_fmt % stream
         if REAL_DATA:
-            util.walk_products(tree[stream], cb_item=update_hashes)
-            util.walk_products(tree[stream], cb_item=update_sizes)
+            util.walk_products(tree[stream], cb_item=update_data)
         else:
             util.walk_products(tree[stream], cb_item=create_file)
 
