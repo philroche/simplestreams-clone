@@ -197,7 +197,8 @@ def load_data_in_dir(path):
             sys.stderr.write("qindex parse failed %s" % path)
             raise e
     except NonExistingUrl as e:
-        sys.stderr.write("%s: 404 (%s)" % (qpath, e))
+        pass
+        #sys.stderr.write("%s: 404 (%s)" % (qpath, e))
 
     # fall back to loading sumfiles and statting sizes
     if qpath_loaded:
