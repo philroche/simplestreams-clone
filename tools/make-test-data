@@ -31,10 +31,12 @@ try:
     import urllib.request
     url_request = urllib.request.Request
     url_open = urllib.request.urlopen
+    url_error = urllib.error
 except ImportError as e:
     import urllib2
     url_request = urllib2.Request
     url_open = urllib2.urlopen
+    url_error = urllib2
 
 import toolutil
 
@@ -113,13 +115,6 @@ def save_cache():
             hfp.write(json.dumps(FILE_DATA, indent=1))
 
 
-def get_checksums_from_url(path, hashes=None):
-    if hashes is None:
-        hashes = ["sha256", "md5"]
-    x = load_url(path)
-    return {k: x[k] for k in hashes}
-
-
 def load_sums_from_sumfiles(path):
     for cksum in ("md5", "sha256"):
         content = None
@@ -141,10 +136,30 @@ def load_sums_from_sumfiles(path):
         store_cache_entry(sfile_url, sfile_info)
 
 
+class NonExistingUrl(Exception):
+    pass
+
+
 def load_url(path, hashes=None):
     url = BASE_URLS[0] + path
     mirrors = [u + path for u in BASE_URLS[1:]]
-    data = cs.UrlContentSource(url, mirrors=mirrors).read()
+    try:
+        data = cs.UrlContentSource(url, mirrors=mirrors).read()
+        if b'403 Forbidden' in content:
+            raise NonExistingUrl("%s: 403 Forbidden (s3 404)" % path)
+    except url_error.HTTPError as e:
+        if e.code == 403:
+            raise NonExistingUrl("%s: 403" % path)
+        elif e.code == 404:
+            raise NonExistingUrl("%s: 404" % path)
+        else:
+            raise e
+    except IOError as e:
+        if e.errno != errno.ENOENT:
+            raise e
+        else:
+            raise NonExistingUrl("%s: ENOENT" % path)
+
     sys.stderr.write("read url %s\n" % path)
 
     raw_content = data
@@ -171,7 +186,7 @@ def load_data_in_dir(path):
         return
 
     try:
-        ret = load_url(path + "/" + qfile)
+        ret = load_url(qpath)
         content = ret['content'].decode("utf-8")
         try:
             for fpath, data in json.loads(content).items():
@@ -179,12 +194,10 @@ def load_data_in_dir(path):
             qpath_loaded = True
             store_cache_entry(qpath, ret)
         except ValueError as e:
-            if '403 Forbidden' in content:
-                sys.stderr.write("qindex 403: %s/%s\n" % (path, qfile))
-    except IOError as e:
-        sys.stderr.write("qindex 404: %s/%s\n" % (path, qfile))
-        if e.errno != errno.ENOENT:
-            raise
+            sys.stderr.write("qindex parse failed %s" % path)
+            raise e
+    except NonExistingUrl as e:
+        sys.stderr.write("%s: 404 (%s)" % (qpath, e))
 
     # fall back to loading sumfiles and statting sizes
     if qpath_loaded:
