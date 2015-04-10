@@ -123,7 +123,7 @@ def main():
         else:
             return content
 
-    smirror = mirrors.UrlMirrorReader(args.source_mirror, mirrors=args.mirrors,
+    smirror = mirrors.UrlMirrorReader(mirror_url, mirrors=args.mirrors,
                                       policy=policy)
     if args.output_dir and args.output_swift:
         error("--output-dir and --output-swift are mutually exclusive\n")
