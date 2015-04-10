@@ -111,7 +111,8 @@ def main():
 
     not_copied_up = ['content_id']
     for content_id in trees:
-        util.products_condense(trees[content_id])
+        util.products_condense(trees[content_id],
+                               sticky=['path', 'sha256', 'md5', 'size'])
         content = trees[content_id]
         index['index'][content_id] = { 
             'path': "%s/%s.json" % (streamdir, content_id),
