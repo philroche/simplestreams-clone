@@ -50,24 +50,12 @@ BASE_URLS = (
 )
 
 FAKE_DATA = {
-    'root.tar.gz': {
-        'size': 10240, 'md5': '1276481102f218c981e0324180bafd9f',
-        'sha256': '84ff92691f909a05b224e1c56abb4864f01b4f8e3c854e4bb4c7baf1d3f6d652'},
-    'tar.gz': {
-        'size': 11264, 'md5': '820a81e0916bac82838fd7e74ab29b15',
-        'sha256': '5309e677c79cffae49a65728c61b436d3cdc2a2bab4c81bf0038415f74a56880'},
-    'disk1.img': {
-        'size': 12288, 'md5': '4072783b8efb99a9e5817067d68f61c6',
-        'sha256': 'f3cc103136423a57975750907ebc1d367e2985ac6338976d4d5a439f50323f4a'},
-    'uefi1.img': {
-        'size': 12421, 'md5': 'd41d8cd98f00b204e9800998ecf8427e',
-        'sha256': '8ca9c39f2200d299b011f5018c9d27a5a70f5a6b4c24f2fe06a94bc0e8c1213f'},
-    'manifest': {
-        'size': 10241, 'md5': 'd570918d26da051cf77f6544b79bbf15',
-        'sha256': '232a9fa5dfa39c75f9c30a4a4292466515134ef734e926ffcae7de455ac5255d'},
-    'ova': {
-        'size': 12399, 'md5': '65b6348179a464fb0a6a1c2ed4d9aa19',
-        'sha256': '102c1cba2e133efd81b597ef8ee30af629e4d7d77b9ca07ca2feb6e958ffaa67'}
+    'root.tar.gz': {'size': 10240},
+    'tar.gz': {'size': 11264},
+    'disk1.img': {'size': 12288},
+    'uefi1.img': {'size': 12421},
+    'manifest': {'size': 10241},
+    'ova': {'size': 12399},
 }
 
 EC2_ENDPOINTS = {
@@ -141,9 +129,11 @@ class NonExistingUrl(Exception):
     pass
 
 
-def load_url(path, hashes=None):
-    url = BASE_URLS[0] + path
-    mirrors = [u + path for u in BASE_URLS[1:]]
+def load_url(path, hashes=None, base_urls=None):
+    if base_urls is None:
+        base_urls = BASE_URLS
+    url = base_urls[0] + path
+    mirrors = [u + path for u in base_urls[1:]]
     try:
         data = cs.UrlContentSource(url, mirrors=mirrors).read()
         if b'403 Forbidden' in data:
@@ -285,6 +275,12 @@ def create_fake_file(prefix, item):
     print("creating %s" % fpath)
     with open(fpath, "w") as fp:
         fp.truncate(data['size'])
+
+    pwd_mirror = "file://" + os.getcwd() + "/"
+    if 'md5' not in FAKE_DATA[item['ftype']]:
+        # load the url to get checksums and update the sparse FAKE_DATA
+        fdata = load_url(fpath, base_urls=[pwd_mirror])
+        FAKE_DATA[item['ftype']].update(fdata)
 
     item.update(data)
 
