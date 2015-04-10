@@ -46,7 +46,7 @@ import toolutil
 #   file:///srv/ec2-images
 #
 BASE_URLS = (
-  "http://cloud-images.ubuntu.com/",
+    "http://cloud-images.ubuntu.com/",
 )
 
 FAKE_DATA = {
@@ -101,6 +101,7 @@ def store_cache_data(path, field, value):
     if bname not in FILE_DATA[dirname]:
         FILE_DATA[dirname][bname] = {}
     FILE_DATA[dirname][bname][field] = value
+
 
 def store_cache_entry(path, data):
     for k, v in data.items():
@@ -197,8 +198,8 @@ def load_data_in_dir(path):
             sys.stderr.write("qindex parse failed %s" % path)
             raise e
     except NonExistingUrl as e:
+        # sys.stderr.write("%s: 404 (%s)" % (qpath, e))
         pass
-        #sys.stderr.write("%s: 404 (%s)" % (qpath, e))
 
     # fall back to loading sumfiles and statting sizes
     if qpath_loaded:
@@ -247,7 +248,7 @@ def get_url_len(url):
 
     # http://stackoverflow.com/questions/4421170/python-head-request-with-urllib2
     request = url_request(url)
-    request.get_method = lambda : 'HEAD'
+    request.get_method = lambda: 'HEAD'
     response = url_open(request)
     return int(response.headers.get('content-length', 0))
 
@@ -277,7 +278,6 @@ def get_cloud_images_file_size(path, save=True):
 
 def create_fake_file(prefix, item):
     fpath = os.path.join(prefix, item['path'])
-    path = item['path']
 
     data = FAKE_DATA[item['ftype']]
 
@@ -289,7 +289,7 @@ def create_fake_file(prefix, item):
     item.update(data)
 
     for cksum in util.CHECKSUMS:
-        if cksum in item and not cksum in data:
+        if cksum in item and cksum not in data:
             del item[data]
 
     return
@@ -585,7 +585,7 @@ def main():
         for root, dirs, files in os.walk(args.out_d):
             for f in [f for f in files if f.endswith(".json")]:
                 toolutil.signjson_file(os.path.join(root, f),
-                                     status_cb=printstatus)
+                                       status_cb=printstatus)
 
     return
 
