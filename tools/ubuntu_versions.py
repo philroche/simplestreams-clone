@@ -30,6 +30,8 @@ HARDCODED_REL2VER = {
     "vivid": {'version': "15.04", 'devname': "Vivid Vervet"},
 }
 
+from simplestreams.log import LOG
+
 
 def get_ubuntu_info(date=None):
     # this returns a sorted list of dicts
@@ -68,7 +70,12 @@ def get_ubuntu_info(date=None):
                 getall(result="release", date=date)]
     full_codenames = [x.split('"')[1] for x in fullnames]
     supported = udi.supported(date=date)
-    devel = udi.devel(date=date)
+    try:
+        devel = udi.devel(date=date)
+    except distro_info.DistroDataOutdated as e:
+        LOG.warn("distro_info.UbuntuDistroInfo() raised exception (%s)."
+                 " Using stable release as devel.", e)
+        devel = udi.stable(date=date)
     ret = []
     for i, codename in enumerate(codenames):
         ret.append({'lts': lts[i], 'version': versions[i],
