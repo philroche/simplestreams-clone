@@ -56,7 +56,7 @@ def is_expected(repl, fields):
     if arch == "ppc64el":
         if rel < "trusty" or serial <= "20140122":
             return False
-        if repl not in (".tar.gz", "-root.tar.gz"):
+        if repl not in (".tar.gz", "-root.tar.gz", "disk1.img", "manifest"):
             return False
 
     if repl == ".ova":
