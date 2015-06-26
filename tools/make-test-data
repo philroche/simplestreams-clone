@@ -280,6 +280,7 @@ def create_fake_file(prefix, item):
     if 'md5' not in FAKE_DATA[item['ftype']]:
         # load the url to get checksums and update the sparse FAKE_DATA
         fdata = load_url(fpath, base_urls=[pwd_mirror])
+        del fdata['content']
         FAKE_DATA[item['ftype']].update(fdata)
 
     item.update(data)
