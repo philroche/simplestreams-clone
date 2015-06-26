@@ -36,7 +36,8 @@ class MirrorReader(object):
         return util.load_content(content)
 
     def read_json(self, path):
-        raw = self.source(path).read().decode('utf-8')
+        with self.source(path) as source:
+            raw = source.read().decode('utf-8')
         return raw, self.policy(content=raw, path=path)
 
     def source(self, path):
@@ -181,10 +182,8 @@ class UrlMirrorReader(MirrorReader):
         # returned is not yet open (LP: #1237658)
         self._trailing_slash_checked = True
         try:
-            csource = self._cs(self.prefix + path, mirrors=None)
-            csource.open()
-            csource.read(1024)
-            csource.close()
+            with self._cs(self.prefix + path, mirrors=None) as csource:
+                csource.read(1024)
         except Exception as e:
             if isinstance(e, IOError) and (e.errno == errno.ENOENT):
                 LOG.warn("got ENOENT for (%s, %s), trying with trailing /",
@@ -379,7 +378,8 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
 
     def _load_rc_dict(self):
         try:
-            raw = self.source(self._reference_count_data_path()).read()
+            with self.source(self._reference_count_data_path()) as source:
+                raw = source.read()
             return json.load(io.StringIO(raw.decode('utf-8')))
         except IOError as e:
             if e.errno == errno.ENOENT:
@@ -420,14 +420,16 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
         if content_id:
             try:
                 dpath = self.products_data_path(content_id)
-                return util.load_content(self.source(dpath).read())
+                with self.source(dpath) as source:
+                    return util.load_content(source.read())
             except IOError as e:
                 if e.errno != errno.ENOENT:
                     raise
 
         if path:
             try:
-                return util.load_content(self.source(path).read())
+                with self.source(path) as source:
+                    return util.load_content(source.read())
             except IOError as e:
                 if e.errno != errno.ENOENT:
                     raise
