@@ -61,6 +61,7 @@ class MemoryObjectStore(ObjectStore):
 
     def insert(self, path, reader, checksums=None, mutable=True, size=None):
         self.data[path] = reader.read()
+        reader.close()
 
     def remove(self, path):
         # remove path from store
@@ -154,6 +155,8 @@ class FileStore(ObjectStore):
 
             if zeros is not None:
                 wfp.truncate(wfp.tell())
+
+        reader.close()
 
         if not cksum.check():
             os.unlink(partfile)
