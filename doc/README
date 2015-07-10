@@ -1,11 +1,11 @@
 == Simple Sync Format ==
-Simple Sync format consists of 2 different file formats.
+Simple Sync format consists of 2 different file formats:
  * A "products list" (format=products:1.0)
  * A "index" (format=index:1.0)
 
-Files contain json formated data.
+Files contain JSON formatted data.
 Data can come in one of 2 formats:
- * Json file: <file>.json
+ * JSON file: <file>.json
    A .json file can be accompanied by a .json.gpg file which contains
    signature data for .json file.
 
@@ -13,10 +13,10 @@ Data can come in one of 2 formats:
    may not be able to be obtained from a storage location at the same
    time, the preferred delivery of signed data is via '.sjson' format.
 
- * Signed Json File: <file>.sjson
-   This is a gpg cleartext signed message.
-      http://rfc-ref.org/RFC-TEXTS/2440/chapter7.html
-   The payload the same content that would be included in the json file.
+ * Signed JSON File: <file>.sjson
+   This is a GPG cleartext signed message:
+      https://tools.ietf.org/html/rfc4880#section-7
+   The payload the same content that would be included in the JSON file.
 
 Special dictionary entries:
  * 'path': If a 'product' dictionary in an index file or a item dictionary
@@ -24,7 +24,6 @@ Special dictionary entries:
    is content to be downloaded associated with that element.
 
    A 'path' must value must be relative to the base of the mirror.
-   It is 
 
  * 'md5', 'sha256', 'sha512':
    If an item contains a 'path' and one of these fields, then the content
@@ -38,7 +37,7 @@ Special dictionary entries:
 
  * 'updated'
    This field can exist at the top level of a products or index, and
-   contains a rfc-2822 timestamp indicating when the file was last updated
+   contains a RFC 2822 timestamp indicating when the file was last updated
    This allows a client to quickly note that it is up to date.
 
 == Simple Sync Mirrors ==
@@ -60,13 +59,13 @@ The 'path' element must be: 'streams/v1/products.sjson'
 
 == Products List ==
 products list: (format=products:1.0)
-For Ubuntu, a product is 'server:precise:amd64'
+For Ubuntu, an example product is 'server:precise:amd64'
 A Products list has a 'content_id' and multiple products.
 a product has multiple versions
 a version has multiple items
 
 An item can be globally uniquely identified by the path to it.
-Ie, the 'content_id' for a products list and the key in each
+i.e., the 'content_id' for a products list and the key in each
 element of the tree form a unique tuple for that item.  Given:
   content_id = tree['content_id']
   prod_name =  tree['products'].keys()[0]
@@ -80,15 +79,15 @@ The following is a description of each of these fields:
     An example is:
        com.ubuntu.cloud:released:aws
     It should have a reverse domain portion followed by a portion
-    that represents a name underneith that domain.
+    that represents a name underneath that domain.
 
   * product_name: product name is unique within a products list.  The same
     product name may appear in multiple products_lists.  For example,
-    In Ubuntu, 'server:precise:amd64' will appear in both
+    in Ubuntu, 'server:precise:amd64' will appear in both
     'com.ubuntu.cloud:released:aws' and
     'com.ubuntu.cloud:released:download'.
 
-    That name collision should imply that the two separate 
+    That name collision should imply that the two separate
     <content_id><product_name> pairs are equivalent in some manner.
 
   * version_name:
@@ -97,22 +96,22 @@ The following is a description of each of these fields:
     by rules of a 'LANG=C sort()'.  That allows the client to trivially
     order versions to find the most recent.  Ubuntu uses "serial" numbers
     for these keys, in the format YYYYMMDD[.0-9].
-  
+
   * item_name:
     Inside of a version, there may be multiple items.  An example would be
     a binary build and a source tarball.
 
     For Ubuntu download images, these are things like '.tar.gz',
-    '-disk1.img' and '-root.tar.gz'.  
+    '-disk1.img' and '-root.tar.gz'.
 
     The item name does not need to be user-friendly.  It must be
-    consistent.  Because this id is unique amoungst the given
+    consistent.  Because this id is unique within the given
     'version_name', a client needs only to store that key, rather than
     trying to determine which keys inside the item dictionary identify it.
 
     An 'item' dictionary may contain a 'path' element.
 
-    'path' entries for a given item must be immutable.  That is, for a 
+    'path' entries for a given item must be immutable.  That is, for a
     given 'path' under a mirror, the content must never change.
 
 == Index ==
@@ -133,7 +132,7 @@ item groups of the same "type".
 
 Useful definitions
  * item group
-   an item group is a list of like items. Ie, all produced by the same build.
+   an item group is a list of like items. e.g. all produced by the same build.
    requirements:
     * serial: a 'serial' entry that can be sorted by YYYYMMDD[.X]
     * items: a list of items
