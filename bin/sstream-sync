@@ -87,6 +87,9 @@ def main():
 
     parser.add_argument('--keyring', action='store', default=None,
                         help='keyring to be specified to gpg via --keyring')
+    parser.add_argument('--no-verify', '-U', action='store_false',
+                        dest='verify', default=True,
+                        help="do not gpg check signed json files")
 
     parser.add_argument('mirror_url')
     cmdargs = parser.parse_args()
@@ -146,7 +149,9 @@ def main():
 
     def policy(content, path):
         if cfg['path'].endswith('sjson'):
-            return util.read_signed(content, keyring=cmdargs.keyring)
+            return util.read_signed(content,
+                                    keyring=cmdargs.keyring,
+                                    checked=cmdargs.verify)
         else:
             return content
 
