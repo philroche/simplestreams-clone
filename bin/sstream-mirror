@@ -100,8 +100,8 @@ def main():
     def policy(content, path):
         if initial_path.endswith('sjson'):
             return util.read_signed(content,
-                                    keyring=cmdargs.keyring,
-                                    checked=cmdargs.verify)
+                                    keyring=args.keyring,
+                                    checked=args.verify)
         else:
             return content
 

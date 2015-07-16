@@ -254,21 +254,22 @@ def policy_read_signed(content, path, keyring=None):
     return read_signed(content=content, keyring=keyring)
 
 
-def read_signed(content, keyring=None):
+def read_signed(content, keyring=None, checked=True):
     # ensure that content is signed by a key in keyring.
     # if no keyring given use default.
     if content.startswith(PGP_SIGNED_MESSAGE_HEADER):
-        # http://rfc-ref.org/RFC-TEXTS/2440/chapter7.html
-        cmd = ["gpg", "--batch", "--verify"]
-        if keyring:
-            cmd.append("--keyring=%s" % keyring)
-        cmd.append("-")
-        try:
-            subp(cmd, data=content)
-        except subprocess.CalledProcessError as e:
-            LOG.debug("failed: %s\n out=%s\n err=%s" %
-                      (' '.join(cmd), e.output[0], e.output[1]))
-            raise e
+        if checked:
+            # http://rfc-ref.org/RFC-TEXTS/2440/chapter7.html
+            cmd = ["gpg", "--batch", "--verify"]
+            if keyring:
+                cmd.append("--keyring=%s" % keyring)
+            cmd.append("-")
+            try:
+                subp(cmd, data=content)
+            except subprocess.CalledProcessError as e:
+                LOG.debug("failed: %s\n out=%s\n err=%s" %
+                          (' '.join(cmd), e.output[0], e.output[1]))
+                raise e
 
         ret = {'body': '', 'signature': '', 'garbage': ''}
         lines = content.splitlines()
