@@ -28,7 +28,7 @@ HARDCODED_REL2VER = {
     "trusty": {'version': "14.04", 'devname': "Trusty Tahr"},
     "utopic": {'version': "14.10", 'devname': "Utopic Unicorn"},
     "vivid": {'version': "15.04", 'devname': "Vivid Vervet"},
-    "vivid": {'version': "15.10", 'devname': "Wily Werewolf"},
+    "wily": {'version': "15.10", 'devname': "Wily Werewolf"},
 }
 
 from simplestreams.log import LOG
