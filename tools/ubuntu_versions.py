@@ -16,22 +16,36 @@
 #   You should have received a copy of the GNU Affero General Public License
 #   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
 
-# this is only used if no distro_info available
-HARDCODED_REL2VER = {
-    "hardy": {'version': "8.04", 'devname': "Hardy Heron"},
-    "lucid": {'version': "10.04", 'devname': "Lucid Lynx"},
-    "oneiric": {'version': "11.10", 'devname': "Oneiric Ocelot"},
-    "precise": {'version': "12.04", 'devname': "Precise Pangolin"},
-    "quantal": {'version': "12.10", 'devname': "Quantal Quetzal"},
-    "raring": {'version': "13.04", 'devname': "Raring Ringtail"},
-    "saucy": {'version': "13.10", 'devname': "Saucy Salamander"},
-    "trusty": {'version': "14.04", 'devname': "Trusty Tahr"},
-    "utopic": {'version': "14.10", 'devname': "Utopic Unicorn"},
-    "vivid": {'version': "15.04", 'devname': "Vivid Vervet"},
-    "wily": {'version': "15.10", 'devname': "Wily Werewolf"},
-}
+# this is patched over the top of distro_info
+# to allow newer data here then available in the pkg installed distro_info
+__RELEASE_DATA = (
+    # version, full codename, lts
+    ("8.04", "Hardy Heron", True),
+    ("10.04", "Lucid Lynx", True),
+    ("11.10", "Oneiric Ocelot", False),
+    ("12.04", "Precise Pangolin", True),
+    ("12.10", "Quantal Quetzal", False),
+    ("13.04", "Raring Ringtail", False),
+    ("13.10", "Saucy Salamander", False),
+    ("14.04", "Trusty Tahr", True),
+    ("14.10", "Utopic Unicorn", False),
+    ("15.04", "Vivid Vervet", False),
+    ("15.10", "Wily Werewolf", False),
+)
 
 from simplestreams.log import LOG
+
+
+def _get_fulldata(version, full_codename, lts):
+    codename = full_codename.split()[0].lower()
+    return {
+        'codename': codename,
+        'lts': lts,
+        'os_title': "Ubuntu",
+        'release_title': "%s LTS" % version if lts else version,
+        'release_codename': full_codename,
+        'version': version,
+    }
 
 
 def get_ubuntu_info(date=None):
@@ -40,11 +54,16 @@ def get_ubuntu_info(date=None):
     # Notably absent is any date information (release or eol)
     # its harder than you'd like to get at data via the distro_info library
     #
-    # The resultant dicts looks like this:
-    # {'codename': 'saucy', 'devel': True,
-    #  'full_codename': 'Saucy Salamander',
-    #  'fullname': 'Ubuntu 13.10 "Saucy Salamander"',
-    #  'lts': False, 'supported': True, 'version': '13.10'}
+    # The resultant dicts have the following fields:
+    #  codename: single word codename of ubuntu release ('saucy' or 'trusty')
+    #  devel: boolean, is this the current development release
+    #  lts: boolean, is this release an LTS
+    #  supported: boolean: is this release currently supported
+    #  release_codename: the full code name ('Saucy Salamander', 'Trusty Tahr')
+    #  os_title: literal "Ubuntu"
+    #  version: the numeric portion only ('13.10', '14.04')
+    #  release_title: numeric portion + " LTS" if this is an lts
+    #                 '13.10', '14.04 LTS"
 
     udi = distro_info.UbuntuDistroInfo()
     # 'all' is a attribute, not a function. so we can't ask for it formated.
@@ -78,14 +97,24 @@ def get_ubuntu_info(date=None):
                  " Using stable release as devel.", e)
         devel = udi.stable(date=date)
     ret = []
+
     for i, codename in enumerate(codenames):
+        title = "%s LTS" % versions[i] if lts[i] else versions[i]
         ret.append({'lts': lts[i], 'version': versions[i],
                     'supported': codename in supported,
-                    'fullname': fullnames[i], 'codename': codename,
-                    'devname': full_codenames[i],
-                    'devel': bool(codename == devel)})
+                    'codename': codename,
+                    'release_codename': full_codenames[i],
+                    'devel': bool(codename == devel),
+                    'release_title': title,
+                    'os_title': "Ubuntu"})
 
     return ret
+
+
+__HARDCODED_REL2VER = {}
+for __t in __RELEASE_DATA:
+    __v = _get_fulldata(*__t)
+    __HARDCODED_REL2VER[__v['codename']] = __v
 
 
 try:
@@ -95,7 +124,15 @@ try:
     for r in info:
         if r['codename'] < "hardy":
             continue
-        REL2VER[r['codename']] = {x: r[x] for x in ("version", "devname")}
+        REL2VER[r['codename']] = r.copy()
+
+    for r in __HARDCODED_REL2VER:
+        if r not in REL2VER:
+            REL2VER[r] = __HARDCODED_REL2VER[r]
 
 except ImportError:
-    REL2VER = HARDCODED_REL2VER
+    REL2VER = __HARDCODED_REL2VER
+
+if __name__ == '__main__':
+    import json
+    print(json.dumps(REL2VER, indent=1))

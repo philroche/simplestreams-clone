@@ -301,21 +301,23 @@ def dl_load_query(path):
             tree[stream] = {'products': {}}
         products = tree[stream]['products']
 
-        version = toolutil.REL2VER[rel]['version']
+        reldata = toolutil.REL2VER[rel]
 
         prodname_rdns = UBUNTU_RDNS
         if stream != "released":
             prodname_rdns += "." + stream
 
-        prodname = ':'.join([prodname_rdns, build, version, arch])
+        prodname = ':'.join([prodname_rdns, build, reldata['version'], arch])
 
         if prodname not in products:
             products[prodname] = {
                 "release": rel,
-                "version": version,
                 "arch": arch,
-                "versions": {}
+                "versions": {},
+                "os": "ubuntu",
             }
+            for f in ('os_title', 'release_title', 'release_codename'):
+                products[prodname][f] = reldata[f]
 
         product = products[prodname]
 
