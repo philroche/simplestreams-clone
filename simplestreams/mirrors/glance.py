@@ -252,7 +252,8 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             return
 
         tree = copy.deepcopy(target)
-        util.products_prune(tree)
+        util.products_prune(tree, preserve_empty_products=True)
+
         # stop these items from copying up when we call condense
         sticky = ['ftype', 'md5', 'sha256', 'size', 'name', 'id']
 

@@ -127,7 +127,7 @@ def products_del(tree, pedigree):
         del cur[pedigree[-1]]
 
 
-def products_prune(tree):
+def products_prune(tree, preserve_empty_products=False):
     for prodname in list(tree.get('products', {}).keys()):
         keys = list(tree['products'][prodname].get('versions', {}).keys())
         for vername in keys:
@@ -143,7 +143,8 @@ def products_prune(tree):
                 not tree['products'][prodname]['versions']):
             del tree['products'][prodname]
 
-    if 'products' in tree and not tree['products']:
+    if (not preserve_empty_products and 'products' in tree
+            and not tree['products']):
         del tree['products']
 
 
