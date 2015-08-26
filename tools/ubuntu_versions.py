@@ -41,7 +41,6 @@ def _get_fulldata(version, full_codename, lts):
     return {
         'codename': codename,
         'lts': lts,
-        'os_title': "Ubuntu",
         'release_title': "%s LTS" % version if lts else version,
         'release_codename': full_codename,
         'version': version,
@@ -60,7 +59,6 @@ def get_ubuntu_info(date=None):
     #  lts: boolean, is this release an LTS
     #  supported: boolean: is this release currently supported
     #  release_codename: the full code name ('Saucy Salamander', 'Trusty Tahr')
-    #  os_title: literal "Ubuntu"
     #  version: the numeric portion only ('13.10', '14.04')
     #  release_title: numeric portion + " LTS" if this is an lts
     #                 '13.10', '14.04 LTS"
@@ -105,8 +103,7 @@ def get_ubuntu_info(date=None):
                     'codename': codename,
                     'release_codename': full_codenames[i],
                     'devel': bool(codename == devel),
-                    'release_title': title,
-                    'os_title': "Ubuntu"})
+                    'release_title': title})
 
     return ret
 

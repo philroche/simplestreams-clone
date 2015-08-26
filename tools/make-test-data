@@ -316,7 +316,7 @@ def dl_load_query(path):
                 "versions": {},
                 "os": "ubuntu",
             }
-            for f in ('os_title', 'release_title', 'release_codename'):
+            for f in ('release_title', 'release_codename'):
                 products[prodname][f] = reldata[f]
 
         product = products[prodname]
