@@ -51,6 +51,8 @@ BASE_URLS = (
 
 FAKE_DATA = {
     'root.tar.gz': {'size': 10240},
+    'root.tar.xz': {'size': 10241},
+    'lxd.tar.xz': {'size': 10245},
     'tar.gz': {'size': 11264},
     'disk1.img': {'size': 12288},
     'uefi1.img': {'size': 12421},
@@ -461,7 +463,16 @@ def create_image_data(query_tree, out_d, streamdir):
     tree = dl_load_query(query_tree)
 
     def update_data(item, tree, pedigree):
-        item.update(get_cloud_images_file_info(item['path']))
+        path = item['path']
+        item.update(get_cloud_images_file_info(path))
+        if path.endswith('-lxd.tar.xz'):
+            # find calculated combined checksum
+            dirname = os.path.dirname(path)
+            lxd = os.path.basename(path)
+            root = lxd.replace('-lxd', '-root')
+            combined = os.path.join(dirname, ','.join([lxd, root]))
+            item.update({'combined_sha256': 
+                         get_cache_data(combined, 'sha256')})
 
     cid_fmt = "com.ubuntu.cloud:%s:download"
     for stream in tree:

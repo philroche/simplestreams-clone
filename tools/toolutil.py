@@ -67,6 +67,11 @@ def is_expected(repl, fields):
         if arch not in ('i386', 'amd64'):
             return False
 
+    if repl == "-root.tar.xz" or repl == "-lxd.tar.xz":
+        # -root.tar.xz and -lxd.tar.xz become available after 20150714.3
+        if serial < "20150714.4":
+            return False
+
     # if some data in /query is not truely available, fill up this array
     # to skip it. ex: export BROKEN="precise/20121212.1 quantal/20130128.1"
     broken = os.environ.get("BROKEN", "").split(" ")
@@ -84,7 +89,7 @@ def load_query_download(path, builds=None, rels=None):
         rels = RELEASES
 
     suffixes = (".tar.gz", "-root.tar.gz", "-disk1.img", "-uefi1.img",
-                ".manifest", ".ova")
+                ".manifest", ".ova", "-root.tar.xz", "-lxd.tar.xz")
     streams = [f[0:-len(".latest.txt")]
                for f in os.listdir(path) if f.endswith("latest.txt")]
 
