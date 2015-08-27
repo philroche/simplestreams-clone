@@ -285,6 +285,24 @@ def create_fake_file(prefix, item):
         del fdata['content']
         FAKE_DATA[item['ftype']].update(fdata)
 
+    # create a combined_sha256 for lxd.tar.xz from the -root.tar.gz also
+    ftype = item['ftype']
+    if ftype == "lxd.tar.xz" and 'combined_sha256' not in FAKE_DATA[ftype]:
+        rootpath = item['path'].replace("-lxd.tar.xz", "-root.tar.xz")
+        # make sure the root.tar.xz exists
+        if not os.path.exists(os.path.join(prefix, rootpath)):
+            rootitem = item.copy()
+            rootitem['ftype'] = "root.tar.xz"
+            rootitem['path'] = rootpath
+            create_fake_file(prefix, rootitem)
+
+        # and sha256 hash the combined file, .xz first
+        chash = hashlib.new('sha256')
+        for member in [fpath, os.path.join(prefix, rootpath)]:
+            with open(member, "rb") as fp:
+                chash.update(fp.read())
+        data.update({'combined_sha256': chash.hexdigest()})
+
     item.update(data)
 
     for cksum in util.CHECKSUMS:
