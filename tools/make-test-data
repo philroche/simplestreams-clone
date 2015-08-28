@@ -317,6 +317,9 @@ def dl_load_query(path):
     for rline in toolutil.load_query_download(path):
         (stream, rel, build, label, serial, arch, filepath, fname) = rline
 
+        if skip_for_faster_debug(serial):
+            continue
+
         if stream not in tree:
             tree[stream] = {'products': {}}
         products = tree[stream]['products']
@@ -391,6 +394,17 @@ def new_ubuntu_product_dict(release, arch):
     return ret
 
 
+def skip_for_faster_debug(serial):
+    min_serial = os.environ.get('SS_DEBUG_MIN_SERIAL')
+    if min_serial in (None, "0"):
+        return False
+    if "." not in min_serial:
+        min_serial += ".0"
+    ret = serial < min_serial
+    print("min_serial: %s serial: %s -> %s" % (min_serial, serial, ret))
+    return serial < min_serial
+
+
 def ec2_load_query(path):
     tree = {}
 
@@ -414,6 +428,8 @@ def ec2_load_query(path):
         (stream, rel, build, label, serial, store, arch, region,
          iid, _kern, _rmd, vtype) = rline
 
+        if skip_for_faster_debug(serial):
+            continue
         if stream not in tree:
             tree[stream] = {'products': {}}
         products = tree[stream]['products']
