@@ -379,7 +379,7 @@ def pubname(label, rel, arch, serial, build='server'):
 
 def new_ubuntu_product_dict(release, arch):
     reldata = toolutil.REL2VER[release]
-    ret =  {
+    ret = {
         "arch": arch,
         "os": "ubuntu",
         "release": release,
@@ -512,7 +512,7 @@ def create_image_data(query_tree, out_d, streamdir):
             lxd = os.path.basename(path)
             root = lxd.replace('-lxd', '-root')
             combined = os.path.join(dirname, ','.join([lxd, root]))
-            item.update({'combined_sha256': 
+            item.update({'combined_sha256':
                          get_cache_data(combined, 'sha256')})
 
     cid_fmt = "com.ubuntu.cloud:%s:download"
