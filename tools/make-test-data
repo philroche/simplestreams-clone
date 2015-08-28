@@ -321,23 +321,15 @@ def dl_load_query(path):
             tree[stream] = {'products': {}}
         products = tree[stream]['products']
 
-        reldata = toolutil.REL2VER[rel]
-
         prodname_rdns = UBUNTU_RDNS
         if stream != "released":
             prodname_rdns += "." + stream
 
-        prodname = ':'.join([prodname_rdns, build, reldata['version'], arch])
+        prodname = ':'.join(
+            [prodname_rdns, build, release_to_version(rel), arch])
 
         if prodname not in products:
-            products[prodname] = {
-                "release": rel,
-                "arch": arch,
-                "versions": {},
-                "os": "ubuntu",
-            }
-            for f in ('release_title', 'release_codename'):
-                products[prodname][f] = reldata[f]
+            products[prodname] = new_ubuntu_product_dict(rel, arch)
 
         product = products[prodname]
 
@@ -364,8 +356,12 @@ def dl_load_query(path):
     return tree
 
 
+def release_to_version(release):
+    return toolutil.REL2VER[release]['version']
+
+
 def pubname(label, rel, arch, serial, build='server'):
-    version = toolutil.REL2VER[rel]['version']
+    version = release_to_version(rel)
 
     if label == "daily":
         rv_label = rel + "-daily"
@@ -376,6 +372,23 @@ def pubname(label, rel, arch, serial, build='server'):
     else:
         rv_label = "%s-%s" % (rel, label)
     return "ubuntu-%s-%s-%s-%s" % (rv_label, arch, build, serial)
+
+
+def new_ubuntu_product_dict(release, arch):
+    reldata = toolutil.REL2VER[release]
+    ret =  {
+        "arch": arch,
+        "os": "ubuntu",
+        "release": release,
+        "release_title": reldata['release_title'],
+        "release_codename": reldata['release_codename'],
+        "version": reldata['version'],
+        "versions": {},
+    }
+    for maybe in ('supported',):
+        if maybe in reldata:
+            ret[maybe] = reldata[maybe]
+    return ret
 
 
 def ec2_load_query(path):
@@ -405,21 +418,15 @@ def ec2_load_query(path):
             tree[stream] = {'products': {}}
         products = tree[stream]['products']
 
-        version = toolutil.REL2VER[rel]['version']
-
         prodname_rdns = UBUNTU_RDNS
         if stream != "released":
             prodname_rdns += "." + stream
 
-        prodname = ':'.join([prodname_rdns, build, version, arch])
+        prodname = ':'.join(
+            [prodname_rdns, build, release_to_version(rel), arch])
 
         if prodname not in products:
-            products[prodname] = {
-                "release": rel,
-                "version": version,
-                "arch": arch,
-                "versions": {}
-            }
+            products[prodname] = new_ubuntu_product_dict(rel, arch)
 
         product = products[prodname]
 
