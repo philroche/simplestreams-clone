@@ -18,6 +18,9 @@
 
 # this is patched over the top of distro_info
 # to allow newer data here then available in the pkg installed distro_info
+
+from simplestreams.log import LOG
+
 __RELEASE_DATA = (
     # version, full codename, lts
     ("8.04", "Hardy Heron", True),
@@ -32,8 +35,6 @@ __RELEASE_DATA = (
     ("15.04", "Vivid Vervet", False),
     ("15.10", "Wily Werewolf", False),
 )
-
-from simplestreams.log import LOG
 
 
 def _get_fulldata(version, full_codename, lts):

@@ -143,8 +143,8 @@ def products_prune(tree, preserve_empty_products=False):
                 not tree['products'][prodname]['versions']):
             del tree['products'][prodname]
 
-    if (not preserve_empty_products and 'products' in tree
-            and not tree['products']):
+    if (not preserve_empty_products and 'products' in tree and
+            not tree['products']):
         del tree['products']
 
 

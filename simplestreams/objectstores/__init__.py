@@ -133,8 +133,8 @@ class FileStore(ObjectStore):
             while True:
                 buf = reader.read(self.read_size)
                 buflen = len(buf)
-                if (buflen != self.read_size and zeros is not None
-                        and zeros[0:buflen] == buf):
+                if (buflen != self.read_size and zeros is not None and
+                        zeros[0:buflen] == buf):
                     wfp.seek(wfp.tell() + buflen)
                 elif buf == zeros:
                     wfp.seek(wfp.tell() + buflen)

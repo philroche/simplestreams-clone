@@ -123,8 +123,8 @@ def main():
         if val == "":
             cfg[cfgname] = None
 
-        if ((cfgname in command_hook.HOOK_NAMES or cfgname == defhook)
-                and cfg.get(cfgname) is not None):
+        if ((cfgname in command_hook.HOOK_NAMES or cfgname == defhook) and
+                cfg.get(cfgname) is not None):
             if which(cfg[cfgname]) is None:
                 msg = "invalid input for %s. '%s' is not executable\n"
                 sys.stderr.write(msg % (argname, val))
