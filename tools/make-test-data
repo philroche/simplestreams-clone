@@ -312,6 +312,15 @@ def create_fake_file(prefix, item):
     return
 
 
+def should_skip_due_to_unsupported(pdata):
+    # filter out unsupported releases from download data
+    if os.environ.get("SS_SKIP_UNSUPPORTED", "0") == "0":
+        return False
+    # this will raise exception if 'supported' is not present.
+    # thus, SS_SKIP_UNSUPPORTED=1 requires that distro-info be present.
+    return not pdata['supported']
+
+
 def dl_load_query(path):
     tree = {}
     for rline in toolutil.load_query_download(path):
@@ -332,7 +341,13 @@ def dl_load_query(path):
             [prodname_rdns, build, release_to_version(rel), arch])
 
         if prodname not in products:
-            products[prodname] = new_ubuntu_product_dict(rel, arch)
+            product = new_ubuntu_product_dict(rel, arch)
+
+            if should_skip_due_to_unsupported(product):
+                sys.stderr.write("skipping unsupported %s\n" % prodname)
+                continue
+
+            products[prodname] = product
 
         product = products[prodname]
 
@@ -442,7 +457,13 @@ def ec2_load_query(path):
             [prodname_rdns, build, release_to_version(rel), arch])
 
         if prodname not in products:
-            products[prodname] = new_ubuntu_product_dict(rel, arch)
+            product = new_ubuntu_product_dict(rel, arch)
+
+            if should_skip_due_to_unsupported(product):
+                sys.stderr.write("skipping unsupported %s\n" % prodname)
+                continue
+
+            products[prodname] = product
 
         product = products[prodname]
 
