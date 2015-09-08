@@ -129,6 +129,14 @@ try:
             REL2VER[r] = __HARDCODED_REL2VER[r]
 
 except ImportError:
+    import os
+    import sys
+    if os.environ.get("SS_REQUIRE_DISTRO_INFO", "1") not in ("0"):
+        pkg = "python3-distro-info"
+        if sys.version_info.major == 2:
+            pkg = "python-distro-info"
+        raise ValueError("Please install package %s "
+                         "or set SS_REQUIRE_DISTRO_INFO=0" % pkg)
     REL2VER = __HARDCODED_REL2VER
 
 if __name__ == '__main__':
