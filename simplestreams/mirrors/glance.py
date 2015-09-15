@@ -42,6 +42,24 @@ def empty_iid_products(content_id):
             'datatype': 'image-ids', 'format': 'products:1.0'}
 
 
+def canonicalize_arch(arch):
+    '''Canonicalize Ubuntu archs for use in OpenStack'''
+    newarch = arch.lower()
+    if newarch == "amd64":
+        newarch = "x86_64"
+    if newarch == "i386":
+        newarch = "i686"
+    if newarch == "ppc64el":
+        newarch = "ppc64le"
+    if newarch == "powerpc":
+        newarch = "ppc"
+    if newarch == "armhf":
+        newarch = "armv7l"
+    if newarch == "arm64":
+        newarch = "aarch64"
+    return newarch
+
+
 # glance mirror 'image-downloads' content into glance
 # if provided an object store, it will produce a 'image-ids' mirror
 class GlanceMirror(mirrors.BasicMirrorWriter):
@@ -177,11 +195,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         arch = flat.get('arch')
         if arch:
             t_item['arch'] = arch
-            if arch == "amd64":
-                arch = "x86_64"
-            if arch == "i386":
-                arch = "i686"
-            props['architecture'] = arch
+            props['architecture'] = canonicalize_arch(arch)
 
         fullname = self.name_prefix + name
         create_kwargs = {
