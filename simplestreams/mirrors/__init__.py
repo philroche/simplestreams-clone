@@ -318,7 +318,7 @@ class BasicMirrorWriter(MirrorWriter):
                             size = int(flat['size'])
                         try:
                             ipath_cs = cs.ChecksummingContentSource(
-                                cs=ipath_cs,
+                                csrc=ipath_cs,
                                 checksums=checksum_util.item_checksums(flat),
                                 size=size)
                         except ValueError:

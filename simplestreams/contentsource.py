@@ -242,11 +242,14 @@ class MemoryContentSource(FdContentSource):
 
 
 class ChecksummingContentSource(ContentSource):
-    def __init__(self, cs, checksums, size=None):
-        self.cs = cs
+    def __init__(self, csrc, checksums, size=None):
+        self.cs = csrc
         self._set_checksummer(checksum_util.SafeCheckSummer(checksums))
         self.bytes_read = 0
-        self.size = size
+        try:
+            self.size = int(size)
+        except TypeError:
+            raise ValueError("invalid size '%s' at '%s'" % (csrc.url, size))
 
     def resume(self, offset, checksummer):
         self.cs.set_start_pos(offset)

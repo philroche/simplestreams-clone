@@ -40,18 +40,21 @@
        "name": "foovendor-pinky-6.1-beta2-amd64-server-20120328.tar.gz", 
        "path": "files/beta-2/foovendor-6.1-beta2-server-cloudimg-amd64.tar.gz", 
        "md5": "c245123c1a7c16dd43962b71c604c5ee",
+       "size": 63,
        "ftype": "tar.gz"
       }, 
       "disk1.img": {
        "name": "foovendor-pinky-6.1-beta2-amd64-server-20120328-disk1.img", 
        "path": "files/beta-2/foovendor-6.1-beta2-server-cloudimg-amd64-disk1.img", 
        "md5": "34cec541a18352783e736ba280a12201",
+       "size": 66,
        "ftype": "disk1.img"
       }, 
       "root.tar.gz": {
        "name": "foovendor-pinky-6.1-beta2-amd64-server-20120328-root.tar.gz", 
        "path": "files/beta-2/foovendor-6.1-beta2-server-cloudimg-amd64-root.tar.gz", 
        "md5": "55686ef088f7baf0ebea9349055daa85",
+       "size": 68,
        "ftype": "root.tar.gz"
       }
      }, 
@@ -124,18 +127,21 @@
        "name": "foovendor-pinky-6.1-beta2-i386-server-20120328.tar.gz", 
        "path": "files/beta-2/foovendor-6.1-beta2-server-cloudimg-i386.tar.gz", 
        "md5": "2cd18b60f892af68c9d49c64ce1638e4",
+       "size": 62,
        "ftype": "tar.gz"
       }, 
       "disk1.img": {
        "name": "foovendor-pinky-6.1-beta2-i386-server-20120328-disk1.img", 
        "path": "files/beta-2/foovendor-6.1-beta2-server-cloudimg-i386-disk1.img", 
        "md5": "e80df7995beb31571e104947e4d7b001",
+       "size": 99,
        "ftype": "disk1.img"
       }, 
       "root.tar.gz": {
        "name": "foovendor-pinky-6.1-beta2-i386-server-20120328-root.tar.gz", 
        "path": "files/beta-2/foovendor-6.1-beta2-server-cloudimg-i386-root.tar.gz", 
        "md5": "5d86b3e75e56e10e1019fe1153fe488f",
+       "size": 67,
        "ftype": "root.tar.gz"
       }
      }, 
