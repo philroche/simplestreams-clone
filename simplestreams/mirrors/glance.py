@@ -197,6 +197,12 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             t_item['arch'] = arch
             props['architecture'] = canonicalize_arch(arch)
 
+        if 'os' in flat:
+            props['os_distro'] = flat['os']
+
+        if 'version' in flat:
+            props['os_version'] = flat['os_version']
+
         fullname = self.name_prefix + name
         create_kwargs = {
             'name': fullname,
