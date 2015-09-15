@@ -20,6 +20,8 @@ import io
 import os
 import sys
 
+from . import checksum_util
+
 if sys.version_info > (3, 0):
     import urllib.parse as urlparse
 else:
@@ -237,6 +239,52 @@ class MemoryContentSource(FdContentSource):
         if url is None:
             url = "MemoryContentSource://undefined"
         super(MemoryContentSource, self).__init__(fd=fd, url=url)
+
+
+class ChecksummingContentSource(ContentSource):
+    def __init__(self, cs, checksums, size=None):
+        self.cs = cs
+        self._set_checksummer(checksum_util.SafeCheckSummer(checksums))
+        self.bytes_read = 0
+        self.size = size
+
+    def resume(self, offset, checksummer):
+        self.cs.set_start_pos(offset)
+        self._set_checksummer(checksummer)
+        self.bytes_read = offset
+
+    @property
+    def algorithm(self):
+        return self.checksummer.algorithm
+
+    def _set_checksummer(self, checksummer):
+        if checksummer.algorithm not in checksum_util.CHECKSUMS:
+            raise ValueError("algorithm %s is not valid (%s)" %
+                             (checksummer.algorithm, checksum_util.CHECKSUMS))
+        self.checksummer = checksummer
+
+    def check(self):
+        return self.checksummer.check()
+
+    def read(self, size=-1):
+        buf = self.cs.read(size)
+        buflen = len(buf)
+        self.checksummer.update(buf)
+        self.bytes_read += buflen
+        if self.size is not None and self.bytes_read >= self.size:
+            if not self.check():
+                raise checksum_util.invalid_checksum_for_reader(self)
+        return buf
+
+    def open(self):
+        return self.cs.open()
+
+    def close(self):
+        return self.cs.close()
+
+    @property
+    def url(self):
+        return self.cs.url
 
 
 class UrlReader(object):

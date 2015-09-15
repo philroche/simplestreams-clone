@@ -20,6 +20,7 @@ import os
 
 import simplestreams.contentsource as cs
 import simplestreams.util as util
+from simplestreams import checksum_util
 from simplestreams.log import LOG
 
 READ_BUFFER_SIZE = 1024 * 10
@@ -88,10 +89,6 @@ class FileStore(ObjectStore):
     def insert(self, path, reader, checksums=None, mutable=True, size=None,
                sparse=False):
 
-        zeros = None
-        if sparse is True:
-            zeros = '\0' * self.read_size
-
         wpath = self._fullpath(path)
         if os.path.isfile(wpath):
             if not mutable:
@@ -102,17 +99,27 @@ class FileStore(ObjectStore):
                                   read_size=self.read_size):
                 return
 
-        cksum = util.checksummer(checksums)
+        zeros = None
+        if sparse is True:
+            zeros = '\0' * self.read_size
+
+        cksum = checksum_util.checksummer(checksums)
         out_d = os.path.dirname(wpath)
         partfile = os.path.join(out_d, "%s.part" % os.path.basename(wpath))
 
         util.mkdir_p(out_d)
         orig_part_size = 0
+        reader_does_checksum = (
+            isinstance(reader, cs.ChecksummingContentSource) and
+            cksum.algorithm == reader.algorithm)
 
         if os.path.exists(partfile):
             try:
                 orig_part_size = os.path.getsize(partfile)
-                reader.set_start_pos(orig_part_size)
+                if reader_does_checksum:
+                    reader.resume(orig_part_size, cksum)
+                else:
+                    reader.set_start_pos(orig_part_size)
 
                 LOG.debug("resuming partial (%s) download of '%s' from '%s'",
                           orig_part_size, path, partfile)
@@ -131,7 +138,10 @@ class FileStore(ObjectStore):
         with open(partfile, "ab") as wfp:
 
             while True:
-                buf = reader.read(self.read_size)
+                try:
+                    buf = reader.read(self.read_size)
+                except checksum_util.InvalidChecksum:
+                    break
                 buflen = len(buf)
                 if (buflen != self.read_size and zeros is not None and
                         zeros[0:buflen] == buf):
@@ -140,7 +150,9 @@ class FileStore(ObjectStore):
                     wfp.seek(wfp.tell() + buflen)
                 else:
                     wfp.write(buf)
-                cksum.update(buf)
+
+                if not reader_does_checksum:
+                    cksum.update(buf)
 
                 if size is not None:
                     if self.complete_callback:
@@ -158,14 +170,19 @@ class FileStore(ObjectStore):
 
         reader.close()
 
-        if not cksum.check():
-            os.unlink(partfile)
-            if orig_part_size:
-                LOG.warn("resumed download of '%s' had bad checksum.", path)
-
-            msg = "unexpected checksum '%s' on %s (found: %s expected: %s)"
-            raise Exception(msg % (cksum.algorithm, path,
-                                   cksum.hexdigest(), cksum.expected))
+        resume_msg = "resumed download of '%s' had bad checksum." % path
+        if reader_does_checksum:
+            if not reader.check():
+                os.unlink(partfile)
+                if orig_part_size:
+                    LOG.warn(resume_msg)
+                raise checksum_util.invalid_checksum_for_reader(reader)
+        else:
+            if not cksum.check():
+                os.unlink(partfile)
+                if orig_part_size:
+                    LOG.warn(resume_msg)
+                raise checksum_util.InvalidChecksum(path=path, cksum=cksum)
         os.rename(partfile, wpath)
 
     def remove(self, path):
@@ -196,8 +213,8 @@ def has_valid_checksum(path, reader, checksums=None,
                        read_size=READ_BUFFER_SIZE):
     if checksums is None:
         return False
-    cksum = util.checksummer(checksums)
     try:
+        cksum = checksum_util.SafeCheckSummer(checksums)
         with reader(path) as rfp:
             while True:
                 buf = rfp.read(read_size)

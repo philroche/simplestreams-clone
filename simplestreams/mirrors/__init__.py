@@ -21,6 +21,7 @@ import json
 
 import simplestreams.filters as filters
 import simplestreams.util as util
+from simplestreams import checksum_util
 import simplestreams.contentsource as cs
 from simplestreams.log import LOG
 
@@ -309,8 +310,21 @@ class BasicMirrorWriter(MirrorWriter):
 
                     ipath = item.get('path', None)
                     ipath_cs = None
-                    if ipath:
-                        ipath_cs = reader.source(ipath) if reader else None
+                    if ipath and reader:
+                        flat = util.products_exdata(src, pgree)
+                        ipath_cs = reader.source(ipath)
+                        size = None
+                        if 'size' in flat:
+                            size = int(flat['size'])
+                        try:
+                            ipath_cs = cs.ChecksummingContentSource(
+                                cs=ipath_cs,
+                                checksums=checksum_util.item_checksums(flat),
+                                size=size)
+                        except ValueError:
+                            LOG.warn("%s did not have checksums",
+                                     "/".join(pgree))
+
                     self.insert_item(item, src, target, pgree, ipath_cs)
 
                 if len(added_items):
@@ -448,8 +462,8 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
             return
         LOG.debug("inserting %s to %s", contentsource.url, data['path'])
         self.store.insert(data['path'], contentsource,
-                          checksums=util.item_checksums(data), mutable=False,
-                          size=data.get('size'))
+                          checksums=checksum_util.item_checksums(data),
+                          mutable=False, size=data.get('size'))
         self._inc_rc(data['path'], src, pedigree)
 
     def insert_index_entry(self, data, src, pedigree, contentsource):
@@ -457,7 +471,7 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
         if not epath:
             return
         self.store.insert(epath, contentsource,
-                          checksums=util.item_checksums(data))
+                          checksums=checksum_util.item_checksums(data))
 
     def insert_products(self, path, target, content):
         dpath = self.products_data_path(target['content_id'])

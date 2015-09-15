@@ -18,6 +18,7 @@
 import simplestreams.filters as filters
 import simplestreams.mirrors as mirrors
 import simplestreams.util as util
+from simplestreams import checksum_util
 import simplestreams.openstack as openstack
 from simplestreams.log import LOG
 
@@ -339,7 +340,7 @@ class ItemInfoDryRunMirror(GlanceMirror):
 def _checksum_file(fobj, read_size=util.READ_SIZE, checksums=None):
     if checksums is None:
         checksums = {'md5': None}
-    cksum = util.checksummer(checksums=checksums)
+    cksum = checksum_util.checksummer(checksums=checksums)
     while True:
         buf = fobj.read(read_size)
         cksum.update(buf)
