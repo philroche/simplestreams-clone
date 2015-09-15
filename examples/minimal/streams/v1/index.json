@@ -1,0 +1,15 @@
+{
+ "index": {
+  "com.example:download": {
+   "datatype": "image-downloads", 
+   "path": "streams/v1/download.json",
+   "updated": "Tue, 15 Sep 2015 16:15:24 -0400",
+   "products": [
+    "com.example:product1"
+   ], 
+   "format": "products:1.0"
+  } 
+ }, 
+ "updated": "Tue, 15 Sep 2015 16:15:24 -0400",
+ "format": "index:1.0"
+}
