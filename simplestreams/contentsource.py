@@ -274,9 +274,14 @@ class ChecksummingContentSource(ContentSource):
         buflen = len(buf)
         self.checksummer.update(buf)
         self.bytes_read += buflen
-        if self.size is not None and self.bytes_read >= self.size:
-            if not self.check():
-                raise checksum_util.invalid_checksum_for_reader(self)
+
+        # read size was different size than expected.
+        # if its not the end, something wrong
+        if buflen != size and self.size != self.bytes_read:
+            raise checksum_util.invalid_checksum_for_reader(self)
+
+        if self.bytes_read == self.size and not self.check():
+            raise checksum_util.invalid_checksum_for_reader(self)
         return buf
 
     def open(self):
