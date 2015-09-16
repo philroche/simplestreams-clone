@@ -87,9 +87,11 @@ class InvalidChecksum(ValueError):
         self.expected_size = expected_size
 
     def __str__(self):
-        ret = ("Invalid %s Checksum at %s. Found %s. Expected %s." %
+        ret = ("Invalid %s Checksum at %s. Found %s. Expected %s. "
+               "read %s bytes expected %s bytes." %
                (self.cksum.algorithm, self.path,
-                self.cksum.hexdigest, self.cksum.expected))
+                self.cksum.hexdigest(), self.cksum.expected,
+                self.size, self.expected_size))
         if self.size:
             ret += " (size %s expected %s)" % (self.size, self.expected_size)
         return ret
