@@ -134,7 +134,7 @@
        "name": "foovendor-pinky-6.1-beta2-i386-server-20120328-disk1.img", 
        "path": "files/beta-2/foovendor-6.1-beta2-server-cloudimg-i386-disk1.img", 
        "md5": "e80df7995beb31571e104947e4d7b001",
-       "size": 99,
+       "size": 65,
        "ftype": "disk1.img"
       }, 
       "root.tar.gz": {
