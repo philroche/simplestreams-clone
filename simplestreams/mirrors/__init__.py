@@ -18,12 +18,24 @@
 import errno
 import io
 import json
+import os
+import sys
 
 import simplestreams.filters as filters
 import simplestreams.util as util
 from simplestreams import checksum_util
 import simplestreams.contentsource as cs
 from simplestreams.log import LOG
+
+_missing_cksum_behavior = {
+    'mode': os.environ.get("SS_MISSING_ITEM_CHECKSUM_BEHAVIOR", "unset"),
+    'messaged': False,
+}
+if _missing_cksum_behavior['mode'] not in ("warn", "fail", "silent", "unset"):
+    raise ValueError(
+        "SS_MISSING_ITEM_CHECKSUM_BEHAVIOR (%s) must be one of:"
+        "'warn', 'fail', 'silent', 'unset'." %
+        _missing_cksum_behavior['mode'])
 
 
 class MirrorReader(object):
@@ -312,18 +324,9 @@ class BasicMirrorWriter(MirrorWriter):
                     ipath_cs = None
                     if ipath and reader:
                         flat = util.products_exdata(src, pgree)
-                        ipath_cs = reader.source(ipath)
-                        size = None
-                        if 'size' in flat:
-                            size = int(flat['size'])
-                        try:
-                            ipath_cs = cs.ChecksummingContentSource(
-                                csrc=ipath_cs,
-                                checksums=checksum_util.item_checksums(flat),
-                                size=size)
-                        except ValueError:
-                            LOG.warn("%s did not have checksums",
-                                     "/".join(pgree))
+                        ipath_cs = _maybe_checksumming_cs(
+                            csrc=reader.source(ipath), size=flat.get('size'),
+                            checksums=checksum_util.item_checksums(flat))
 
                     self.insert_item(item, src, target, pgree, ipath_cs)
 
@@ -569,6 +572,46 @@ def check_tree_paths(tree, fmt=None):
         index = tree.get('index')
         for content_id in index:
             util.assert_safe_path(index[content_id].get('path'))
+
+
+def _maybe_checksumming_cs(csrc, size, checksums):
+    """wraps calls to ChecksummingContentSource consulting environment
+
+    SS_MISSING_ITEM_CHECKSUM_BEHAVIOR=<value>
+
+    values are:
+        silent: behave exactly as before.  No checksumming is done,
+                no warnings are emitted.  The consumer of the
+                contentsource must check checksums.
+        warn:   log messages at WARN level
+        fail:   the new behavior. raise a ValueError.
+
+    Note: only legacy versions of this library respect
+    the SS_MISSING_ITEM_CHECKSUM_BEHAVIOR environment variable.
+    All other versions require checksums and size on items."""
+
+    def handle_exception(e, cs):
+        mode = _missing_cksum_behavior['mode']
+        if (not _missing_cksum_behavior['messaged'] and mode != 'unset'):
+            sys.stderr.write(
+                "consider setting environment variable "
+                "'SS_MISSING_ITEM_CHECKSUM_BEHAVIOR' to "
+                "'silent', 'warn', or 'fail'.  See "
+                "https://bugs.launchpad.net/bugs/1487004 for more info.")
+            _missing_cksum_behavior['messaged'] = True
+
+        if mode == 'silent':
+            return cs
+        elif mode in ("warn", "unset"):
+            LOG.warn(e)
+        else:
+            raise e
+
+    try:
+        return cs.ChecksummingContentSource(
+            csrc=csrc, size=size, checksums=checksums)
+    except ValueError as e:
+        return handle_exception(cs, e)
 
 
 # vi: ts=4 expandtab
