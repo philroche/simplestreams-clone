@@ -8,7 +8,7 @@ from simplestreams import checksum_util
 
 
 class TestBadDataSources(TestCase):
-    """Test of CommandHookMirror."""
+    """Test of Bad Data in a datasource."""
 
     dlpath = "streams/v1/download.json"
     pedigree = ("com.example:product1", "20150915", "item1")
@@ -27,7 +27,8 @@ class TestBadDataSources(TestCase):
         target.sync(good_src, path)
 
         # clean the .data out of the mirror so it doesn't get read
-        for k in objectstore.data.keys():
+        keys = list(objectstore.data.keys())
+        for k in keys:
             if k.startswith(".data"):
                 del objectstore.data[k]
 
@@ -57,7 +58,7 @@ class TestBadDataSources(TestCase):
                           self.target.sync, self.src, self.dlpath)
 
     def test_too_much_content_causes_bad_checksum(self):
-        self.src.objectstore.data[self.item_path] += "extra"
+        self.src.objectstore.data[self.item_path] += b"extra"
         self.assertRaises(checksum_util.InvalidChecksum,
                           self.target.sync, self.src, self.dlpath)
 
