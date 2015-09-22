@@ -213,6 +213,7 @@ class BasicMirrorWriter(MirrorWriter):
         if config is None:
             config = {}
         self.config = config
+        self.checksumming_reader = self.config.get('checksumming_reader', True)
 
     def load_products(self, path=None, content_id=None):
         super(BasicMirrorWriter, self).load_products(path, content_id)
@@ -239,8 +240,7 @@ class BasicMirrorWriter(MirrorWriter):
 
         self.insert_index(path, src, content)
 
-    def sync_products(self, reader, path=None, src=None, content=None,
-                      checksumming_reader=True):
+    def sync_products(self, reader, path=None, src=None, content=None):
         (src, content) = _get_data_content(path, src, content, reader)
 
         util.expand_tree(src)
@@ -311,7 +311,7 @@ class BasicMirrorWriter(MirrorWriter):
                     ipath = item.get('path', None)
                     ipath_cs = None
                     if ipath and reader:
-                        if checksumming_reader:
+                        if self.checksumming_reader:
                             flat = util.products_exdata(src, pgree)
                             ipath_cs = cs.ChecksummingContentSource(
                                 csrc=reader.source(ipath),
