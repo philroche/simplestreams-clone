@@ -202,7 +202,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             props['os_distro'] = flat['os']
 
         if 'version' in flat:
-            props['os_version'] = flat['os_version']
+            props['os_version'] = flat['version']
 
         fullname = self.name_prefix + name
         create_kwargs = {
