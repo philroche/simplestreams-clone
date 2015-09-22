@@ -5,6 +5,7 @@ from simplestreams.mirrors import (
 from simplestreams.objectstores import MemoryObjectStore
 from simplestreams import util
 from simplestreams import checksum_util
+from simplestreams import mirrors
 
 
 class TestBadDataSources(TestCase):
@@ -39,25 +40,6 @@ class TestBadDataSources(TestCase):
         # verify that the tests are fine on expected pass
         _moditem(self.src, self.dlpath, self.pedigree, lambda c: c)
         self.target.sync(self.src, self.dlpath)
-
-    def test_no_checksums_cause_bad_checksum(self):
-        def del_checksums(item):
-            for c in checksum_util.item_checksums(item).keys():
-                del item[c]
-            return item
-
-        _moditem(self.src, self.dlpath, self.pedigree, del_checksums)
-        self.assertRaises(checksum_util.InvalidChecksum,
-                          self.target.sync, self.src, self.dlpath)
-
-    def test_missing_size_causes_bad_checksum(self):
-        def del_size(item):
-            del item['size']
-            return item
-
-        _moditem(self.src, self.dlpath, self.pedigree, del_size)
-        self.assertRaises(checksum_util.InvalidChecksum,
-                          self.target.sync, self.src, self.dlpath)
 
     def test_larger_size_causes_bad_checksum(self):
         def size_plus_1(item):
@@ -105,6 +87,42 @@ class TestBadDataSources(TestCase):
             ["x" for c in self.src.objectstore.data[self.item_path]])
         self.assertRaises(checksum_util.InvalidChecksum,
                           self.target.sync, self.src, self.dlpath)
+
+    def test_no_checksums_cause_bad_checksum(self):
+        def del_checksums(item):
+            for c in checksum_util.item_checksums(item).keys():
+                del item[c]
+            return item
+
+        _moditem(self.src, self.dlpath, self.pedigree, del_checksums)
+        with _patched_missing_sum("fail"):
+            self.assertRaises(checksum_util.InvalidChecksum,
+                              self.target.sync, self.src, self.dlpath)
+
+    def test_missing_size_causes_bad_checksum(self):
+        def del_size(item):
+            del item['size']
+            return item
+
+        _moditem(self.src, self.dlpath, self.pedigree, del_size)
+        with _patched_missing_sum("fail"):
+            self.assertRaises(checksum_util.InvalidChecksum,
+                            self.target.sync, self.src, self.dlpath)
+
+
+class _patched_missing_sum(object):
+    def __init__(self, mode="fail"):
+        self.mode = mode
+
+    def __enter__(self):
+        self.modmcb = getattr(mirrors, '_missing_cksum_behavior', {})
+        self.orig = self.modmcb.copy()
+        if self.modmcb:
+            self.modmcb['mode'] = self.mode
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.patch = self.orig
 
 
 def _moditem(src, path, pedigree, modfunc):
