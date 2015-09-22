@@ -14,12 +14,12 @@
 #
 #   You should have received a copy of the GNU Affero General Public License
 #   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
+import os
+import sys
 
 import errno
 import io
 import json
-import os
-import sys
 
 import simplestreams.filters as filters
 import simplestreams.util as util
@@ -316,7 +316,6 @@ class BasicMirrorWriter(MirrorWriter):
                     if ipath and reader:
                         if checksumming_reader:
                             flat = util.products_exdata(src, pgree)
-                            #ipath_cs = cs.ChecksummingContentSource(
                             ipath_cs = _maybe_checksumming_cs(
                                 csrc=reader.source(ipath),
                                 size=flat.get('size'),
