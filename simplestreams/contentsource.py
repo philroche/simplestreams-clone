@@ -277,7 +277,7 @@ class ChecksummingContentSource(ContentSource):
         self.checksummer = checksummer
 
     def check(self):
-        return self.checksummer.check()
+        return self.bytes_read == self.size and self.checksummer.check()
 
     def read(self, size=-1):
         buf = self.cs.read(size)
