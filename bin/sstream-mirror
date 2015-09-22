@@ -87,6 +87,10 @@ def main():
     parser.add_argument('--no-verify', '-U', action='store_false',
                         dest='verify', default=True,
                         help="do not gpg check signed json files")
+    parser.add_argument('--no-checksumming-reader', action='store_false',
+                        dest='checksumming_reader', default=True,
+                        help=("do not call 'insert_item' with a reader" 
+                              " that does checksumming."))
 
     parser.add_argument('source_mirror')
     parser.add_argument('output_d')
@@ -108,7 +112,8 @@ def main():
     filter_list = filters.get_filters(args.filters)
     mirror_config = {'max_items': args.max, 'keep_items': args.keep,
                      'filters': filter_list,
-                     'item_download': not args.no_item_download}
+                     'item_download': not args.no_item_download,
+                     'checksumming_reader': args.checksumming_reader}
 
     level = (log.ERROR, log.INFO, log.DEBUG)[min(args.verbose, 2)]
     log.basicConfig(stream=args.log_file, level=level)
