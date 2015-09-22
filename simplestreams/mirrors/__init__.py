@@ -14,9 +14,6 @@
 #
 #   You should have received a copy of the GNU Affero General Public License
 #   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
-import os
-import sys
-
 import errno
 import io
 import json
@@ -316,7 +313,7 @@ class BasicMirrorWriter(MirrorWriter):
                     if ipath and reader:
                         if checksumming_reader:
                             flat = util.products_exdata(src, pgree)
-                            ipath_cs = _maybe_checksumming_cs(
+                            ipath_cs = cs.ChecksummingContentSource(
                                 csrc=reader.source(ipath),
                                 size=flat.get('size'),
                                 checksums=checksum_util.item_checksums(flat))
@@ -567,59 +564,5 @@ def check_tree_paths(tree, fmt=None):
         index = tree.get('index')
         for content_id in index:
             util.assert_safe_path(index[content_id].get('path'))
-
-
-def _maybe_checksumming_cs(csrc, size, checksums):
-    """wraps calls to ChecksummingContentSource consulting environment
-
-    SS_MISSING_ITEM_CHECKSUM_BEHAVIOR=<value>
-
-    values are:
-        silent: behave exactly as before.  No checksumming is done,
-                no warnings are emitted.  The consumer of the
-                contentsource must check checksums.
-        warn:   log messages at WARN level (same as default/unset)
-        fail:   the new behavior. raise an InvalidChecksum exception.
-
-    Note: only legacy versions of this library respect
-    the SS_MISSING_ITEM_CHECKSUM_BEHAVIOR environment variable.
-    All other versions require checksums and size on items."""
-
-    def handle_exception(e, cs):
-        mode = _missing_cksum_behavior['mode']
-        if (not _missing_cksum_behavior['messaged'] and
-                mode not in ('silent', 'fail')):
-            sys.stderr.write(
-                "WARNING: consider setting environment variable "
-                "'SS_MISSING_ITEM_CHECKSUM_BEHAVIOR' to "
-                "'silent', 'warn', or 'fail'.  See "
-                "https://bugs.launchpad.net/bugs/1487004 for more info.")
-            _missing_cksum_behavior['messaged'] = True
-
-        if mode == 'silent':
-            return cs
-        elif mode in ("warn", "unset"):
-            LOG.warn(e)
-            return cs
-        else:
-            raise e
-
-    try:
-        return cs.ChecksummingContentSource(
-            csrc=csrc, size=size, checksums=checksums)
-    except ValueError as e:
-        return handle_exception(e, csrc)
-
-
-_missing_cksum_behavior = {
-    'mode': os.environ.get("SS_MISSING_ITEM_CHECKSUM_BEHAVIOR", "unset"),
-    'messaged': False,
-}
-if _missing_cksum_behavior['mode'] not in ("warn", "fail", "silent", "unset"):
-    raise ValueError(
-        "SS_MISSING_ITEM_CHECKSUM_BEHAVIOR (%s) must be one of:"
-        "'warn', 'fail', 'silent', 'unset'." %
-        _missing_cksum_behavior['mode'])
-
 
 # vi: ts=4 expandtab
