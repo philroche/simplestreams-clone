@@ -89,7 +89,7 @@ def main():
                         help="do not gpg check signed json files")
     parser.add_argument('--no-checksumming-reader', action='store_false',
                         dest='checksumming_reader', default=True,
-                        help=("do not call 'insert_item' with a reader" 
+                        help=("do not call 'insert_item' with a reader"
                               " that does checksumming."))
 
     parser.add_argument('source_mirror')
