@@ -107,10 +107,13 @@ class TestBadDataSources(TestCase):
         _moditem(self.src, self.dlpath, self.pedigree, del_size)
         with _patched_missing_sum("fail"):
             self.assertRaises(checksum_util.InvalidChecksum,
-                            self.target.sync, self.src, self.dlpath)
+                              self.target.sync, self.src, self.dlpath)
 
 
 class _patched_missing_sum(object):
+    """This patches the legacy mode for missing checksum info so
+    that it behaves like the new code path.  Thus we can make
+    the test run correctly"""
     def __init__(self, mode="fail"):
         self.mode = mode
 
