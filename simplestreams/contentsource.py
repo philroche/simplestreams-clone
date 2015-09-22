@@ -249,7 +249,8 @@ class ChecksummingContentSource(ContentSource):
         try:
             self.size = int(size)
         except TypeError:
-            raise ValueError("invalid size '%s' at '%s'" % (csrc.url, size))
+            self.size = size
+            raise checksum_util.invalid_checksum_for_reader(self)
 
     def resume(self, offset, checksummer):
         self.cs.set_start_pos(offset)

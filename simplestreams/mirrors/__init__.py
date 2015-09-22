@@ -252,7 +252,8 @@ class BasicMirrorWriter(MirrorWriter):
 
         self.insert_index(path, src, content)
 
-    def sync_products(self, reader, path=None, src=None, content=None):
+    def sync_products(self, reader, path=None, src=None, content=None,
+                      checksumming_reader=True):
         (src, content) = _get_data_content(path, src, content, reader)
 
         util.expand_tree(src)
@@ -323,10 +324,15 @@ class BasicMirrorWriter(MirrorWriter):
                     ipath = item.get('path', None)
                     ipath_cs = None
                     if ipath and reader:
-                        flat = util.products_exdata(src, pgree)
-                        ipath_cs = _maybe_checksumming_cs(
-                            csrc=reader.source(ipath), size=flat.get('size'),
-                            checksums=checksum_util.item_checksums(flat))
+                        if checksumming_reader:
+                            flat = util.products_exdata(src, pgree)
+                            #ipath_cs = _maybe_checksumming_cs(
+                            ipath_cs = cs.ChecksummingContentSource(
+                                csrc=reader.source(ipath),
+                                size=flat.get('size'),
+                                checksums=checksum_util.item_checksums(flat))
+                        else:
+                            ipath_cs = reader.source(ipath)
 
                     self.insert_item(item, src, target, pgree, ipath_cs)
 
@@ -600,10 +606,12 @@ def _maybe_checksumming_cs(csrc, size, checksums):
                 "https://bugs.launchpad.net/bugs/1487004 for more info.")
             _missing_cksum_behavior['messaged'] = True
 
-        if mode == 'silent':
+        print("got error: %s" % e)
+        if mode != 'silent':
             return cs
         elif mode in ("warn", "unset"):
             LOG.warn(e)
+            return cs
         else:
             raise e
 
@@ -611,7 +619,7 @@ def _maybe_checksumming_cs(csrc, size, checksums):
         return cs.ChecksummingContentSource(
             csrc=csrc, size=size, checksums=checksums)
     except ValueError as e:
-        return handle_exception(cs, e)
+        return handle_exception(e, csrc)
 
 
 # vi: ts=4 expandtab

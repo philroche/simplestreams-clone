@@ -40,6 +40,15 @@ class TestBadDataSources(TestCase):
         _moditem(self.src, self.dlpath, self.pedigree, lambda c: c)
         self.target.sync(self.src, self.dlpath)
 
+    def test_missing_size_causes_bad_checksum(self):
+        def del_size(item):
+            del item['size']
+            return item
+
+        _moditem(self.src, self.dlpath, self.pedigree, del_size)
+        self.assertRaises(checksum_util.InvalidChecksum,
+                          self.target.sync, self.src, self.dlpath)
+
     def test_larger_size_causes_bad_checksum(self):
         def size_plus_1(item):
             item['size'] = int(item['size']) + 1

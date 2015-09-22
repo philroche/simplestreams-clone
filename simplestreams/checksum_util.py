@@ -87,16 +87,20 @@ class InvalidChecksum(ValueError):
         self.expected_size = expected_size
 
     def __str__(self):
-        ret = ("Invalid %s Checksum at %s. Found %s. Expected %s. "
-               "read %s bytes expected %s bytes." %
-               (self.cksum.algorithm, self.path,
-                self.cksum.hexdigest(), self.cksum.expected,
-                self.size, self.expected_size))
-        if self.size:
-            ret += " (size %s expected %s)" % (self.size, self.expected_size)
-        return ret
+        if not isinstance(self.expected_size, int):
+            msg = "Invalid size '%s' at %s." % (self.expected_size, self.path)
+        else:
+            msg = ("Invalid %s Checksum at %s. Found %s. Expected %s. "
+                   "read %s bytes expected %s bytes." %
+                   (self.cksum.algorithm, self.path,
+                    self.cksum.hexdigest(), self.cksum.expected,
+                    self.size, self.expected_size))
+            if self.size:
+                msg += (" (size %s expected %s)" %
+                        (self.size, self.expected_size))
+        return msg
 
 
 def invalid_checksum_for_reader(reader):
     return InvalidChecksum(path=reader.url, cksum=reader.checksummer,
-                           size=reader.size, expected_size=reader.bytes_read)
+                           size=reader.bytes_read, expected_size=reader.size)
