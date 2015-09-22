@@ -1,0 +1,28 @@
+{
+ "datatype": "image-downloads", 
+ "format": "products:1.0",
+ "updated": "Tue, 15 Sep 2015 16:15:24 -0400",
+ "content_id": "com.example:download",
+ "products": {
+  "com.example:product1": {
+   "versions": {
+    "20150915": {
+     "items": {
+      "item1": {
+       "ftype": "text",
+       "path": "product1/20150915/text.txt",
+       "sha256": "f4797060c79363d37129656e5069e817cfd144ba9a1db0a392eeba0c534316dd", 
+       "size": 38
+      },
+      "item2": {
+       "ftype": "root.img",
+       "path": "product1/20150915/root.img",
+       "sha256": "0e2f431f4e4063483708ce24448af8586e115c984e483d60bdb532194536ece4", 
+       "size": 38
+      }
+     }
+    }
+   }
+  }
+ }
+}

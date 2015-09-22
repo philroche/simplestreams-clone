@@ -16,7 +16,6 @@
 #   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
 
 import errno
-import hashlib
 import os
 import re
 import subprocess
@@ -25,12 +24,8 @@ import time
 import json
 
 import simplestreams.contentsource as cs
+import simplestreams.checksum_util as checksum_util
 from simplestreams.log import LOG
-
-try:
-    ALGORITHMS = list(getattr(hashlib, 'algorithms'))
-except AttributeError:
-    ALGORITHMS = list(hashlib.algorithms_available)
 
 ALIASNAME = "_aliases"
 
@@ -39,7 +34,6 @@ PGP_SIGNATURE_HEADER = "-----BEGIN PGP SIGNATURE-----"
 PGP_SIGNATURE_FOOTER = "-----END PGP SIGNATURE-----"
 
 _UNSET = object()
-CHECKSUMS = ("md5", "sha256", "sha512")
 
 READ_SIZE = (1024 * 10)
 
@@ -315,44 +309,6 @@ def timestamp(ts=None):
     return time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime(ts))
 
 
-def item_checksums(item):
-    return {k: item[k] for k in CHECKSUMS if k in item}
-
-
-class checksummer(object):
-    _hasher = None
-    algorithm = None
-    expected = None
-
-    def __init__(self, checksums):
-        # expects a dict of hashname/value
-        if not checksums:
-            self._hasher = None
-            return
-        for meth in CHECKSUMS:
-            if meth in checksums and meth in ALGORITHMS:
-                self._hasher = hashlib.new(meth)
-                self.algorithm = meth
-
-        self.expected = checksums.get(self.algorithm, None)
-
-        if not self._hasher:
-            raise TypeError("Unable to find suitable hash algorithm")
-
-    def update(self, data):
-        if self._hasher is None:
-            return
-        self._hasher.update(data)
-
-    def hexdigest(self):
-        if self._hasher is None:
-            return None
-        return self._hasher.hexdigest()
-
-    def check(self):
-        return (self.expected is None or self.expected == self.hexdigest())
-
-
 def move_dups(src, target, sticky=None):
     # given src = {e1: {a:a, b:c}, e2: {a:a, b:d, e:f}}
     # update target with {a:a}, and delete 'a' from entries in dict1
@@ -603,5 +559,12 @@ class ProgressAggregator(object):
 
     def emit(self, progress):
         raise NotImplementedError()
+
+
+# these are legacy
+CHECKSUMS = checksum_util.CHECKSUMS
+item_checksums = checksum_util.item_checksums
+ALGORITHMS = checksum_util.ALGORITHMS
+
 
 # vi: ts=4 expandtab

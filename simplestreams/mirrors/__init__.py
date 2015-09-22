@@ -14,13 +14,13 @@
 #
 #   You should have received a copy of the GNU Affero General Public License
 #   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
-
 import errno
 import io
 import json
 
 import simplestreams.filters as filters
 import simplestreams.util as util
+from simplestreams import checksum_util
 import simplestreams.contentsource as cs
 from simplestreams.log import LOG
 
@@ -213,6 +213,7 @@ class BasicMirrorWriter(MirrorWriter):
         if config is None:
             config = {}
         self.config = config
+        self.checksumming_reader = self.config.get('checksumming_reader', True)
 
     def load_products(self, path=None, content_id=None):
         super(BasicMirrorWriter, self).load_products(path, content_id)
@@ -309,8 +310,16 @@ class BasicMirrorWriter(MirrorWriter):
 
                     ipath = item.get('path', None)
                     ipath_cs = None
-                    if ipath:
-                        ipath_cs = reader.source(ipath) if reader else None
+                    if ipath and reader:
+                        if self.checksumming_reader:
+                            flat = util.products_exdata(src, pgree)
+                            ipath_cs = cs.ChecksummingContentSource(
+                                csrc=reader.source(ipath),
+                                size=flat.get('size'),
+                                checksums=checksum_util.item_checksums(flat))
+                        else:
+                            ipath_cs = reader.source(ipath)
+
                     self.insert_item(item, src, target, pgree, ipath_cs)
 
                 if len(added_items):
@@ -448,8 +457,8 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
             return
         LOG.debug("inserting %s to %s", contentsource.url, data['path'])
         self.store.insert(data['path'], contentsource,
-                          checksums=util.item_checksums(data), mutable=False,
-                          size=data.get('size'))
+                          checksums=checksum_util.item_checksums(data),
+                          mutable=False, size=data.get('size'))
         self._inc_rc(data['path'], src, pedigree)
 
     def insert_index_entry(self, data, src, pedigree, contentsource):
@@ -457,7 +466,7 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
         if not epath:
             return
         self.store.insert(epath, contentsource,
-                          checksums=util.item_checksums(data))
+                          checksums=checksum_util.item_checksums(data))
 
     def insert_products(self, path, target, content):
         dpath = self.products_data_path(target['content_id'])
@@ -555,6 +564,5 @@ def check_tree_paths(tree, fmt=None):
         index = tree.get('index')
         for content_id in index:
             util.assert_safe_path(index[content_id].get('path'))
-
 
 # vi: ts=4 expandtab
