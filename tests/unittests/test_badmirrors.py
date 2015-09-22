@@ -40,6 +40,16 @@ class TestBadDataSources(TestCase):
         _moditem(self.src, self.dlpath, self.pedigree, lambda c: c)
         self.target.sync(self.src, self.dlpath)
 
+    def test_no_checksums_cause_bad_checksum(self):
+        def del_checksums(item):
+            for c in checksum_util.item_checksums(item).keys():
+                del item[c]
+            return item
+
+        _moditem(self.src, self.dlpath, self.pedigree, del_checksums)
+        self.assertRaises(checksum_util.InvalidChecksum,
+                          self.target.sync, self.src, self.dlpath)
+
     def test_missing_size_causes_bad_checksum(self):
         def del_size(item):
             del item['size']

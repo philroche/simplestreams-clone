@@ -80,13 +80,16 @@ class SafeCheckSummer(checksummer):
 
 
 class InvalidChecksum(ValueError):
-    def __init__(self, path, cksum, size=None, expected_size=None):
+    def __init__(self, path, cksum, size=None, expected_size=None, msg=None):
         self.path = path
         self.cksum = cksum
         self.size = size
         self.expected_size = expected_size
+        self.msg = msg
 
     def __str__(self):
+        if self.msg is not None:
+            return self.msg
         if not isinstance(self.expected_size, int):
             msg = "Invalid size '%s' at %s." % (self.expected_size, self.path)
         else:
@@ -101,6 +104,7 @@ class InvalidChecksum(ValueError):
         return msg
 
 
-def invalid_checksum_for_reader(reader):
+def invalid_checksum_for_reader(reader, msg=None):
     return InvalidChecksum(path=reader.url, cksum=reader.checksummer,
-                           size=reader.bytes_read, expected_size=reader.size)
+                           size=reader.bytes_read, expected_size=reader.size,
+                           msg=msg)
