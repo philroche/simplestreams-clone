@@ -565,6 +565,7 @@ class ProgressAggregator(object):
 CHECKSUMS = checksum_util.CHECKSUMS
 item_checksums = checksum_util.item_checksums
 ALGORITHMS = checksum_util.ALGORITHMS
+checksummer = checksum_util.checksummer
 
 
 # vi: ts=4 expandtab
