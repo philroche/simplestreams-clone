@@ -32,6 +32,8 @@ def tab2items(content):
     #    (content_id, product_name, version_name, item_name, {data})
     items = []
     for line in content.splitlines():
+        if line.startswith("#"):
+            continue
         fields = line.split('\t')
         content_id, prodname, vername, itemname = fields[0:4]
 
