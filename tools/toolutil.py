@@ -47,9 +47,9 @@ def is_expected(repl, fields):
             return False
 
     if repl == "-uefi1.img":
-        # uefi images were released with trusty and for amd64 right now
-        if arch != "amd64":
+        if arch not in ["amd64", "arm64"]:
             return False
+        # uefi images were released with trusty
         if rel < "trusty":
             return False
 
