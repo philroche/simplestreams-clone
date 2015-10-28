@@ -20,6 +20,7 @@ import argparse
 import json
 import os
 import sys
+from simplestreams import generate_simplestreams
 from simplestreams import util
 
 import toolutil
@@ -51,34 +52,6 @@ def tab2items(content):
     return items
 
 
-def items2content_trees(itemslist, exdata):
-    # input is a list with each item having:
-    #   (content_id, product_name, version_name, item_name, {data})
-    ctrees = {}
-    for (content_id, prodname, vername, itemname, data) in itemslist:
-        if content_id not in ctrees:
-            ctrees[content_id] = {'content_id': content_id,
-                                  'format': 'products:1.0', 'products': {}}
-            ctrees[content_id].update(exdata)
-
-        ctree = ctrees[content_id]
-        if prodname not in ctree['products']:
-            ctree['products'][prodname] = {'versions': {}}
-
-        prodtree = ctree['products'][prodname]
-        if vername not in prodtree['versions']:
-            prodtree['versions'][vername] = {'items': {}}
-
-        vertree = prodtree['versions'][vername]
-
-        if itemname in vertree['items']:
-            raise ValueError("%s: already existed" %
-                             str([content_id, prodname, vername, itemname]))
-
-        vertree['items'][itemname] = data
-    return ctrees
-
-
 def main():
     parser = argparse.ArgumentParser(
         description="create content tree from tab data")
@@ -103,37 +76,13 @@ def main():
     streamdir = "streams/v1"
 
     items = tab2items(tabinput)
-    data = {'updated': util.timestamp(), 'datatype': 'image-downloads'}
-    trees = items2content_trees(items, data)
-
-    index = {"index": {}, 'format': 'index:1.0',
-             'updated': data['updated']}
-
-    to_write = [("%s/%s" % (streamdir, 'index.json'), index,)]
-
-    not_copied_up = ['content_id']
-    for content_id in trees:
-        util.products_condense(trees[content_id],
-                               sticky=['path', 'sha256', 'md5', 'size'])
-        content = trees[content_id]
-        index['index'][content_id] = { 
-            'path': "%s/%s.json" % (streamdir, content_id),
-            'products': list(content['products'].keys()),
-        }
-        for k in util.stringitems(content):
-            if k not in not_copied_up:
-                index['index'][content_id][k] = content[k]
-
-        to_write.append((index['index'][content_id]['path'], content,))
-
-    for (outfile, data) in to_write:
-        filef = os.path.join(args.out_d, outfile)
-        util.mkdir_p(os.path.dirname(filef))
-        with open(filef, "w") as fp:
-            sys.stderr.write("writing %s\n" % filef)
-            fp.write(json.dumps(data, indent=1) + "\n")
-
-        if args.sign:
+    updated = util.timestamp()
+    data = {'updated': updated, 'datatype': 'image-downloads'}
+    trees = generate_simplestreams.items2content_trees(items, data)
+    out_filenames = generate_simplestreams.write_streams(args.out_d, trees,
+                                                         updated)
+    if args.sign:
+        for outf in out_filenames:
             sys.stderr.write("signing %s\n" % filef)
             toolutil.signjson_file(filef)
 
