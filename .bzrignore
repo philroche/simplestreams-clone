@@ -4,3 +4,4 @@ exdata
 exdata-query
 examples/**/*.sjson
 examples/**/*.gpg
+__pycache__
