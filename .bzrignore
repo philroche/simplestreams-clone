@@ -5,3 +5,10 @@ exdata-query
 examples/**/*.sjson
 examples/**/*.gpg
 __pycache__
+./lib
+./include
+./local
+bin/activate*
+bin/easy_install*
+bin/pip*
+bin/python*
