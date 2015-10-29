@@ -403,7 +403,7 @@ def new_ubuntu_product_dict(release, arch):
         "version": reldata['version'],
         "versions": {},
     }
-    for maybe in ('supported',):
+    for maybe in ('supported', 'support_eol'):
         if maybe in reldata:
             ret[maybe] = reldata[maybe]
     return ret
