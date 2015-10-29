@@ -43,6 +43,7 @@ PRODUCTS_TREE_DATA = (
     ("items", "item_name"),
 )
 PRODUCTS_TREE_HIERARCHY = [_k[0] for _k in PRODUCTS_TREE_DATA]
+_HAS_GPGV = None
 
 
 class SignatureMissingException(Exception):
@@ -249,22 +250,42 @@ def policy_read_signed(content, path, keyring=None):
     return read_signed(content=content, keyring=keyring)
 
 
+def has_gpgv():
+    global _HAS_GPGV
+    if _HAS_GPGV is not None:
+        return _HAS_GPGV
+
+    if which('gpgv'):
+        try:
+            env = os.environ.copy()
+            env['LANG'] = 'C'
+            out, err = subp(["gpgv", "--help"], capture=True, env=env)
+            _HAS_GPGV = 'gnupg' in out.lower() or 'gnupg' in err.lower()
+        except subprocess.CalledProcessError:
+            _HAS_GPGV = False
+    else:
+        _HAS_GPGV = False
+    return _HAS_GPGV
+
+
 def read_signed(content, keyring=None, checked=True):
     # ensure that content is signed by a key in keyring.
     # if no keyring given use default.
     if content.startswith(PGP_SIGNED_MESSAGE_HEADER):
-        if checked:
+        if checked and keyring and has_gpgv():
+            cmd = ["gpgv", "--keyring=%s" % keyring, "-"]
+        elif checked:
             # http://rfc-ref.org/RFC-TEXTS/2440/chapter7.html
             cmd = ["gpg", "--batch", "--verify"]
             if keyring:
                 cmd.append("--keyring=%s" % keyring)
             cmd.append("-")
-            try:
-                subp(cmd, data=content)
-            except subprocess.CalledProcessError as e:
-                LOG.debug("failed: %s\n out=%s\n err=%s" %
-                          (' '.join(cmd), e.output[0], e.output[1]))
-                raise e
+        try:
+            subp(cmd, data=content)
+        except subprocess.CalledProcessError as e:
+            LOG.debug("failed: %s\n out=%s\n err=%s" %
+                      (' '.join(cmd), e.output[0], e.output[1]))
+            raise e
 
         ret = {'body': '', 'signature': '', 'garbage': ''}
         lines = content.splitlines()
@@ -495,6 +516,25 @@ def rm_f_file(fname, skip=None):
     except OSError as exc:
         if exc.errno != errno.ENOENT:
             raise
+
+
+def which(program):
+    # Return path of program for execution if found in path
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    _fpath, _ = os.path.split(program)
+    if _fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ.get("PATH", "").split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
 
 
 def sign_file(fname, inline=True, outfile=None):
