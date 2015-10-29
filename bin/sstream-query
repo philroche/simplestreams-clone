@@ -23,11 +23,13 @@ from simplestreams import util
 
 import argparse
 import errno
+import json
 import pprint
 import signal
 import sys
 
 FORMAT_PRETTY = "PRETTY"
+FORMAT_JSON = "JSON"
 
 
 def warn(msg):
@@ -45,6 +47,7 @@ class FilterMirror(mirrors.BasicMirrorWriter):
         if not outfmt:
             outfmt = "%s"
         self.output_format = outfmt
+        self.json_entries = []
 
     def load_products(self, path=None, content_id=None):
         return {'content_id': content_id, 'products': {}}
@@ -62,6 +65,8 @@ class FilterMirror(mirrors.BasicMirrorWriter):
 
         if self.output_format == FORMAT_PRETTY:
             pprint.pprint(data)
+        elif self.output_format == FORMAT_JSON:
+            self.json_entries.append(data)
         else:
             try:
                 print(self.output_format % (data))
@@ -86,6 +91,9 @@ def main():
     fmt_group.add_argument('--pretty', action='store_const',
                            const=FORMAT_PRETTY, dest='output_format',
                            help="pretty print output")
+    fmt_group.add_argument('--json', action='store_const',
+                           const=FORMAT_JSON, dest='output_format',
+                           help="output in JSON as a list of dicts.")
     parser.add_argument('--verbose', '-v', action='count', default=0)
     parser.add_argument('--log-file', default=sys.stderr,
                         type=argparse.FileType('w'))
@@ -127,6 +135,9 @@ def main():
     tmirror = FilterMirror(config=cfg)
     try:
         tmirror.sync(smirror, path)
+        if tmirror.output_format == FORMAT_JSON:
+            print(json.dumps(tmirror.json_entries, indent=2, sort_keys=True,
+                             separators=(',', ': ')))
     except IOError as e:
         if e.errno == errno.EPIPE:
             sys.exit(0x80 | signal.SIGPIPE)
