@@ -436,13 +436,12 @@ class ObjectStoreMirrorWriter(BasicMirrorWriter):
                     raise
 
         if path:
-            try:
-                with self.source(path) as source:
-                    return util.load_content(source.read())
-            except IOError as e:
-                if e.errno != errno.ENOENT:
-                    raise
-                return {}
+            # we possibly have 'path' that we could read.
+            # but returning that would indicate we have inserted all items
+            # rather than just the list of items that were mirrored.
+            # this is because the .data/ entry was missing.
+            # thus, just return empty.
+            return {}
 
         raise TypeError("unable to load_products with no path")
 
