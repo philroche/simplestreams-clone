@@ -128,14 +128,14 @@ def main():
 
     def print_diff(char, items):
         for pedigree, path, size in items:
-            fmt = "{char} {pedigree} {path} {size} Mb"
+            fmt = "{char} {pedigree} {path} {size} Mb\n"
             size = int(size / (1024 * 1024))
-            print(fmt.format(
+            sys.stderr.write(fmt.format(
                 char=char, pedigree=' '.join(pedigree), path=path, size=size))
 
     print_diff('+', drmirror.downloading)
     print_diff('-', drmirror.removing)
-    print("%d Mb change" % (drmirror.size / (1024 * 1024)))
+    sys.stderr.write("%d Mb change\n" % (drmirror.size / (1024 * 1024)))
 
     if args.dry_run:
         return True
