@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 import json
 import os
 from io import StringIO
@@ -120,7 +121,10 @@ class TestWriteReleaseIndex(TestCase):
 
 class TestFilenamesToStreams(TestCase):
 
-    def test_filenames_to_streams(self):
+    updated = 'updated'
+
+    @contextmanager
+    def filenames_to_streams_cxt(self):
         item = {
             'content_id': 'foo:1',
             'product_name': 'bar',
@@ -132,7 +136,6 @@ class TestFilenamesToStreams(TestCase):
         item2.update({
             'size': '42',
             'item_name': 'quxx'})
-        updated = 'updated'
         file_a = NamedTemporaryFile()
         file_b = NamedTemporaryFile()
         with temp_dir() as out_d, file_a, file_b:
@@ -140,15 +143,36 @@ class TestFilenamesToStreams(TestCase):
             json_dump([item2], file_b.name)
             stream_dir = os.path.join(out_d, 'streams/v1')
             with patch('sys.stderr', StringIO()):
-                filenames_to_streams([file_a.name, file_b.name], updated,
-                                     out_d)
+                yield item, item2, file_a, file_b, out_d, stream_dir
+
+    def test_filenames_to_streams(self):
+        with self.filenames_to_streams_cxt() as (item, item2, file_a, file_b,
+                                                 out_d, stream_dir):
+            filenames_to_streams([file_a.name, file_b.name], self.updated,
+                                 out_d)
+            content = load_stream_dir(stream_dir)
+        self.assertEqual(
+            sorted(content.keys()),
+            sorted(['index.json', 'foo:1.json']))
+        items = [dict_to_item(item), dict_to_item(item2)]
+        trees = items2content_trees(items, {
+            'updated': self.updated, 'datatype': 'content-download'})
+        expected = generate_index(trees, 'updated', FileNamer)
+        self.assertEqual(expected, content['index.json'])
+        self.assertEqual(trees['foo:1'], content['foo:1.json'])
+
+    def test_filenames_to_streams_juju_format(self):
+        with self.filenames_to_streams_cxt() as (item, item2, file_a, file_b,
+                                                 out_d, stream_dir):
+            filenames_to_streams([file_a.name, file_b.name], self.updated,
+                                 out_d, juju_format=True)
             content = load_stream_dir(stream_dir)
         self.assertEqual(
             sorted(content.keys()),
             sorted(['index.json', 'index2.json', 'foo-1.json']))
         items = [dict_to_item(item), dict_to_item(item2)]
         trees = items2content_trees(items, {
-            'updated': updated, 'datatype': 'content-download'})
+            'updated': self.updated, 'datatype': 'content-download'})
         expected = generate_index(trees, 'updated', JujuFileNamer)
         self.assertEqual(expected, content['index2.json'])
         index_expected = generate_index({}, 'updated', FileNamer)

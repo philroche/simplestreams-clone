@@ -57,7 +57,7 @@ def write_release_index(out_d):
     return out_path
 
 
-def filenames_to_streams(filenames, updated, out_d):
+def filenames_to_streams(filenames, updated, out_d, juju_format=False):
     """Convert a list of filenames into simplestreams.
 
     File contents must be json simplestream stanzas.
@@ -70,8 +70,17 @@ def filenames_to_streams(filenames, updated, out_d):
 
     data = {'updated': updated, 'datatype': 'content-download'}
     trees = items2content_trees(items, data)
+    if juju_format:
+        write = write_juju_streams
+    else:
+        write = write_streams
+    return write(out_d, trees, updated)
+
+
+def write_juju_streams(out_d, trees, updated):
     out_filenames = write_streams(out_d, trees, updated, JujuFileNamer)
     out_filenames.append(write_release_index(out_d))
+    return out_filenames
 
 
 def parse_args(argv=None):
