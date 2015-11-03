@@ -1,27 +1,29 @@
 import json
 import os
-from StringIO import StringIO
+from io import StringIO
 from tempfile import NamedTemporaryFile
 from unittest import TestCase
 
 from mock import patch
 
-from generate_simplestreams import (
+from simplestreams.generate_simplestreams import (
     FileNamer,
     generate_index,
     Item,
     items2content_trees,
     json_dump as json_dump_verbose,
     )
-from stanzas_to_streams import (
+from simplestreams.stanzas_to_streams import (
     dict_to_item,
     filenames_to_streams,
     JujuFileNamer,
     read_items_file,
     write_release_index,
     )
-from test_generate_simplestreams import load_stream_dir
-from utils import temp_dir
+from tests.unittests.test_generate_simplestreams import (
+    load_stream_dir,
+    temp_dir,
+    )
 
 
 class TestJujuFileNamer(TestCase):
@@ -141,8 +143,9 @@ class TestFilenamesToStreams(TestCase):
                 filenames_to_streams([file_a.name, file_b.name], updated,
                                      out_d)
             content = load_stream_dir(stream_dir)
-        self.assertItemsEqual(content.keys(), ['index.json', 'index2.json',
-                                               'foo-1.json'])
+        self.assertEqual(
+            sorted(content.keys()),
+            sorted(['index.json', 'index2.json', 'foo-1.json']))
         items = [dict_to_item(item), dict_to_item(item2)]
         trees = items2content_trees(items, {
             'updated': updated, 'datatype': 'content-download'})

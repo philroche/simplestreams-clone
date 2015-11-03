@@ -8,7 +8,7 @@ import sys
 
 from simplestreams import util
 
-from generate_simplestreams import (
+from simplestreams.generate_simplestreams import (
     FileNamer,
     Item,
     items2content_trees,
