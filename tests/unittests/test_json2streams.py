@@ -13,7 +13,7 @@ from simplestreams.generate_simplestreams import (
     items2content_trees,
     json_dump as json_dump_verbose,
     )
-from simplestreams.stanzas_to_streams import (
+from simplestreams.json2streams import (
     dict_to_item,
     filenames_to_streams,
     JujuFileNamer,
