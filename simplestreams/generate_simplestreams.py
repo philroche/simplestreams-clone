@@ -14,6 +14,7 @@
 #   License for more details.
 #
 from collections import namedtuple
+from copy import deepcopy
 import json
 import os
 import sys
@@ -85,6 +86,8 @@ def write_streams(out_d, trees, updated, namer=None):
         namer = FileNamer
     index = generate_index(trees, updated, namer)
     to_write = [(namer.get_index_path(), index,)]
+    # Don't let products_condense modify the input
+    trees = deepcopy(trees)
     for content_id in trees:
         util.products_condense(trees[content_id],
                                sticky=['path', 'sha256', 'md5', 'size'])
