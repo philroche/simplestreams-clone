@@ -91,13 +91,17 @@ def parse_args(argv=None):
     parser.add_argument(
         'out_d', metavar='output-dir',
         help='The directory to write stream files to.')
+    parser.add_argument(
+        '--juju-format', action='store_true',
+        help='Write stream files in juju format.')
     return parser.parse_args(argv)
 
 
 def main():
     args = parse_args()
     updated = util.timestamp()
-    filenames_to_streams(args.items_file, updated, args.out_d)
+    filenames_to_streams(args.items_file, updated, args.out_d,
+                         args.juju_format)
 
 
 if __name__ == '__main__':

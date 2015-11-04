@@ -1,3 +1,4 @@
+from argparse import Namespace
 from contextlib import contextmanager
 import json
 import os
@@ -18,6 +19,7 @@ from simplestreams.json2streams import (
     dict_to_item,
     filenames_to_streams,
     JujuFileNamer,
+    parse_args,
     read_items_file,
     write_release_index,
     )
@@ -178,3 +180,22 @@ class TestFilenamesToStreams(TestCase):
         index_expected = generate_index({}, 'updated', FileNamer)
         self.assertEqual(index_expected, content['index.json'])
         self.assertEqual(trees['foo:1'], content['foo-1.json'])
+
+
+class TestParseArgs(TestCase):
+
+    def test_defaults(self):
+        args = parse_args(['file1', 'outdir'])
+        self.assertEqual(
+            Namespace(items_file=['file1'], out_d='outdir', juju_format=False),
+            args)
+
+    def test_multiple_files(self):
+        args = parse_args(['file1', 'file2', 'file3', 'outdir'])
+        self.assertEqual(
+            ['file1', 'file2', 'file3'], args.items_file)
+        self.assertEqual('outdir', args.out_d)
+
+    def test_juju_format(self):
+        args = parse_args(['file1', 'outdir', '--juju-format'])
+        self.assertIs(True, args.juju_format)
