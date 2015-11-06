@@ -29,9 +29,23 @@ BUILDS = ("server")
 NUM_DAILIES = 4
 
 
-def is_expected(repl, fields):
+def is_expected(suffix, fields):
+    """return boolean indicating if 'suffix' is expected for data in fields
+
+       suffix is the part of the name that varies for a cloud image file
+          given files like:
+             ubuntu-15.10-server-cloudimg-i386.tar.gz
+             wily-server-cloudimg-i386-root.tar.xz
+          The common part is wily-server-cloudimg-i386.
+          The suffix is the part after that.
+            .tar.gz, -root.tar.gz, -disk1.img, -uefi1.img,
+            .manifest, .ova, -root.tar.xz, -lxd.tar.xz ...
+
+       fields are the fields from /query data. It is a tuple of
+          rel, bname, label, serial, arch, path, pubname"""
+
     rel, bname, label, serial, arch, path, pubname = fields
-    if repl == "-root.tar.gz":
+    if suffix == "-root.tar.gz":
         if rel in ("lucid", "oneiric"):
             # lucid, oneiric do not have -root.tar.gz
             return False
@@ -39,14 +53,14 @@ def is_expected(repl, fields):
             # precise got -root.tar.gz after alpha2
             return False
 
-    if repl == "-disk1.img":
+    if suffix == "-disk1.img":
         if rel == "lucid":
             return False
         if rel == "oneiric" and serial <= "20110802.2":
             # oneiric got -disk1.img after alpha3
             return False
 
-    if repl == "-uefi1.img":
+    if suffix == "-uefi1.img":
         if arch not in ["amd64", "arm64"]:
             return False
         # uefi images were released with trusty
@@ -56,10 +70,11 @@ def is_expected(repl, fields):
     if arch == "ppc64el":
         if rel < "trusty" or serial <= "20140326":
             return False
-        if repl not in (".tar.gz", "-root.tar.gz", "-disk1.img", ".manifest"):
+        ppc64el_suffs = (".tar.gz", "-root.tar.gz", "-disk1.img", ".manifest")
+        if suffix not in ppc64el_suffs:
             return False
 
-    if repl == ".ova":
+    if suffix == ".ova":
         # OVA images become available after 20150407.4 (vivid beta-3)
         # and only for trusty and later x86
         if rel < "trusty" or serial < "20150407.4":
@@ -67,7 +82,7 @@ def is_expected(repl, fields):
         if arch not in ('i386', 'amd64'):
             return False
 
-    if repl == "-root.tar.xz" or repl == "-lxd.tar.xz":
+    if suffix == "-root.tar.xz" or suffix == "-lxd.tar.xz":
         # -root.tar.xz and -lxd.tar.xz become available after 20150714.3
         if serial < "20150714.4":
             return False
