@@ -87,6 +87,12 @@ def is_expected(suffix, fields):
         if serial < "20150714.4":
             return False
 
+    if suffix == ".tar.gz":
+        # the sparse compressed tarball of an unpartitioned disk image
+        # is not being produced for xenial
+        if rel == "xenial" or rel > "xenial":
+            return False
+
     # if some data in /query is not truely available, fill up this array
     # to skip it. ex: export BROKEN="precise/20121212.1 quantal/20130128.1"
     broken = os.environ.get("BROKEN", "").split(" ")
