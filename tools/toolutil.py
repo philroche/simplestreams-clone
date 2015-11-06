@@ -93,6 +93,11 @@ def load_query_download(path, builds=None, rels=None):
     streams = [f[0:-len(".latest.txt")]
                for f in os.listdir(path) if f.endswith("latest.txt")]
 
+    # releases prior to xenial published /query data referencing
+    # the .tar.gz file.  xenial does not produce that at all,
+    # so /query references another file.
+    expected_qsuff = (".tar.gz", "-lxd.tar.xz", "-root.tar.xz")
+
     results = []
     for stream in streams:
         dl_files = []
@@ -121,12 +126,23 @@ def load_query_download(path, builds=None, rels=None):
             # file.  So we have to make up other entries.
             lines = []
             for oline in olines:
+                ofields = oline.rstrip().split("\t")
+                fpath = ofields[field_path]
+                qsuff = None
+                for candidate in expected_qsuff:
+                    if fpath.endswith(candidate):
+                        qsuff = candidate
+                if qsuff is None:
+                    raise ValueError("%s had unexpected suffix in %s" %
+                                     (dl_file, fpath))
+
                 for repl in suffixes:
-                    fields = oline.rstrip().split("\t")
+                    # copy for editing here.
+                    fields = list(ofields)
                     if not is_expected(repl, fields):
                         continue
 
-                    new_path = fields[field_path].replace(".tar.gz", repl)
+                    new_path = fields[field_path].replace(qsuff, repl)
 
                     fields[field_path] = new_path
                     fields[field_name] += repl
