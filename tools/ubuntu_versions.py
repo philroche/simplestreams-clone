@@ -21,6 +21,8 @@
 
 from simplestreams.log import LOG
 
+# This data is only used if python-distro-info is not available and
+# the user has set environment variable SS_REQUIRE_DISTRO_INFO=0
 __RELEASE_DATA = (
     # version, full codename, lts
     ("8.04", "Hardy Heron", True),
@@ -34,6 +36,7 @@ __RELEASE_DATA = (
     ("14.10", "Utopic Unicorn", False),
     ("15.04", "Vivid Vervet", False),
     ("15.10", "Wily Werewolf", False),
+    ("16.04", "Xenial Xerus", True),
 )
 
 
