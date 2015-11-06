@@ -34,6 +34,7 @@ __RELEASE_DATA = (
     ("14.10", "Utopic Unicorn", False),
     ("15.04", "Vivid Vervet", False),
     ("15.10", "Wily Werewolf", False),
+    ("16.04", "Xenial Xerus", True),
 )
 
 
