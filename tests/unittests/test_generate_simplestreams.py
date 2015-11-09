@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from copy import deepcopy
 import json
 import os
 import shutil
@@ -237,3 +238,33 @@ class TestWriteStreams(TestCase):
                          contents['foo.json'])
         self.assertEqual({'products': {'prodbar': {}}}, contents['bar.json'])
         self.assertEqual({'products': {'prodbaz': {}}}, contents['baz.json'])
+
+    def test_no_input_compaction(self):
+        trees = {
+                'bar': {'products': {'prodbar': {'versions': {'1': {'items': {
+                    'item-1': {'arch': 'amd64'},
+                    'item-2': {'arch': 'amd64'},
+                }}}}}},
+            }
+        trees_copy = deepcopy(trees)
+        with temp_dir() as out_dir, patch('sys.stderr', StringIO()):
+            write_streams(out_dir, trees_copy, self.updated, FakeNamer)
+        self.assertEqual(trees, trees_copy)
+
+    def test_no_output_compaction(self):
+        trees = {
+                'bar': {'products': {'prodbar': {'versions': {'1': {'items': {
+                    'item-1': {'arch': 'amd64'},
+                    'item-2': {'arch': 'amd64'},
+                }}}}}},
+            }
+        with temp_dir() as out_dir, patch('sys.stderr', StringIO()):
+            write_streams(out_dir, trees, self.updated, FakeNamer,
+                          condense=False)
+            with open(os.path.join(out_dir, 'bar.json')) as bar_file:
+                bar = json.load(bar_file)
+        expected = {
+            'products': {'prodbar': {'versions': {'1': {'items': {
+                'item-1': {'arch': 'amd64'},
+                'item-2': {'arch': 'amd64'}, }}}}}}
+        self.assertEqual(bar, expected)

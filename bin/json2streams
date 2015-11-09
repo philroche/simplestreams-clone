@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+#   Copyright (C) 2013, 2015 Canonical Ltd.
+
+import sys
+from simplestreams.json2streams import main
+
+
+if __name__ == '__main__':
+    sys.exit(main())
