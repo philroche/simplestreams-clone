@@ -336,15 +336,10 @@ def move_dups(src, target, sticky=None):
     # if a key exists in target, it will not be copied or deleted.
     if len(src) == 0:
         return
-    if sticky is None:
-        sticky = []
 
-    candidates = None
-    for entry in src:
-        if candidates is None:
-            candidates = set(src[entry].keys()).difference(sticky)
-        else:
-            candidates.intersection_update(src[entry].keys())
+    candidates = set.intersection(*[set(e.keys()) for e in src.values()])
+    if sticky is not None:
+        candidates.difference_update(sticky)
 
     updates = {}
     for entry in list(src.keys()):
