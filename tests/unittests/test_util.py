@@ -174,15 +174,16 @@ class TestProductsCondense(TestCase):
         self.assertEqual(tree, exp)
 
     def test_condense_no_arch(self):
-        tree = {'products': {'P1': {'versions': {'1': {'items': {'thing1': {'arch': 'amd64'},
-                                                                 'thing2': {'arch': 'amd64'}}},
-                                                 '2': {'items': {'thing3': {}}}}}}}
+        tree = {'products': {'P1': {'versions': {
+            '1': {'items': {'thing1': {'arch': 'amd64'},
+                            'thing2': {'arch': 'amd64'}}},
+            '2': {'items': {'thing3': {}}}}}}}
 
-        exp  = {'products': {'P1': {'versions': {'1': {'arch': 'amd64',
-                                                       'items': {'thing1': {},
-                                                                 'thing2': {}}},
-                                                 '2': {'items': {'thing3': {}}}}}}}
-
+        exp = {'products': {'P1': {'versions': {
+            '1': {'arch': 'amd64',
+                  'items': {'thing1': {},
+                            'thing2': {}}},
+            '2': {'items': {'thing3': {}}}}}}}
 
         util.products_condense(tree)
         self.assertEqual(tree, exp)
