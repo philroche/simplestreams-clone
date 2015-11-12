@@ -334,14 +334,12 @@ def move_dups(src, target, sticky=None):
     # given src = {e1: {a:a, b:c}, e2: {a:a, b:d, e:f}}
     # update target with {a:a}, and delete 'a' from entries in dict1
     # if a key exists in target, it will not be copied or deleted.
-    if sticky is None:
-        sticky = []
+    if len(src) == 0:
+        return
 
-    allkeys = set()
-    for entry in src:
-        allkeys.update(list(src[entry].keys()))
-
-    candidates = allkeys.difference(sticky)
+    candidates = set.intersection(*[set(e.keys()) for e in src.values()])
+    if sticky is not None:
+        candidates.difference_update(sticky)
 
     updates = {}
     for entry in list(src.keys()):
