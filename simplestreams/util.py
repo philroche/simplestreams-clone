@@ -280,7 +280,7 @@ def read_signed(content, keyring=None, checked=True):
             if keyring:
                 cmd.append("--keyring=%s" % keyring)
             cmd.append("-")
-        if checked or True:
+        if checked:
             try:
                 subp(cmd, data=content)
             except subprocess.CalledProcessError as e:
