@@ -2,7 +2,10 @@
 from simplestreams import util
 
 from copy import deepcopy
+import os
 from unittest import TestCase
+
+from tests.testutil import EXAMPLES_DIR
 
 
 class TestProductsSet(TestCase):
@@ -137,6 +140,20 @@ class TestProductsPrune(TestCase):
         util.products_prune(tree)
         del otree['products']['P1']['versions']['V1']
         self.assertEqual(tree, otree)
+
+
+class TestReadSigned(TestCase):
+
+    def test_read_signed(self):
+        path = os.path.join(EXAMPLES_DIR, 'foocloud/streams/v1/index.sjson')
+        with open(path) as fileobj:
+            util.read_signed(fileobj.read())
+
+    def test_no_check(self):
+        streams = os.path.join(EXAMPLES_DIR, 'foocloud/streams/v1')
+        path = os.path.join(streams, 'index.sjson')
+        with open(path) as fileobj:
+            util.read_signed(fileobj.read(), checked=False)
 
 
 class TestProductsCondense(TestCase):
