@@ -68,7 +68,7 @@ def canonicalize_disk_format(disk_format):
         return 'root-tar'
     if newformat in ['disk.img', 'disk1.img']:
         return 'qcow2'
-    return newformat
+    return None
 
 
 def hypervisor_type(ftype):
@@ -244,7 +244,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         if 'ftype' in flat:
             create_kwargs['disk_format'] = (
-                canonicalize_disk_format(flat['ftype'])
+                canonicalize_disk_format(flat['ftype']) or 'qcow2'
             )
         else:
             create_kwargs['disk_format'] = 'qcow2'
