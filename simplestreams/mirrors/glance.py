@@ -61,12 +61,23 @@ def canonicalize_arch(arch):
     return newarch
 
 
+LXC_FTYPES = [
+    'root.tar.gz',
+    'root.tar.xz',
+]
+
+QEMU_FTYPES = [
+    'disk.img',
+    'disk1.img',
+]
+
+
 def disk_format(ftype):
     '''Canonicalize disk formats for use in OpenStack'''
     newftype = ftype.lower()
-    if newftype in ['root.tar.gz', 'root.tar.xz']:
+    if newftype in LXC_FTYPES:
         return 'root-tar'
-    if newftype in ['disk.img', 'disk1.img']:
+    if newftype in QEMU_FTYPES:
         return 'qcow2'
     return None
 
@@ -74,9 +85,9 @@ def disk_format(ftype):
 def hypervisor_type(ftype):
     '''Determine hypervisor type based on image format'''
     newftype = ftype.lower()
-    if newftype in ['root.tar.gz', 'root.tar.xz']:
+    if newftype in LXC_FTYPES:
         return 'lxc'
-    if newftype in ['disk.img', 'disk1.img']:
+    if newftype in QEMU_FTYPES:
         return 'qemu'
     return None
 
