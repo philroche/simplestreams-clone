@@ -242,7 +242,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         if 'ftype' in flat:
             create_kwargs['disk_format'] = (
-                canonicalize_disk_format(flat['ftype']
+                canonicalize_disk_format(flat['ftype'])
             )
         else:
             create_kwargs['disk_format'] = 'qcow2'
