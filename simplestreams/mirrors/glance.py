@@ -61,12 +61,12 @@ def canonicalize_arch(arch):
     return newarch
 
 
-def canonicalize_disk_format(disk_format):
+def disk_format(ftype):
     '''Canonicalize disk formats for use in OpenStack'''
-    newformat = disk_format.lower()
-    if newformat in ['root.tar.gz', 'root.tar.xz']:
+    newftype = ftype.lower()
+    if newftype in ['root.tar.gz', 'root.tar.xz']:
         return 'root-tar'
-    if newformat in ['disk.img', 'disk1.img']:
+    if newftype in ['disk.img', 'disk1.img']:
         return 'qcow2'
     return None
 
@@ -244,7 +244,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         if 'ftype' in flat:
             create_kwargs['disk_format'] = (
-                canonicalize_disk_format(flat['ftype']) or 'qcow2'
+                disk_format(flat['ftype']) or 'qcow2'
             )
         else:
             create_kwargs['disk_format'] = 'qcow2'
