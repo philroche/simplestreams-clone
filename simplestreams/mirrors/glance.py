@@ -61,6 +61,24 @@ def canonicalize_arch(arch):
     return newarch
 
 
+def canonicalize_disk_format(disk_format):
+    '''Canonicalize disk formats for use in OpenStack'''
+    newformat = disk_format.lower()
+    if newformat in  ['root.tar.gz', 'root.tar.xz']:
+        return 'root-tar'
+    return newformat
+
+
+def hypervisor_type(ftype):
+    '''Determine hypervisor type based on image format'''
+    newftype = ftype.lower()
+    if ftype in ['root.tar.gz', 'root.tar.xz']:
+        return 'lxc'
+    if ftype in ['qcow2']
+        return 'qemu'
+    return None
+
+
 # glance mirror 'image-downloads' content into glance
 # if provided an object store, it will produce a 'image-ids' mirror
 class GlanceMirror(mirrors.BasicMirrorWriter):
@@ -198,6 +216,11 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             t_item['arch'] = arch
             props['architecture'] = canonicalize_arch(arch)
 
+        if 'ftype' in flat
+            _hypervisor_type = hypervisor_type(flat['ftype'])
+            if _hypervisor_type:
+                props['hypervisor_type'] = _hypervisor_type
+
         if 'os' in flat:
             props['os_distro'] = flat['os']
 
@@ -208,7 +231,6 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         create_kwargs = {
             'name': fullname,
             'properties': props,
-            'disk_format': 'qcow2',
             'container_format': 'bare',
             'is_public': True,
         }
@@ -217,6 +239,13 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         if 'md5' in data:
             create_kwargs['checksum'] = data.get('md5')
+
+        if 'ftype' in flat:
+            create_kwargs['disk_format'] = (
+                canonicalize_disk_format(flat['ftype']
+            )
+        else:
+            create_kwargs['disk_format'] = 'qcow2'
 
         if self.progress_callback:
             def progress_wrapper(written):
