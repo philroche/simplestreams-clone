@@ -66,6 +66,8 @@ def canonicalize_disk_format(disk_format):
     newformat = disk_format.lower()
     if newformat in ['root.tar.gz', 'root.tar.xz']:
         return 'root-tar'
+    if newformat in ['disk.img', 'disk1.img']:
+        return 'qcow2'
     return newformat
 
 
@@ -74,7 +76,7 @@ def hypervisor_type(ftype):
     newftype = ftype.lower()
     if newftype in ['root.tar.gz', 'root.tar.xz']:
         return 'lxc'
-    if newftype in ['qcow2']:
+    if newftype in ['disk.img', 'disk1.img']:
         return 'qemu'
     return None
 
