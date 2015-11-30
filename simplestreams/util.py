@@ -280,12 +280,13 @@ def read_signed(content, keyring=None, checked=True):
             if keyring:
                 cmd.append("--keyring=%s" % keyring)
             cmd.append("-")
-        try:
-            subp(cmd, data=content)
-        except subprocess.CalledProcessError as e:
-            LOG.debug("failed: %s\n out=%s\n err=%s" %
-                      (' '.join(cmd), e.output[0], e.output[1]))
-            raise e
+        if checked:
+            try:
+                subp(cmd, data=content)
+            except subprocess.CalledProcessError as e:
+                LOG.debug("failed: %s\n out=%s\n err=%s" %
+                          (' '.join(cmd), e.output[0], e.output[1]))
+                raise e
 
         ret = {'body': '', 'signature': '', 'garbage': ''}
         lines = content.splitlines()
