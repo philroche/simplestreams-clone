@@ -140,7 +140,7 @@ class UrlContentSource(ContentSource):
     def read(self, size=-1):
         if self.fd is None:
             self.open()
-        if sys.version_info > (3, 0) and size < 0:
+        if size is not None and sys.version_info > (3, 0) and size < 0:
             size = None
 
         return self.fd.read(size)
@@ -162,7 +162,7 @@ class FdContentSource(ContentSource):
         self.url = url
 
     def read(self, size=-1):
-        if sys.version_info > (3, 0) and size < 0:
+        if size is not None and sys.version_info > (3, 0) and size < 0:
             size = None
         return self.fd.read(size)
 
