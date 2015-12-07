@@ -140,9 +140,12 @@ class UrlContentSource(ContentSource):
     def read(self, size=-1):
         if self.fd is None:
             self.open()
-        if size is not None and sys.version_info > (3, 0) and size < 0:
-            size = None
-
+        if sys.version_info > (3, 0):
+            if size is not None and size < 0:
+                size = None
+        else:
+            if size is None:
+                size = -1
         return self.fd.read(size)
 
     def set_start_pos(self, offset):
@@ -162,8 +165,6 @@ class FdContentSource(ContentSource):
         self.url = url
 
     def read(self, size=-1):
-        if size is not None and sys.version_info > (3, 0) and size < 0:
-            size = None
         return self.fd.read(size)
 
     def close(self):
@@ -386,8 +387,6 @@ class RequestsUrlReader(UrlReader):
             self._read = self.read_raw
 
     def read(self, size=-1):
-        if size is not None and size < 0:
-            size = None
         return self._read(size)
 
     def read_compressed(self, size=None):

@@ -33,6 +33,39 @@ class RandomPortServer(object):
         self.process.kill()  # pylint: disable=E1101
 
 
+class TestUrlContentSource(TestCase):
+
+    def setUp(self):
+        self.source = tempfile.mkdtemp()
+        with open(join(self.source, 'foo'), 'wb') as f:
+            f.write(b'hello world\n')
+
+    def tearDown(self):
+        shutil.rmtree(self.source)
+
+    def test_url_read_handles_None(self):
+        with RandomPortServer(self.source) as server:
+            loc = 'http://localhost:%d/foo' % server.port
+            scs = contentsource.UrlContentSource(loc)
+            scs.read(None)
+
+    def test_url_read_handles_negative_size(self):
+        with RandomPortServer(self.source) as server:
+            loc = 'http://localhost:%d/foo' % server.port
+            scs = contentsource.UrlContentSource(loc)
+            scs.read(-1)
+
+    def test_fd_read_handles_None(self):
+        loc = 'file://%s/foo' % self.source
+        scs = contentsource.UrlContentSource(loc)
+        scs.read(None)
+
+    def test_fd_read_handles_negative_size(self):
+        loc = 'file://%s/foo' % self.source
+        scs = contentsource.UrlContentSource(loc)
+        scs.read(-1)
+
+
 class TestResume(TestCase):
     def setUp(self):
         self.target = tempfile.mkdtemp()
