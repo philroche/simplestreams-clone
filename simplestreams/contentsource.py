@@ -24,10 +24,12 @@ from . import checksum_util
 
 if sys.version_info > (3, 0):
     import urllib.parse as urlparse
+    import urllib.request as urllib_request
+    import urllib.error as urllib_error
 else:
     import urlparse
-
-READ_BUFFER_SIZE = 1024 * 10
+    import urllib2 as urllib_request
+    urllib_error = urllib_request
 
 READ_BUFFER_SIZE = 1024 * 10
 
@@ -44,14 +46,8 @@ try:
         raise Exception("Couldn't use requests")
     URL_READER_CLASSNAME = "RequestsUrlReader"
 except:
-    if sys.version_info > (3, 0):
-        import urllib.request as urllib_request
-        import urllib.error as urllib_error
-    else:
-        import urllib2 as urllib_request
-        urllib_error = urllib_request
-
     URL_READER_CLASSNAME = "Urllib2UrlReader"
+    requests = None
 
 
 class ContentSource(object):
@@ -88,7 +84,7 @@ class ContentSource(object):
 class UrlContentSource(ContentSource):
     fd = None
 
-    def __init__(self, url, mirrors=None):
+    def __init__(self, url, mirrors=None, url_reader=None):
         if mirrors is None:
             mirrors = []
         self.mirrors = mirrors
@@ -96,6 +92,10 @@ class UrlContentSource(ContentSource):
         self.url = url
         self.offset = None
         self.fd = None
+        if url_reader is None:
+            self.url_reader = URL_READER
+        else:
+            self.url_reader = url_reader
 
     def _urlinfo(self, url):
         parsed = urlparse.urlparse(url)
@@ -107,16 +107,9 @@ class UrlContentSource(ContentSource):
             parsed = urlparse.urlparse(url)
 
         if parsed.scheme == "file":
-
-            def binopen(path, offset=None):
-                f = open(path, "rb")
-                if offset is not None:
-                    f.seek(offset)
-                return f
-
-            return (url, binopen, (parsed.path,))
+            return (url, FileReader, (parsed.path,))
         else:
-            return (url, URL_READER, (url,))
+            return (url, self.url_reader, (url,))
 
     def _open(self):
         for url in [self.input_url] + self.mirrors:
@@ -140,7 +133,6 @@ class UrlContentSource(ContentSource):
     def read(self, size=-1):
         if self.fd is None:
             self.open()
-
         return self.fd.read(size)
 
     def set_start_pos(self, offset):
@@ -313,6 +305,21 @@ class UrlReader(object):
         raise NotImplementedError()
 
 
+class FileReader(UrlReader):
+    def __init__(self, path, offset=None):
+        if path.startswith("file://"):
+            path = path[7:]
+        self.fd = open(path, "rb")
+        if offset is not None:
+            self.fd.seek(offset)
+
+    def read(self, size=-1):
+        return _read_fd(self.fd, size)
+
+    def close(self):
+        return self.fd.close()
+
+
 class Urllib2UrlReader(UrlReader):
     def __init__(self, url, offset=None):
         (url, username, password) = parse_url_auth(url)
@@ -338,7 +345,7 @@ class Urllib2UrlReader(UrlReader):
             raise e
 
     def read(self, size=-1):
-        return self.req.read(size)
+        return _read_fd(self.req, size)
 
     def close(self):
         return self.req.close()
@@ -351,6 +358,9 @@ class RequestsUrlReader(UrlReader):
     # r.read(10)
     # r.close()
     def __init__(self, url, buflen=None, offset=None):
+        if requests is None:
+            raise ImportError("Attempt to use RequestsUrlReader "
+                              "without suitable requests library.")
         self.url = url
         (url, user, password) = parse_url_auth(url)
         if user is None:
@@ -382,8 +392,6 @@ class RequestsUrlReader(UrlReader):
             self._read = self.read_raw
 
     def read(self, size=-1):
-        if size < 0:
-            size = None
         return self._read(size)
 
     def read_compressed(self, size=None):
@@ -424,8 +432,8 @@ class RequestsUrlReader(UrlReader):
                 break
         return ret
 
-    def read_raw(self, size=None):
-        return self.req.raw.read(size)
+    def read_raw(self, size=-1):
+        return _read_fd(self.req.raw, size)
 
     def close(self):
         self.req.close()
@@ -437,6 +445,15 @@ def parse_url_auth(url):
     if parsed.netloc.startswith(authtok):
         url = url.replace(authtok, "", 1)
     return (url, parsed.username, parsed.password)
+
+
+def _read_fd(fd, size=-1):
+    # normalize calling of fd.read()
+    # python3 generally wants fd.read(size=None)
+    # python2 generally wants fd.read(size=-1)
+    if size is None or size < 0:
+        return fd.read()
+    return fd.read(size)
 
 
 if URL_READER_CLASSNAME == "RequestsUrlReader":
