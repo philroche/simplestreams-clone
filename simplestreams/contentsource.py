@@ -47,6 +47,7 @@ try:
     URL_READER_CLASSNAME = "RequestsUrlReader"
 except:
     URL_READER_CLASSNAME = "Urllib2UrlReader"
+    requests = None
 
 
 class ContentSource(object):
@@ -357,6 +358,9 @@ class RequestsUrlReader(UrlReader):
     # r.read(10)
     # r.close()
     def __init__(self, url, buflen=None, offset=None):
+        if requests is None:
+            raise ImportError("Attempt to use RequestsUrlReader "
+                              "without suitable requests library.")
         self.url = url
         (url, user, password) = parse_url_auth(url)
         if user is None:
