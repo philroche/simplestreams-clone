@@ -15,7 +15,7 @@ class RandomPortServer(object):
         self.path = path
         self.process = None
         self.port = None
-        self.process
+        self.process = None
 
     def serve(self):
         if self.port and self.process:
