@@ -24,10 +24,12 @@ from . import checksum_util
 
 if sys.version_info > (3, 0):
     import urllib.parse as urlparse
+    import urllib.request as urllib_request
+    import urllib.error as urllib_error
 else:
     import urlparse
-
-READ_BUFFER_SIZE = 1024 * 10
+    import urllib2 as urllib_request
+    urllib_error = urllib_request
 
 READ_BUFFER_SIZE = 1024 * 10
 
@@ -44,13 +46,6 @@ try:
         raise Exception("Couldn't use requests")
     URL_READER_CLASSNAME = "RequestsUrlReader"
 except:
-    if sys.version_info > (3, 0):
-        import urllib.request as urllib_request
-        import urllib.error as urllib_error
-    else:
-        import urllib2 as urllib_request
-        urllib_error = urllib_request
-
     URL_READER_CLASSNAME = "Urllib2UrlReader"
 
 
@@ -88,7 +83,7 @@ class ContentSource(object):
 class UrlContentSource(ContentSource):
     fd = None
 
-    def __init__(self, url, mirrors=None):
+    def __init__(self, url, mirrors=None, url_reader=None):
         if mirrors is None:
             mirrors = []
         self.mirrors = mirrors
@@ -96,6 +91,10 @@ class UrlContentSource(ContentSource):
         self.url = url
         self.offset = None
         self.fd = None
+        if url_reader is None:
+            self.url_reader = URL_READER
+        else:
+            self.url_reader = url_reader
 
     def _urlinfo(self, url):
         parsed = urlparse.urlparse(url)
@@ -116,7 +115,7 @@ class UrlContentSource(ContentSource):
 
             return (url, binopen, (parsed.path,))
         else:
-            return (url, URL_READER, (url,))
+            return (url, self.url_reader, (url,))
 
     def _open(self):
         for url in [self.input_url] + self.mirrors:
