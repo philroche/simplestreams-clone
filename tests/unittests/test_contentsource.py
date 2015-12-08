@@ -6,7 +6,7 @@ from os.path import join
 from simplestreams import objectstores
 from simplestreams import contentsource
 from subprocess import Popen, PIPE, STDOUT
-from unittest import TestCase
+from unittest import TestCase, skipIf
 from nose.tools import raises
 
 
@@ -69,8 +69,7 @@ class TestUrlContentSource(TestCase):
 
     def getcs(self, path, url_reader=None):
         return contentsource.UrlContentSource(
-            self.server.url_for(path),
-            url_reader=contentsource.RequestsUrlReader)
+            self.server.url_for(path), url_reader=url_reader)
 
     def test_default_url_read_handles_None(self):
         scs = contentsource.UrlContentSource(self.server.url_for(self.fpath))
@@ -94,21 +93,25 @@ class TestUrlContentSource(TestCase):
         data = scs.read(-1)
         self.assertEqual(data, self.fdata)
 
+    @skipIf(contentsource.requests is None, "requests not available")
     def test_requests_url_read_handles_None(self):
         scs = self.getcs(self.fpath, contentsource.RequestsUrlReader)
         data = scs.read(None)
         self.assertEqual(data, self.fdata)
 
+    @skipIf(contentsource.requests is None, "requests not available")
     def test_requests_url_read_handles_negative_size(self):
         scs = self.getcs(self.fpath, contentsource.RequestsUrlReader)
         data = scs.read(None)
         self.assertEqual(data, self.fdata)
 
+    @skipIf(contentsource.requests is None, "requests not available")
     def test_requests_url_read_handles_no_size(self):
         scs = self.getcs(self.fpath, contentsource.RequestsUrlReader)
         data = scs.read()
         self.assertEqual(data, self.fdata)
 
+    @skipIf(contentsource.requests is None, "requests not available")
     def test_requests_url_read_handles_int(self):
         scs = self.getcs(self.fpath, contentsource.RequestsUrlReader)
         data = scs.read(3)
@@ -259,6 +262,7 @@ class BaseReaderTest(object):
         self.assertEqual(content, self.fdata)
 
 
+@skipIf(contentsource.requests is None, "requests not available")
 class TestRequestsUrlReader(BaseReaderTest, TestCase):
     reader = contentsource.RequestsUrlReader
     http = True
