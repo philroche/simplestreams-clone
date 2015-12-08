@@ -1,5 +1,6 @@
 #!/usr/bin/make -f
 
+export SS_REQUIRE_DISTRO_INFO = 0
 PYVERS := $(shell pyversions -r)
 PY3VERS := $(shell py3versions -r)
 %:
