@@ -106,14 +106,7 @@ class UrlContentSource(ContentSource):
             parsed = urlparse.urlparse(url)
 
         if parsed.scheme == "file":
-
-            def binopen(path, offset=None):
-                f = open(path, "rb")
-                if offset is not None:
-                    f.seek(offset)
-                return f
-
-            return (url, binopen, (parsed.path,))
+            return (url, FileReader, (parsed.path,))
         else:
             return (url, self.url_reader, (url,))
 
@@ -139,12 +132,6 @@ class UrlContentSource(ContentSource):
     def read(self, size=-1):
         if self.fd is None:
             self.open()
-        if sys.version_info > (3, 0):
-            if size is not None and size < 0:
-                size = None
-        else:
-            if size is None:
-                size = -1
         return self.fd.read(size)
 
     def set_start_pos(self, offset):
@@ -317,6 +304,21 @@ class UrlReader(object):
         raise NotImplementedError()
 
 
+class FileReader(UrlReader):
+    def __init__(self, path, offset=None):
+        if path.startswith("file://"):
+            path = path[7:]
+        self.fd = open(path, "rb")
+        if offset is not None:
+            self.fd.seek(offset)
+
+    def read(self, size=-1):
+        return _read_fd(self.fd, size)
+
+    def close(self):
+        return self.fd.close()
+
+
 class Urllib2UrlReader(UrlReader):
     def __init__(self, url, offset=None):
         (url, username, password) = parse_url_auth(url)
@@ -342,7 +344,7 @@ class Urllib2UrlReader(UrlReader):
             raise e
 
     def read(self, size=-1):
-        return self.req.read(size)
+        return _read_fd(self.req, size)
 
     def close(self):
         return self.req.close()
@@ -426,8 +428,8 @@ class RequestsUrlReader(UrlReader):
                 break
         return ret
 
-    def read_raw(self, size=None):
-        return self.req.raw.read(size)
+    def read_raw(self, size=-1):
+        return _read_fd(self.req.raw, size)
 
     def close(self):
         self.req.close()
@@ -439,6 +441,15 @@ def parse_url_auth(url):
     if parsed.netloc.startswith(authtok):
         url = url.replace(authtok, "", 1)
     return (url, parsed.username, parsed.password)
+
+
+def _read_fd(fd, size=-1):
+    # normalize calling of fd.read()
+    # python3 generally wants fd.read(size=None)
+    # python2 generally wants fd.read(size=-1)
+    if size is None or size < 0:
+        return fd.read()
+    return fd.read(size)
 
 
 if URL_READER_CLASSNAME == "RequestsUrlReader":
