@@ -32,12 +32,20 @@ class RandomPortServer(object):
     def __exit__(self, _type, value, tb):
         self.process.kill()  # pylint: disable=E1101
 
+    def url_for(self, fpath=""):
+        if self.port is None:
+            raise ValueError("No port available")
+        return 'http://127.0.0.1:%d/' % self.port + fpath
+
 
 class TestUrlContentSource(TestCase):
 
+    fpath = 'foo'
+    fdata = b'hello world\n'
+
     def setUp(self):
         self.source = tempfile.mkdtemp()
-        with open(join(self.source, 'foo'), 'wb') as f:
+        with open(join(self.source, self.fpath), 'wb') as f:
             f.write(b'hello world\n')
 
     def tearDown(self):
@@ -45,25 +53,27 @@ class TestUrlContentSource(TestCase):
 
     def test_url_read_handles_None(self):
         with RandomPortServer(self.source) as server:
-            loc = 'http://localhost:%d/foo' % server.port
-            scs = contentsource.UrlContentSource(loc)
-            scs.read(None)
+            scs = contentsource.UrlContentSource(server.url_for(self.fpath))
+            data = scs.read(None)
+        self.assertEqual(data, self.fdata)
 
     def test_url_read_handles_negative_size(self):
         with RandomPortServer(self.source) as server:
-            loc = 'http://localhost:%d/foo' % server.port
-            scs = contentsource.UrlContentSource(loc)
-            scs.read(-1)
+            scs = contentsource.UrlContentSource(server.url_for(self.fpath))
+            data = scs.read(-1)
+        self.assertEqual(data, self.fdata)
 
     def test_fd_read_handles_None(self):
-        loc = 'file://%s/foo' % self.source
+        loc = 'file://%s/%s' % (self.source, self.fpath)
         scs = contentsource.UrlContentSource(loc)
-        scs.read(None)
+        data = scs.read(None)
+        self.assertEqual(data, self.fdata)
 
     def test_fd_read_handles_negative_size(self):
-        loc = 'file://%s/foo' % self.source
+        loc = 'file://%s/%s' % (self.source, self.fpath)
         scs = contentsource.UrlContentSource(loc)
-        scs.read(-1)
+        data = scs.read(-1)
+        self.assertEqual(data, self.fdata)
 
 
 class TestResume(TestCase):
@@ -90,7 +100,7 @@ class TestResume(TestCase):
     def test_url_seek(self):
         with RandomPortServer(self.source) as server:
             tcs = objectstores.FileStore(self.target)
-            loc = 'http://localhost:%d/foo' % server.port
+            loc = server.url_for('foo')
             scs = contentsource.UrlContentSource(loc)
             tcs.insert('foo', scs)
             with open(join(self.target, 'foo'), 'rb') as f:
@@ -114,7 +124,7 @@ class TestResume(TestCase):
         with RandomPortServer(self.source) as server:
             tcs = objectstores.FileStore(self.target,
                                          complete_callback=handler)
-            loc = 'http://localhost:%d/foo' % server.port
+            loc = server.url_for('foo')
             scs = contentsource.UrlContentSource(loc)
             tcs.insert('foo', scs, size=len('hellohello world'))
 
