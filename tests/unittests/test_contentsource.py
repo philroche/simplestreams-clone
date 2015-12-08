@@ -67,12 +67,17 @@ class TestUrlContentSource(TestCase):
         self.server.unserve()
         shutil.rmtree(self.source)
 
-    def test_url_read_handles_None(self):
+    def getcs(self, path, url_reader=None):
+        return contentsource.UrlContentSource(
+            self.server.url_for(path),
+            url_reader=contentsource.RequestsUrlReader)
+
+    def test_default_url_read_handles_None(self):
         scs = contentsource.UrlContentSource(self.server.url_for(self.fpath))
         data = scs.read(None)
         self.assertEqual(data, self.fdata)
 
-    def test_url_read_handles_negative_size(self):
+    def test_default_url_read_handles_negative_size(self):
         scs = contentsource.UrlContentSource(self.server.url_for(self.fpath))
         data = scs.read(-1)
         self.assertEqual(data, self.fdata)
@@ -88,6 +93,46 @@ class TestUrlContentSource(TestCase):
         scs = contentsource.UrlContentSource(loc)
         data = scs.read(-1)
         self.assertEqual(data, self.fdata)
+
+    def test_requests_url_read_handles_None(self):
+        scs = self.getcs(self.fpath, contentsource.RequestsUrlReader)
+        data = scs.read(None)
+        self.assertEqual(data, self.fdata)
+
+    def test_requests_url_read_handles_negative_size(self):
+        scs = self.getcs(self.fpath, contentsource.RequestsUrlReader)
+        data = scs.read(None)
+        self.assertEqual(data, self.fdata)
+
+    def test_requests_url_read_handles_no_size(self):
+        scs = self.getcs(self.fpath, contentsource.RequestsUrlReader)
+        data = scs.read()
+        self.assertEqual(data, self.fdata)
+
+    def test_requests_url_read_handles_int(self):
+        scs = self.getcs(self.fpath, contentsource.RequestsUrlReader)
+        data = scs.read(3)
+        self.assertEqual(data, self.fdata[0:3])
+
+    def test_urllib_url_read_handles_None(self):
+        scs = self.getcs(self.fpath, contentsource.Urllib2UrlReader)
+        data = scs.read(None)
+        self.assertEqual(data, self.fdata)
+
+    def test_urllib_url_read_handles_negative_size(self):
+        scs = self.getcs(self.fpath, contentsource.Urllib2UrlReader)
+        data = scs.read(None)
+        self.assertEqual(data, self.fdata)
+
+    def test_urllib_url_read_handles_no_size(self):
+        scs = self.getcs(self.fpath, contentsource.Urllib2UrlReader)
+        data = scs.read()
+        self.assertEqual(data, self.fdata)
+
+    def test_urllib_url_read_handles_int(self):
+        scs = self.getcs(self.fpath, contentsource.Urllib2UrlReader)
+        data = scs.read(3)
+        self.assertEqual(data, self.fdata[0:3])
 
 
 class TestResume(TestCase):
