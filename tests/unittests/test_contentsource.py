@@ -15,8 +15,11 @@ class RandomPortServer(object):
         self.path = path
         self.process = None
         self.port = None
+        self.process
 
-    def __enter__(self):
+    def serve(self):
+        if self.port and self.process:
+            return
         for _ in range(10):
             port = random.randrange(40000, 65000)
             p = Popen(['python', '-u', '-m', 'SimpleHTTPServer', str(port)],
@@ -27,10 +30,20 @@ class RandomPortServer(object):
                 if b'Serving HTTP' in line:
                     self.port = port
                     self.process = p
-                    return self
+                    return
+
+    def unserve(self):
+        if self.process:
+            self.process.kill()  # pylint: disable=E1101
+        self.process = None
+        self.port = None
+
+    def __enter__(self):
+        self.serve()
+        return self
 
     def __exit__(self, _type, value, tb):
-        self.process.kill()  # pylint: disable=E1101
+        self.unserve()
 
     def url_for(self, fpath=""):
         if self.port is None:
@@ -47,20 +60,21 @@ class TestUrlContentSource(TestCase):
         self.source = tempfile.mkdtemp()
         with open(join(self.source, self.fpath), 'wb') as f:
             f.write(b'hello world\n')
+        self.server = RandomPortServer(self.source)
+        self.server.serve()
 
     def tearDown(self):
+        self.server.unserve()
         shutil.rmtree(self.source)
 
     def test_url_read_handles_None(self):
-        with RandomPortServer(self.source) as server:
-            scs = contentsource.UrlContentSource(server.url_for(self.fpath))
-            data = scs.read(None)
+        scs = contentsource.UrlContentSource(self.server.url_for(self.fpath))
+        data = scs.read(None)
         self.assertEqual(data, self.fdata)
 
     def test_url_read_handles_negative_size(self):
-        with RandomPortServer(self.source) as server:
-            scs = contentsource.UrlContentSource(server.url_for(self.fpath))
-            data = scs.read(-1)
+        scs = contentsource.UrlContentSource(self.server.url_for(self.fpath))
+        data = scs.read(-1)
         self.assertEqual(data, self.fdata)
 
     def test_fd_read_handles_None(self):
@@ -84,8 +98,11 @@ class TestResume(TestCase):
             f.write(b'hello')
         with open(join(self.source, 'foo'), 'wb') as f:
             f.write(b'hello world\n')
+        self.server = RandomPortServer(self.source)
+        self.server.serve()
 
     def tearDown(self):
+        self.server.unserve()
         shutil.rmtree(self.target)
         shutil.rmtree(self.source)
 
@@ -98,16 +115,15 @@ class TestResume(TestCase):
             assert contents == b'hello world\n', contents
 
     def test_url_seek(self):
-        with RandomPortServer(self.source) as server:
-            tcs = objectstores.FileStore(self.target)
-            loc = server.url_for('foo')
-            scs = contentsource.UrlContentSource(loc)
-            tcs.insert('foo', scs)
-            with open(join(self.target, 'foo'), 'rb') as f:
-                contents = f.read()
-                # Unfortunately, SimpleHTTPServer doesn't support the Range
-                # header, so we get two 'hello's.
-                assert contents == b'hellohello world\n', contents
+        tcs = objectstores.FileStore(self.target)
+        loc = self.server.url_for('foo')
+        scs = contentsource.UrlContentSource(loc)
+        tcs.insert('foo', scs)
+        with open(join(self.target, 'foo'), 'rb') as f:
+            contents = f.read()
+            # Unfortunately, SimpleHTTPServer doesn't support the Range
+            # header, so we get two 'hello's.
+            assert contents == b'hellohello world\n', contents
 
     @raises(Exception)
     def test_post_open_set_start_pos(self):
@@ -121,11 +137,10 @@ class TestResume(TestCase):
         def handler(path, downloaded, total):
             data['dld'] = downloaded
 
-        with RandomPortServer(self.source) as server:
-            tcs = objectstores.FileStore(self.target,
-                                         complete_callback=handler)
-            loc = server.url_for('foo')
-            scs = contentsource.UrlContentSource(loc)
-            tcs.insert('foo', scs, size=len('hellohello world'))
+        tcs = objectstores.FileStore(self.target,
+                                     complete_callback=handler)
+        loc = self.server.url_for('foo')
+        scs = contentsource.UrlContentSource(loc)
+        tcs.insert('foo', scs, size=len('hellohello world'))
 
-            assert data['dld'] > 0  # just make sure it was called
+        assert data['dld'] > 0  # just make sure it was called
