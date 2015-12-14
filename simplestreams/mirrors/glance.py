@@ -233,6 +233,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             _hypervisor_type = hypervisor_type(flat['ftype'])
             if _hypervisor_type:
                 props['hypervisor_type'] = _hypervisor_type
+                t_item['hypervisor_type'] = _hypervisor_type
 
         if 'os' in flat:
             props['os_distro'] = flat['os']
