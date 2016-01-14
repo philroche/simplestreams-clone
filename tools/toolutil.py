@@ -70,9 +70,6 @@ def is_expected(suffix, fields):
     if arch == "ppc64el":
         if rel < "trusty" or serial <= "20140326":
             return False
-        ppc64el_suffs = (".tar.gz", "-root.tar.gz", "-disk1.img", ".manifest")
-        if suffix not in ppc64el_suffs:
-            return False
 
     if suffix == ".ova":
         # OVA images become available after 20150407.4 (vivid beta-3)
