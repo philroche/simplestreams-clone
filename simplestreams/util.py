@@ -324,7 +324,8 @@ def load_content(content):
 
 
 def dump_data(data):
-    return json.dumps(data, indent=1).encode('utf-8')
+    return json.dumps(data, indent=1, sort_keys=True,
+                      separators=(',', ': ')).encode('utf-8')
 
 
 def timestamp(ts=None):
