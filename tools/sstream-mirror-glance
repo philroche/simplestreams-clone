@@ -104,6 +104,11 @@ def main():
                         "Expressions are key[!]=literal_string "
                         "or key[!]~regexp.")
 
+    parser.add_argument('--hypervisor-mapping', action='store_true', default=False,
+                        help="Set hypervisor_type attribute on stored images. "
+                        "This is useful in OpenStack Clouds which use multiple "
+                        "hypervisor types with in a single region.")
+
     args = parser.parse_args()
 
     modify_hook = None
@@ -113,7 +118,8 @@ def main():
     mirror_config = {'max_items': args.max, 'keep_items': args.keep,
                      'cloud_name': args.cloud_name,
                      'modify_hook': modify_hook,
-                     'item_filters': args.item_filters}
+                     'item_filters': args.item_filters,
+                     'hypervisor_mapping': args.hypervisor_mapping}
 
     (mirror_url, args.path) = util.path_from_mirror_url(args.source_mirror,
                                                         args.path)

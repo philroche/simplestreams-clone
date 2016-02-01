@@ -61,6 +61,37 @@ def canonicalize_arch(arch):
     return newarch
 
 
+LXC_FTYPES = [
+    'root.tar.gz',
+    'root.tar.xz',
+]
+
+QEMU_FTYPES = [
+    'disk.img',
+    'disk1.img',
+]
+
+
+def disk_format(ftype):
+    '''Canonicalize disk formats for use in OpenStack'''
+    newftype = ftype.lower()
+    if newftype in LXC_FTYPES:
+        return 'root-tar'
+    if newftype in QEMU_FTYPES:
+        return 'qcow2'
+    return None
+
+
+def hypervisor_type(ftype):
+    '''Determine hypervisor type based on image format'''
+    newftype = ftype.lower()
+    if newftype in LXC_FTYPES:
+        return 'lxc'
+    if newftype in QEMU_FTYPES:
+        return 'qemu'
+    return None
+
+
 # glance mirror 'image-downloads' content into glance
 # if provided an object store, it will produce a 'image-ids' mirror
 class GlanceMirror(mirrors.BasicMirrorWriter):
@@ -198,6 +229,12 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             t_item['arch'] = arch
             props['architecture'] = canonicalize_arch(arch)
 
+        if self.config['hypervisor_mapping'] and 'ftype' in flat:
+            _hypervisor_type = hypervisor_type(flat['ftype'])
+            if _hypervisor_type:
+                props['hypervisor_type'] = _hypervisor_type
+                t_item['hypervisor_type'] = _hypervisor_type
+
         if 'os' in flat:
             props['os_distro'] = flat['os']
 
@@ -208,7 +245,6 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         create_kwargs = {
             'name': fullname,
             'properties': props,
-            'disk_format': 'qcow2',
             'container_format': 'bare',
             'is_public': True,
         }
@@ -217,6 +253,13 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         if 'md5' in data:
             create_kwargs['checksum'] = data.get('md5')
+
+        if 'ftype' in flat:
+            create_kwargs['disk_format'] = (
+                disk_format(flat['ftype']) or 'qcow2'
+            )
+        else:
+            create_kwargs['disk_format'] = 'qcow2'
 
         if self.progress_callback:
             def progress_wrapper(written):
