@@ -114,7 +114,7 @@ def get_ubuntu_info(date=None):
         aliases = [codename, versions[i], codename[0]]
         if codename == CURRENT_LTS:
             aliases.extend(["default", "lts"])
-        if codename == devel:
+        elif codename == devel:
             aliases.append("devel")
         ret.append({'lts': lts[i], 'version': versions[i],
                     'supported': codename in supported,
