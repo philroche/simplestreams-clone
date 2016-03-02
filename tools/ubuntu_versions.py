@@ -21,6 +21,10 @@
 
 from simplestreams.log import LOG
 
+# Needs to be changed whenever do-release-upgrade is flipped to the next
+# LTS (typically around the time of .1)
+CURRENT_LTS = "trusty"
+
 # This data is only used if python-distro-info is not available and
 # the user has set environment variable SS_REQUIRE_DISTRO_INFO=0
 __RELEASE_DATA = (
@@ -107,13 +111,19 @@ def get_ubuntu_info(date=None):
     for i, codename in enumerate(codenames):
         title = "%s LTS" % versions[i] if lts[i] else versions[i]
         eol = hack_all[codename]['eol'].strftime("%Y-%m-%d")
+        aliases = [codename, versions[i], codename[0]]
+        if codename == CURRENT_LTS:
+            aliases.extend(["default", "lts"])
+        elif codename == devel:
+            aliases.append("devel")
         ret.append({'lts': lts[i], 'version': versions[i],
                     'supported': codename in supported,
                     'codename': codename,
                     'support_eol': eol,
                     'release_codename': full_codenames[i],
                     'devel': bool(codename == devel),
-                    'release_title': title})
+                    'release_title': title,
+                    'aliases': aliases})
 
     return ret
 
