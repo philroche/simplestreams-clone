@@ -345,7 +345,7 @@ def dl_load_query(path):
             [prodname_rdns, build, release_to_version(rel), arch])
 
         if prodname not in products:
-            product = new_ubuntu_product_dict(rel, arch)
+            product = new_ubuntu_product_dict(rel, arch, label)
 
             if should_skip_due_to_unsupported(product):
                 sys.stderr.write("skipping unsupported %s\n" % prodname)
@@ -396,10 +396,10 @@ def pubname(label, rel, arch, serial, build='server'):
     return "ubuntu-%s-%s-%s-%s" % (rv_label, arch, build, serial)
 
 
-def new_ubuntu_product_dict(release, arch):
+def new_ubuntu_product_dict(release, arch, label):
     reldata = toolutil.REL2VER[release]
     aliases = [release, reldata['version'], release[0]]
-    if reldata['devel']:
+    if reldata['devel'] and 'daily' in label:
         aliases.append("devel")
     if release == CURRENT_LTS:
         aliases.append("default")
@@ -468,7 +468,7 @@ def ec2_load_query(path):
             [prodname_rdns, build, release_to_version(rel), arch])
 
         if prodname not in products:
-            product = new_ubuntu_product_dict(rel, arch)
+            product = new_ubuntu_product_dict(rel, arch, label)
 
             if should_skip_due_to_unsupported(product):
                 sys.stderr.write("skipping unsupported %s\n" % prodname)
