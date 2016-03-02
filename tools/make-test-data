@@ -395,9 +395,11 @@ def pubname(label, rel, arch, serial, build='server'):
 def new_ubuntu_product_dict(release, arch, label):
     reldata = toolutil.REL2VER[release]
 
-    aliases = reldata['aliases']
-    if "devel" in aliases and 'daily' not in label:
-        aliases.remove("devel")
+    aliases = None
+    if 'aliases' in reldata:
+        aliases = reldata['aliases']
+        if "devel" in aliases and 'daily' not in label:
+            aliases.remove("devel")
 
     ret = {
         "arch": arch,
@@ -413,7 +415,7 @@ def new_ubuntu_product_dict(release, arch, label):
     for maybe in ('supported', 'support_eol'):
         if maybe in reldata:
             ret[maybe] = reldata[maybe]
-        if 'aliases' in reldata:
+        if aliases:
             ret['aliases'] = ','.join(sorted(aliases))
     return ret
 
