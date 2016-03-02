@@ -76,10 +76,6 @@ else:
 
 FILE_DATA = {}
 
-# Needs to be changed whenever do-release-upgrade is flipped to the next
-# LTS (typically around the time of .1)
-CURRENT_LTS = "trusty"
-
 
 def get_cache_data(path, field):
     dirname = os.path.dirname(path)
@@ -398,12 +394,11 @@ def pubname(label, rel, arch, serial, build='server'):
 
 def new_ubuntu_product_dict(release, arch, label):
     reldata = toolutil.REL2VER[release]
-    aliases = [release, reldata['version'], release[0]]
-    if reldata['devel'] and 'daily' in label:
-        aliases.append("devel")
-    if release == CURRENT_LTS:
-        aliases.append("default")
-        aliases.append("lts")
+
+    aliases = reldata['aliases']
+    if "devel" in aliases and 'daily' not in label:
+        aliases.remove("devel")
+
     ret = {
         "arch": arch,
         "os": "ubuntu",
@@ -412,11 +407,14 @@ def new_ubuntu_product_dict(release, arch, label):
         "release_codename": reldata['release_codename'],
         "version": reldata['version'],
         "versions": {},
-        "aliases": ",".join(aliases)
+        "aliases": ",".join(sorted(reldata['aliases']))
     }
+
     for maybe in ('supported', 'support_eol'):
         if maybe in reldata:
             ret[maybe] = reldata[maybe]
+        if 'aliases' in reldata:
+            ret['aliases'] = ','.join(sorted(aliases))
     return ret
 
 
