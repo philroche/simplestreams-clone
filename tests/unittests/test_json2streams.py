@@ -57,6 +57,16 @@ class TestDictToItem(TestCase):
         item = dict_to_item(item_dict)
         self.assertEqual(Item(data={'size': 27}, **pedigree), item)
 
+    def test_no_size(self):
+        pedigree = {
+            'content_id': 'cid', 'product_name': 'pname',
+            'version_name': 'vname', 'item_name': 'iname',
+            }
+        item_dict = {}
+        item_dict.update(pedigree)
+        item = dict_to_item(item_dict)
+        self.assertEqual(Item(data={}, **pedigree), item)
+
 
 class TestReadItemsFile(TestCase):
 
