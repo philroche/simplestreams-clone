@@ -321,7 +321,7 @@ class FileReader(UrlReader):
 
 
 class Urllib2UrlReader(UrlReader):
-    def __init__(self, url, offset=None):
+    def __init__(self, url, offset=None, user_agent=None):
         (url, username, password) = parse_url_auth(url)
         self.url = url
         if username is None:
@@ -334,6 +334,8 @@ class Urllib2UrlReader(UrlReader):
 
         try:
             req = urllib_request.Request(url)
+            if user_agent is not None:
+                req.add_header('User-Agent', user_agent)
             if offset is not None:
                 req.add_header('Range', 'bytes=%d-' % offset)
             self.req = opener(req)
@@ -357,7 +359,7 @@ class RequestsUrlReader(UrlReader):
     # r = RequestsUrlReader(http://example.com)
     # r.read(10)
     # r.close()
-    def __init__(self, url, buflen=None, offset=None):
+    def __init__(self, url, buflen=None, offset=None, user_agent=None):
         if requests is None:
             raise ImportError("Attempt to use RequestsUrlReader "
                               "without suitable requests library.")
@@ -368,9 +370,11 @@ class RequestsUrlReader(UrlReader):
         else:
             auth = (user, password)
 
-        headers = None
+        headers = {}
+        if user_agent is not None:
+            headers['User-Agent'] = user_agent
         if offset is not None:
-            headers = {'Range': 'bytes=%d-' % offset}
+            headers['Range'] = 'bytes=%d-' % offset
 
         self.req = requests.get(url, stream=True, auth=auth, headers=headers)
         self.r_iter = None

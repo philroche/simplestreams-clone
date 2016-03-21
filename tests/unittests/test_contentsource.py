@@ -2,7 +2,7 @@ import random
 import shutil
 import tempfile
 
-from os.path import join
+from os.path import join, dirname
 from simplestreams import objectstores
 from simplestreams import contentsource
 from subprocess import Popen, PIPE, STDOUT
@@ -22,15 +22,21 @@ class RandomPortServer(object):
             return
         for _ in range(10):
             port = random.randrange(40000, 65000)
-            p = Popen(['python', '-u', '-m', 'SimpleHTTPServer', str(port)],
+            testserver_path = join(
+                dirname(__file__), "..", "..", "tests", "httpserver.py")
+            p = Popen(['python2', '-u', testserver_path, str(port)],
                       cwd=self.path, stdout=PIPE, stderr=STDOUT)
+
             # wait for the HTTP server to start up
             while True:
-                line = p.stdout.readline()  # pylint: disable=E1101
-                if b'Serving HTTP' in line:
+                self.line = p.stdout.readline()  # pylint: disable=E1101
+                if b'Serving HTTP' in self.line:
                     self.port = port
                     self.process = p
                     return
+
+    def read_output(self):
+        return str(self.process.stdout.readline())
 
     def unserve(self):
         if self.process:
@@ -262,15 +268,28 @@ class BaseReaderTest(object):
         self.assertEqual(content, self.fdata)
 
 
+class BaseHttpReaderTest(BaseReaderTest):
+    http = True
+
+    def test_read_sends_user_agent(self):
+        """
+        When user agent is set on the HTTP URL reader, it is passed on to
+        the server for every read() call.
+        """
+        fp = self.reader(
+            self.geturl(self.fpath), user_agent=u"python-simplestreams")
+        fp.read()
+        self.assertIn(u"python-simplestreams", self.server.read_output())
+        fp.close()
+
+
 @skipIf(contentsource.requests is None, "requests not available")
-class TestRequestsUrlReader(BaseReaderTest, TestCase):
+class TestRequestsUrlReader(BaseHttpReaderTest, TestCase):
     reader = contentsource.RequestsUrlReader
-    http = True
 
 
-class TestUrllib2UrlReader(BaseReaderTest, TestCase):
+class TestUrllib2UrlReader(BaseHttpReaderTest, TestCase):
     reader = contentsource.Urllib2UrlReader
-    http = True
 
 
 class TestFileReader(BaseReaderTest, TestCase):
