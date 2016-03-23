@@ -92,6 +92,16 @@ def hypervisor_type(ftype):
     return None
 
 
+def virt_type(hypervisor_type):
+    '''Map underlying hypervisor types into high level virt types'''
+    newhtype = hypervisor_type.lower()
+    if newhtype == 'qemu':
+        return 'kvm'
+    if newhtype == 'lxc':
+        return 'lxd'
+    return None
+
+
 # glance mirror 'image-downloads' content into glance
 # if provided an object store, it will produce a 'image-ids' mirror
 class GlanceMirror(mirrors.BasicMirrorWriter):
@@ -233,7 +243,9 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             _hypervisor_type = hypervisor_type(flat['ftype'])
             if _hypervisor_type:
                 props['hypervisor_type'] = _hypervisor_type
-                t_item['hypervisor_type'] = _hypervisor_type
+                _virt_type = virt_type(_hypervisor_type)
+                if _virt_type:
+                    t_item['virt'] = _virt_type
 
         if 'os' in flat:
             props['os_distro'] = flat['os']
