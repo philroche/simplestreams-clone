@@ -105,7 +105,8 @@ def main():
                         "or key[!]~regexp.")
 
     parser.add_argument('--hypervisor-mapping', action='store_true', default=False,
-                        help="Set hypervisor_type attribute on stored images. "
+                        help="Set hypervisor_type attribute on stored images "
+                        "and the virt attribute in the associated stream data. "
                         "This is useful in OpenStack Clouds which use multiple "
                         "hypervisor types with in a single region.")
 
