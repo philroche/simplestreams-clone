@@ -162,27 +162,42 @@ class MirrorWriter(object):
 
 
 class UrlMirrorReader(MirrorReader):
-    def __init__(self, prefix, mirrors=None, policy=util.policy_read_signed):
+    def __init__(self, prefix, mirrors=None, policy=util.policy_read_signed,
+                 user_agent=None):
         super(UrlMirrorReader, self).__init__(policy=policy)
         self._cs = cs.UrlContentSource
         if mirrors is None:
             mirrors = []
         self.mirrors = mirrors
+        self.user_agent = user_agent
         self.prefix = prefix
         self._trailing_slash_checked = self.prefix.endswith("/")
 
     def source(self, path):
         mirrors = [m + path for m in self.mirrors]
+
+        if self.user_agent is not None:
+            # Create a custom UrlReader with the user_agent passed in,
+            # using the default cs.URL_READER.
+
+            def url_reader_factory(*args, **kwargs):
+                return cs.URL_READER(
+                    *args, user_agent=self.user_agent, **kwargs)
+        else:
+            url_reader_factory = None
+
         if self._trailing_slash_checked:
-            return self._cs(self.prefix + path, mirrors=mirrors)
+            return self._cs(self.prefix + path, mirrors=mirrors,
+                            url_reader=url_reader_factory)
 
         # A little hack to fix up the user's path. It's fairly common to
-        # specify URLs without a trailing slash, so we try to that here as
+        # specify URLs without a trailing slash, so we try to do that here as
         # well. We open, then close and then get a new one (so the one we
         # returned is not yet open (LP: #1237658)
         self._trailing_slash_checked = True
         try:
-            with self._cs(self.prefix + path, mirrors=None) as csource:
+            with self._cs(self.prefix + path, mirrors=None,
+                          url_reader=url_reader_factory) as csource:
                 csource.read(1024)
         except Exception as e:
             if isinstance(e, IOError) and (e.errno == errno.ENOENT):
@@ -195,7 +210,8 @@ class UrlMirrorReader(MirrorReader):
                 LOG.debug("trailing / check on (%s, %s) resulted in %s",
                           self.prefix, path, e)
 
-        return self._cs(self.prefix + path, mirrors=mirrors)
+        return self._cs(self.prefix + path, mirrors=mirrors,
+                        url_reader=url_reader_factory)
 
 
 class ObjectStoreMirrorReader(MirrorReader):
