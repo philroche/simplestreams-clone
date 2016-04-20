@@ -306,7 +306,7 @@ class UrlReader(object):
 
 
 class FileReader(UrlReader):
-    def __init__(self, path, offset=None):
+    def __init__(self, path, offset=None, user_agent=None):
         if path.startswith("file://"):
             path = path[7:]
         self.fd = open(path, "rb")
