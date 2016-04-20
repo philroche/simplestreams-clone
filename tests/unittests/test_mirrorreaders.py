@@ -17,9 +17,6 @@ def fake_url_reader(*args, **kwargs):
 
 class TestUrlMirrorReader(TestCase):
 
-    def setUp(self):
-        pass
-
     def test_source(self):
         """source() method returns a ContentSource."""
         # Verify source() returns a content source constructed using the
