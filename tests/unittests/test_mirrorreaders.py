@@ -28,7 +28,7 @@ class TestUrlMirrorReader(TestCase):
         # the prefix and the path.
         self.assertEqual("/prefix/some/path", cs.url)
         # Mirror URLs have path appended.
-        self.assertItemsEqual(["a/some/path", "b/some/path"], cs.mirrors)
+        self.assertEqual(["a/some/path", "b/some/path"], cs.mirrors)
         # Default URL_READER is returned.
         self.assertEqual(URL_READER, cs.url_reader)
 
@@ -38,7 +38,7 @@ class TestUrlMirrorReader(TestCase):
         cs = reader.source("some/path")
 
         self.assertEqual("/prefix/some/path", cs.url)
-        self.assertItemsEqual(["a/some/path", "b/some/path"], cs.mirrors)
+        self.assertEqual(["a/some/path", "b/some/path"], cs.mirrors)
         self.assertEqual(URL_READER, cs.url_reader)
 
     def test_source_user_agent(self):
