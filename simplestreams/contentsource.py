@@ -375,6 +375,8 @@ class RequestsUrlReader(UrlReader):
             headers['User-Agent'] = user_agent
         if offset is not None:
             headers['Range'] = 'bytes=%d-' % offset
+        if headers == {}:
+            headers = None
 
         self.req = requests.get(url, stream=True, auth=auth, headers=headers)
         self.r_iter = None

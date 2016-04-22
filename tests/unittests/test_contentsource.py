@@ -1,5 +1,6 @@
 import random
 import shutil
+import sys
 import tempfile
 
 from os.path import join, dirname
@@ -24,7 +25,7 @@ class RandomPortServer(object):
             port = random.randrange(40000, 65000)
             testserver_path = join(
                 dirname(__file__), "..", "..", "tests", "httpserver.py")
-            p = Popen(['python2', '-u', testserver_path, str(port)],
+            p = Popen([sys.executable, '-u', testserver_path, str(port)],
                       cwd=self.path, stdout=PIPE, stderr=STDOUT)
 
             # wait for the HTTP server to start up
