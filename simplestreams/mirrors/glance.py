@@ -229,7 +229,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             t_item['arch'] = arch
             props['architecture'] = canonicalize_arch(arch)
 
-        if self.config.get('hypervisor_mapping') and 'ftype' in flat:
+        if self.config.get('hypervisor_mapping', False) and 'ftype' in flat:
             _hypervisor_type = hypervisor_type(flat['ftype'])
             if _hypervisor_type:
                 props['hypervisor_type'] = _hypervisor_type
