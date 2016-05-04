@@ -44,6 +44,29 @@ class TestUrlMirrorReader(TestCase):
         self.assertEqual(URL_READER, cs.url_reader)
 
     def test_source_user_agent(self):
+        """Default user_agent is set and passed to the ContentSource."""
+        reader = UrlMirrorReader("/prefix/", mirrors=["a/", "b/"])
+        cs = reader.source("some/path")
+
+        # A factory function is set instead of the URL_READER, and
+        # it constructs a URL_READER with user_agent passed in.
+        url_reader = cs.url_reader
+        self.assertNotEqual(URL_READER, url_reader)
+
+        # Override the default URL_READER to track arguments being passed.
+        simplestreams.mirrors.cs.URL_READER = fake_url_reader
+        result = url_reader("a", "b", something="c")
+
+        # It passes all the same arguments, with "user_agent" added in.
+        self.assertEqual(
+            {"user_agent": "python-simplestreams/0.1", "something": "c",
+             "ARGS": ("a", "b")},
+            result)
+
+        # Restore default UrlReader.
+        simplestreams.mirrors.cs.URL_READER = URL_READER
+
+    def test_source_user_agent_override(self):
         """When user_agent is set, it is passed to the ContentSource."""
         reader = UrlMirrorReader("/prefix/", mirrors=["a/", "b/"],
                                  user_agent="test agent")
