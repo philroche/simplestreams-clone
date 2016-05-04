@@ -24,6 +24,8 @@ from simplestreams import checksum_util
 import simplestreams.contentsource as cs
 from simplestreams.log import LOG
 
+DEFAULT_USER_AGENT = "python-simplestreams/0.1"
+
 
 class MirrorReader(object):
     def __init__(self, policy=util.policy_read_signed):
@@ -163,7 +165,7 @@ class MirrorWriter(object):
 
 class UrlMirrorReader(MirrorReader):
     def __init__(self, prefix, mirrors=None, policy=util.policy_read_signed,
-                 user_agent="python-simplestreams/0.1"):
+                 user_agent=DEFAULT_USER_AGENT):
         super(UrlMirrorReader, self).__init__(policy=policy)
         self._cs = cs.UrlContentSource
         if mirrors is None:
