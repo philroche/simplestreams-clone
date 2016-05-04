@@ -21,7 +21,8 @@ class TestUrlMirrorReader(TestCase):
         """source() method returns a ContentSource."""
         # Verify source() returns a content source constructed using the
         # appropriate path and mirrors.
-        reader = UrlMirrorReader("/prefix/", mirrors=["a/", "b/"])
+        reader = UrlMirrorReader(
+            "/prefix/", mirrors=["a/", "b/"], user_agent=None)
         cs = reader.source("some/path")
 
         # Resulting ContentSource is passed an URL as a concatenation of
@@ -34,7 +35,8 @@ class TestUrlMirrorReader(TestCase):
 
     def test_source_no_trailing_slash(self):
         """Even if prefix lacks a trailing slash, it behaves the same."""
-        reader = UrlMirrorReader("/prefix/", mirrors=["a/", "b/"])
+        reader = UrlMirrorReader(
+            "/prefix/", mirrors=["a/", "b/"], user_agent=None)
         cs = reader.source("some/path")
 
         self.assertEqual("/prefix/some/path", cs.url)
