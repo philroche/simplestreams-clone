@@ -288,7 +288,7 @@ def read_signed(content, keyring=None, checked=True):
                           (' '.join(cmd), e.output[0], e.output[1]))
                 raise e
 
-        ret = {'body': '', 'signature': '', 'garbage': ''}
+        ret = {'body': [], 'signature': [], 'garbage': []}
         lines = content.splitlines()
         i = 0
         for i in range(0, len(lines)):
@@ -308,11 +308,12 @@ def read_signed(content, keyring=None, checked=True):
 
             # dash-escaped content in body
             if lines[i].startswith("- ") and mode == "body":
-                ret[mode] += lines[i][2:] + "\n"
+                ret[mode].append(lines[i][2:])
             else:
-                ret[mode] += lines[i] + "\n"
+                ret[mode].append(lines[i])
 
-        return ret['body']
+        ret['body'].append('')  # need empty line at end
+        return "\n".join(ret['body'])
     else:
         raise SignatureMissingException("No signature found!")
 
