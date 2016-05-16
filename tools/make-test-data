@@ -58,6 +58,9 @@ FAKE_DATA = {
     'uefi1.img': {'size': 12421},
     'manifest': {'size': 10241},
     'ova': {'size': 12399},
+    'squashfs': {'size': 12400},
+    'squashfs.manifest': {'size': 12401},
+    'img': {'size': 12402},
 }
 
 EC2_ENDPOINTS = {
@@ -363,9 +366,13 @@ def dl_load_query(path):
         # take basename of the filename, and remove up to "-<arch>?"
         # so ubuntu-12.04-server-cloudimg-armhf.tar.gz becomes
         # 'tar.gz' and 'ubuntu-12.04-server-cloudimg-armhf-disk1.img'
-        # becomse 'disk1.img'
+        # becomes 'disk1.img'
         dash_arch = "-" + arch
         ftype = filepath[filepath.rindex(dash_arch) + len(dash_arch) + 1:]
+        # the ftype for '.img' is 'disk1.img' to keep stream metadata
+        # backwards compatible.
+        if ftype == "img":
+            ftype = "disk1.img"
         items[ftype] = {
             'path': filepath,
             'ftype': ftype
