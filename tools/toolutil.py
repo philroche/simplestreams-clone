@@ -20,7 +20,7 @@ import os
 import os.path
 
 from simplestreams import util
-from ubuntu_versions import REL2VER
+from ubuntu_versions import REL2VER, codename_cmp
 
 BLACKLIST_RELS = ('hardy', 'intrepid', 'jaunty', 'karmic', 'maverick', 'natty', 'yakkety')
 RELEASES = [k for k in REL2VER if k not in BLACKLIST_RELS]
@@ -46,7 +46,7 @@ def is_expected(suffix, fields):
 
     rel, bname, label, serial, arch, path, pubname = fields
     if suffix == "-root.tar.gz":
-        if rel in ("lucid", "oneiric"):
+        if codename_cmp(rel, "<=", "oneiric"):
             # lucid, oneiric do not have -root.tar.gz
             return False
         if rel == "precise" and serial <= "20120202":
@@ -54,7 +54,7 @@ def is_expected(suffix, fields):
             return False
 
     if suffix == "-disk1.img":
-        if rel == "lucid":
+        if codename_cmp(rel, "<", "oneiric"):
             return False
         if rel == "oneiric" and serial <= "20110802.2":
             # oneiric got -disk1.img after alpha3
@@ -64,17 +64,17 @@ def is_expected(suffix, fields):
         if arch not in ["amd64", "arm64"]:
             return False
         # uefi images were released with trusty
-        if rel < "trusty":
+        if codename_cmp(rel, "<", "trusty"):
             return False
 
     if arch == "ppc64el":
-        if rel < "trusty" or serial <= "20140326":
+        if codename_cmp(rel, "<", "trusty") or serial <= "20140326":
             return False
 
     if suffix == ".ova":
         # OVA images become available after 20150407.4 (vivid beta-3)
         # and only for trusty and later x86
-        if rel < "trusty" or serial < "20150407.4":
+        if codename_cmp(rel, "<", "trusty") or serial < "20150407.4":
             return False
         if arch not in ('i386', 'amd64'):
             return False

@@ -116,6 +116,18 @@ def get_ubuntu_info(date=None):
             aliases.extend(["default", "lts"])
         elif codename == devel:
             aliases.append("devel")
+
+        # this will only work for X.Y versions, not X.Y.Z
+        parts = versions[i].split(".")
+        if len(parts) != 2:
+            raise ValueError("Confused by version '%s' on '%s'" %
+                             (versions[i], codename))
+        try:
+            _int_version = 100 * int(parts[0]) + int(parts[1])
+        except ValueError:
+            raise ValueError("Failed to convert version '%s' on '%s'" %
+                             (versions[i], codename))
+
         ret.append({'lts': lts[i], 'version': versions[i],
                     'supported': codename in supported,
                     'codename': codename,
@@ -123,9 +135,28 @@ def get_ubuntu_info(date=None):
                     'release_codename': full_codenames[i],
                     'devel': bool(codename == devel),
                     'release_title': title,
-                    'aliases': aliases})
+                    'aliases': aliases,
+                    '_int_version': _int_version})
 
     return ret
+
+
+def codename_cmp(codename1, op, codename2):
+    # return the result of comparison between release1 and release2
+    # supported operations are ">", ">=", "<", "<=", "="
+    iver1 = REL2VER[codename1]['_int_version']
+    iver2 = REL2VER[codename2]['_int_version']
+    if op == ">":
+        return iver1 > iver2
+    if op == ">=":
+        return iver1 >= iver2
+    if op == "<":
+        return iver1 < iver2
+    if op == "<=":
+        return iver1 <= iver2
+    if op == "=" or op == "==":
+        return iver1 == iver2
+    raise ValueError("Invalid operation '%s'" % op)
 
 
 __HARDCODED_REL2VER = {}
