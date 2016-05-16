@@ -22,7 +22,7 @@ import os.path
 from simplestreams import util
 from ubuntu_versions import REL2VER
 
-BLACKLIST_RELS = ('hardy', 'intrepid', 'jaunty', 'karmic', 'maverick', 'natty')
+BLACKLIST_RELS = ('hardy', 'intrepid', 'jaunty', 'karmic', 'maverick', 'natty', 'yakkety')
 RELEASES = [k for k in REL2VER if k not in BLACKLIST_RELS]
 BUILDS = ("server")
 
