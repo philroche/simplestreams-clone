@@ -1,0 +1,101 @@
+#!/bin/bash
+
+VERBOSITY=0
+TEMP_D=""
+
+error() { echo "$@" 1>&2; }
+fail() { [ $# -eq 0 ] || error "$@"; exit 1; }
+
+Usage() {
+    cat <<EOF
+Usage: ${0##*/} [ options ] tree1 tree2
+
+   build exdata and compare output from tree1 and tree2
+   Useful for checking your changes to tools/make-test-data
+
+   options:
+      --fake : only test the exdata/fake directories (much faster)
+EOF
+}
+
+bad_Usage() { Usage 1>&2; [ $# -eq 0 ] || error "$@"; return 1; }
+cleanup() {
+    [ -z "${TEMP_D}" -o ! -d "${TEMP_D}" ] || rm -Rf "${TEMP_D}"
+}
+
+debug() {
+    local level=${1}; shift;
+    [ "${level}" -gt "${VERBOSITY}" ] && return
+    error "${@}"
+}
+
+main() {
+    local short_opts="hv"
+    local long_opts="help,fake,verbose"
+    local getopt_out=""
+    getopt_out=$(getopt --name "${0##*/}" \
+        --options "${short_opts}" --long "${long_opts}" -- "$@") &&
+        eval set -- "${getopt_out}" ||
+        { bad_Usage; return; }
+
+    local cur="" next="" fake=false
+
+    while [ $# -ne 0 ]; do
+        cur="$1"; next="$2";
+        case "$cur" in
+            -h|--help) Usage ; exit 0;;
+               --fake) fake=true;;
+            -v|--verbose) VERBOSITY=$((${VERBOSITY}+1));;
+            --) shift; break;;
+        esac
+        shift;
+    done
+
+    [ $# -ne 0 ] || { bad_Usage "must provide 2 arguments"; return; }
+    [ $# -eq 2 ] || { bad_Usage "got $# args ($*) expected 2"; return; }
+
+    local from="$1" to="$2"
+    local target="exdata/data"
+    if $fake; then
+        target="exdata/fake"
+    fi
+    [ -d "$from" ] || { error "$from: not a directory"; return 1; }
+    [ -d "$to" ] || { error "$to: not a directory"; return 1; }
+
+    TEMP_D=$(mktemp -d "${TMPDIR:-/tmp}/${0##*/}.XXXXXX") ||
+        fail "failed to make tempdir"
+    trap cleanup EXIT
+
+    ( cd "$from" && make "$target" 1>&2 ) ||
+        { error "failed to make $target in $from"; return 1; }
+
+    ( cd "$to" && make "$target" 1>&2 ) ||
+        { error "failed to make $target in $to"; return 1; }
+
+    local d="" json=""
+    local args="" ofmt=""
+    ofmt="%(product_name)s %(version_name)s %(item_name)s %(ftype)s %(path)s"
+
+    args=( "--output-format=$ofmt" )
+    for d in daily released; do
+        ( cd "$from" && 
+            ./bin/sstream-query "${args[@]}" \
+                "$target/$d/streams/v1/"*download.json ) \
+                > "${TEMP_D}/from-$d.list" ||
+                { error "failed sstream-query in $from"; return 1; }
+        ( cd "$to" && 
+            ./bin/sstream-query "${args[@]}" \
+                "$target/$d/streams/v1/"*download.json ) \
+                > "${TEMP_D}/to-$d.list" ||
+                { error "failed sstream-query in $to"; return 1; }
+        sort "${TEMP_D}/from-$d.list" > "${TEMP_D}/from-$d.sort"
+        sort "${TEMP_D}/to-$d.list" > "${TEMP_D}/to-$d.sort"
+        echo "=== $d ==="
+        diff -u "${TEMP_D}/from-$d.sort" "${TEMP_D}/to-$d.sort"
+    done
+
+    return 0
+}
+
+main "$@"
+# vi: ts=4 expandtab
