@@ -20,7 +20,7 @@ import os
 import os.path
 
 from simplestreams import util
-from ubuntu_versions import REL2VER
+from ubuntu_versions import REL2VER, codename_cmp
 
 BLACKLIST_RELS = ('hardy', 'intrepid', 'jaunty', 'karmic', 'maverick', 'natty')
 RELEASES = [k for k in REL2VER if k not in BLACKLIST_RELS]
@@ -46,7 +46,10 @@ def is_expected(suffix, fields):
 
     rel, bname, label, serial, arch, path, pubname = fields
     if suffix == "-root.tar.gz":
-        if rel in ("lucid", "oneiric"):
+        # yakkety and forward do not have -root.tar.gz
+        if codename_cmp(rel, ">=", "yakkety"):
+            return False
+        if codename_cmp(rel, "<=", "oneiric"):
             # lucid, oneiric do not have -root.tar.gz
             return False
         if rel == "precise" and serial <= "20120202":
@@ -54,27 +57,37 @@ def is_expected(suffix, fields):
             return False
 
     if suffix == "-disk1.img":
-        if rel == "lucid":
+        # disk1.img as a suffix was replaced by .img in yakkety
+        if codename_cmp(rel, "<", "oneiric"):
+            return False
+        if codename_cmp(rel, ">=", "yakkety"):
             return False
         if rel == "oneiric" and serial <= "20110802.2":
             # oneiric got -disk1.img after alpha3
             return False
 
+    if suffix == ".img":
+        # .img files replaced -disk1.img in yakkety
+        if codename_cmp(rel, "<", "yakkety") or serial < "20160512":
+            return False
+
     if suffix == "-uefi1.img":
         if arch not in ["amd64", "arm64"]:
             return False
-        # uefi images were released with trusty
-        if rel < "trusty":
+        # uefi images were released with trusty and removed in yakkety
+        if codename_cmp(rel, "<", "trusty"):
+            return False
+        if codename_cmp(rel, ">=", "yakkety"):
             return False
 
     if arch == "ppc64el":
-        if rel < "trusty" or serial <= "20140326":
+        if codename_cmp(rel, "<", "trusty") or serial <= "20140326":
             return False
 
     if suffix == ".ova":
         # OVA images become available after 20150407.4 (vivid beta-3)
         # and only for trusty and later x86
-        if rel < "trusty" or serial < "20150407.4":
+        if codename_cmp(rel, "<", "trusty") or serial < "20150407.4":
             return False
         if arch not in ('i386', 'amd64'):
             return False
@@ -82,6 +95,17 @@ def is_expected(suffix, fields):
     if suffix == "-root.tar.xz" or suffix == "-lxd.tar.xz":
         # -root.tar.xz and -lxd.tar.xz become available after 20150714.3
         if serial < "20150714.4":
+            return False
+        if codename_cmp(rel, "<", "precise"):
+            return False
+        if codename_cmp(rel, ">=", "yakkety"):
+            return False
+
+    if suffix == '.squashfs' or suffix == '.squashfs.manifest':
+        # squashfs became available in the xenial cycle
+        if codename_cmp(rel, "<", "xenial"):
+            return False
+        if rel == "xenial" and serial <= "20160420.3":
             return False
 
     # if some data in /query is not truely available, fill up this array
@@ -101,7 +125,8 @@ def load_query_download(path, builds=None, rels=None):
         rels = RELEASES
 
     suffixes = (".tar.gz", "-root.tar.gz", "-disk1.img", "-uefi1.img",
-                ".manifest", ".ova", "-root.tar.xz", "-lxd.tar.xz")
+                ".manifest", ".ova", "-root.tar.xz", "-lxd.tar.xz",
+                ".squashfs", ".squashfs.manifest", ".img",)
     streams = [f[0:-len(".latest.txt")]
                for f in os.listdir(path) if f.endswith("latest.txt")]
 
