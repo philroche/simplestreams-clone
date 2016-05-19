@@ -106,7 +106,7 @@ def save_cache():
     if FILE_DATA:
         hashcache = FILE_DATA['filename']
         with open(hashcache, "w") as hfp:
-            hfp.write(json.dumps(FILE_DATA, indent=1))
+            hfp.write(util.dump_data(FILE_DATA))
 
 
 def load_sums_from_sumfiles(path):
@@ -574,7 +574,7 @@ def create_image_data(query_tree, out_d, streamdir):
         util.mkdir_p(os.path.dirname(outfile))
         with open(outfile, "w") as fp:
             sys.stderr.write("writing %s\n" % outfile)
-            fp.write(json.dumps(tree[stream], indent=1) + "\n")
+            fp.write(util.dump_data(tree[stream]) + "\n")
 
     # save hashes data
     save_cache()
@@ -650,7 +650,7 @@ def main():
             'cloudname': "aws",
             'path': '/'.join((streamdir,
                              "%s.json" % aws_tree[streamname]['content_id'],)),
-            'products': list(aws_tree[streamname]['products'].keys()),
+            'products': sorted(list(aws_tree[streamname]['products'].keys())),
             'format': aws_tree[streamname]['format'],
         }
         index['index'][dltree[streamname]['content_id']] = {
@@ -658,7 +658,7 @@ def main():
             'datatype': dltree[streamname]['datatype'],
             'path': '/'.join((streamdir,
                              "%s.json" % dltree[streamname]['content_id'],)),
-            'products': list(dltree[streamname]['products'].keys()),
+            'products': sorted(list(dltree[streamname]['products'].keys())),
             'format': dltree[streamname]['format']
         }
 
@@ -666,7 +666,7 @@ def main():
         util.mkdir_p(os.path.dirname(outfile))
         with open(outfile, "w") as fp:
             sys.stderr.write("writing %s\n" % outfile)
-            fp.write(json.dumps(index, indent=1) + "\n")
+            fp.write(util.dump_data(index) + "\n")
 
     if args.sign:
         def printstatus(name):
