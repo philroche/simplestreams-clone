@@ -89,6 +89,9 @@ def is_expected(suffix, fields):
         # and only for trusty and later x86
         if codename_cmp(rel, "<", "trusty") or serial < "20150407.4":
             return False
+        # OVAs weren't produced properly for early first yakkety images
+        if codename_cmp(rel, "=", "yakkety") and serial < "20160516.1":
+            return False
         if arch not in ('i386', 'amd64'):
             return False
 
