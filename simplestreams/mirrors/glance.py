@@ -181,7 +181,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
             if image.get('status') != "active":
                 LOG.warn("Ignoring inactive image %s with status '%s'" % (
-                    image['id'], image['status']))
+                    image['id'], image.get('status')))
                 continue
 
             source_content_id = props.get('source_content_id')
