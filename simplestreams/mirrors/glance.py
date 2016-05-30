@@ -219,6 +219,40 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
     def filter_item(self, data, src, target, pedigree):
         return filters.filter_item(self.item_filters, data, src, pedigree)
 
+    def create_glance_properties(self, content_id, image_metadata,
+                                 hypervisor_mapping):
+        """
+        Construct extra properties to store in Glance for an image.
+
+        Based on source image metadata.
+        """
+        properties = {
+            'content_id': content_id,
+            'source_content_id': image_metadata['content_id'],
+        }
+        # An iterator of properties to carry over: if a property needs
+        # renaming, uses a tuple (old name, new name).
+        carry_over = (
+            'product_name', 'version_name', 'item_name',
+            ('os', 'os_distro'), ('version', 'os_version'),
+        )
+        for carry_over_property in carry_over:
+            if isinstance(carry_over_property, tuple):
+                name_old, name_new = carry_over_property
+            else:
+                name_old = name_new = carry_over_property
+            properties[name_new] = image_metadata[name_old]
+
+        if 'arch' in image_metadata:
+            properties['architecture'] = canonicalize_arch(
+                image_metadata['arch'])
+
+        if hypervisor_mapping is not None and 'ftype' in image_metadata:
+            _hypervisor_type = hypervisor_type(image_metadata['ftype'])
+            if _hypervisor_type:
+                properties['hypervisor_type'] = _hypervisor_type
+        return properties
+
     def insert_item(self, data, src, target, pedigree, contentsource):
         flat = util.products_exdata(src, pedigree, include_top=False)
 
@@ -233,30 +267,19 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         if 'path' in t_item:
             del t_item['path']
 
-        props = {'content_id': target['content_id'],
-                 'source_content_id': src['content_id']}
-        for n in ('product_name', 'version_name', 'item_name'):
-            props[n] = flat[n]
-            del t_item[n]
+        props = self.create_glance_properties(
+            target['content_id'], flat,
+            self.config.get('hypervisor_mapping', None))
 
-        arch = flat.get('arch')
-        if arch:
-            t_item['arch'] = arch
-            props['architecture'] = canonicalize_arch(arch)
+        for n in ('product_name', 'version_name', 'item_name'):
+            del t_item[n]
 
         if self.config.get('hypervisor_mapping', False) and 'ftype' in flat:
             _hypervisor_type = hypervisor_type(flat['ftype'])
             if _hypervisor_type:
-                props['hypervisor_type'] = _hypervisor_type
                 _virt_type = virt_type(_hypervisor_type)
                 if _virt_type:
                     t_item['virt'] = _virt_type
-
-        if 'os' in flat:
-            props['os_distro'] = flat['os']
-
-        if 'version' in flat:
-            props['os_version'] = flat['version']
 
         fullname = self.name_prefix + name
         create_kwargs = {
