@@ -253,6 +253,28 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
                 properties['hypervisor_type'] = _hypervisor_type
         return properties
 
+    def prepare_glance_arguments(self, name_prefix, image_metadata,
+                                 image_data):
+        image_name = image_metadata.get('pubname', image_metadata.get('name'))
+        create_kwargs = {
+            'name': name_prefix + image_name,
+            'container_format': 'bare',
+            'is_public': True,
+        }
+        if 'size' in image_data:
+            create_kwargs['size'] = image_data.get('size')
+
+        if 'md5' in image_data:
+            create_kwargs['checksum'] = image_data.get('md5')
+
+        if 'ftype' in image_metadata:
+            create_kwargs['disk_format'] = (
+                disk_format(image_metadata['ftype']) or 'qcow2'
+            )
+        else:
+            create_kwargs['disk_format'] = 'qcow2'
+        return create_kwargs
+
     def insert_item(self, data, src, target, pedigree, contentsource):
         flat = util.products_exdata(src, pedigree, include_top=False)
 
@@ -263,16 +285,20 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         if not name.endswith(flat['item_name']):
             name += "-%s" % (flat['item_name'])
 
-        t_item = flat.copy()
-        if 'path' in t_item:
-            del t_item['path']
-
         props = self.create_glance_properties(
             target['content_id'], flat,
             self.config.get('hypervisor_mapping', None))
 
-        for n in ('product_name', 'version_name', 'item_name'):
-            del t_item[n]
+        create_kwargs = self.prepare_glance_arguments(
+            self.name_prefix, flat, data)
+        create_kwargs['properties'] = props
+        fullname = self.name_prefix + name
+
+        t_item = flat.copy()
+        for property_name in ('path', 'product_name', 'version_name',
+                              'item_name'):
+            if property_name in t_item:
+                del t_item[property_name]
 
         if self.config.get('hypervisor_mapping', False) and 'ftype' in flat:
             _hypervisor_type = hypervisor_type(flat['ftype'])
@@ -280,26 +306,6 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
                 _virt_type = virt_type(_hypervisor_type)
                 if _virt_type:
                     t_item['virt'] = _virt_type
-
-        fullname = self.name_prefix + name
-        create_kwargs = {
-            'name': fullname,
-            'properties': props,
-            'container_format': 'bare',
-            'is_public': True,
-        }
-        if 'size' in data:
-            create_kwargs['size'] = data.get('size')
-
-        if 'md5' in data:
-            create_kwargs['checksum'] = data.get('md5')
-
-        if 'ftype' in flat:
-            create_kwargs['disk_format'] = (
-                disk_format(flat['ftype']) or 'qcow2'
-            )
-        else:
-            create_kwargs['disk_format'] = 'qcow2'
 
         if self.progress_callback:
             def progress_wrapper(written):
