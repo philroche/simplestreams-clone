@@ -275,6 +275,33 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             create_kwargs['disk_format'] = 'qcow2'
         return create_kwargs
 
+    def download_images(self, contentsource, image_name, image_size,
+                        image_stream_data):
+        tmp_path = tmp_del = new_size = new_md5 = None
+
+        if self.progress_callback:
+            def progress_wrapper(written):
+                self.progress_callback(dict(status="Downloading",
+                                            name=image_name,
+                                            size=image_size,
+                                            written=written))
+        else:
+            def progress_wrapper(written):
+                pass
+
+        try:
+            (tmp_path, tmp_del) = util.get_local_copy(
+                contentsource, progress_callback=progress_wrapper)
+
+            if self.modify_hook:
+                (new_size, new_md5) = call_hook(
+                    item=image_stream_data, path=tmp_path,
+                    cmd=self.modify_hook)
+        finally:
+            contentsource.close()
+
+        return tmp_path, new_size, new_md5
+
     def insert_item(self, data, src, target, pedigree, contentsource):
         flat = util.products_exdata(src, pedigree, include_top=False)
 
@@ -307,31 +334,16 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
                 if _virt_type:
                     t_item['virt'] = _virt_type
 
-        if self.progress_callback:
-            def progress_wrapper(written):
-                self.progress_callback(dict(status="Downloading",
-                                            name=flat.get('pubname'),
-                                            size=data.get('size', 0),
-                                            written=written))
-        else:
-            def progress_wrapper(written):
-                pass
-
         try:
-            try:
-                (tmp_path, tmp_del) = util.get_local_copy(
-                    contentsource, progress_callback=progress_wrapper)
+            tmp_path, new_size, new_md5 = self.download_images(
+                contentsource, flat.get('pubname'), data.get('size', 0),
+                t_item)
 
-                if self.modify_hook:
-                    (newsize, newmd5) = call_hook(item=t_item, path=tmp_path,
-                                                  cmd=self.modify_hook)
-                    create_kwargs['checksum'] = newmd5
-                    create_kwargs['size'] = newsize
-                    t_item['md5'] = newmd5
-                    t_item['size'] = newsize
-
-            finally:
-                contentsource.close()
+            if new_size and new_md5:
+                create_kwargs['checksum'] = new_md5
+                create_kwargs['size'] = new_size
+                t_item['md5'] = new_md5
+                t_item['size'] = new_size
 
             create_kwargs['data'] = open(tmp_path, 'rb')
             ret = self.gclient.images.create(**create_kwargs)
@@ -339,7 +351,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             print("created %s: %s" % (ret.id, fullname))
 
         finally:
-            if tmp_del and os.path.exists(tmp_path):
+            if tmp_path and os.path.exists(tmp_path):
                 os.unlink(tmp_path)
 
         t_item['region'] = self.region
