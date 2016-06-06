@@ -48,11 +48,14 @@ class TestCommandHookMirror(TestCase):
             chm.run_command = oruncmd
 
         # the 'load_products' should be called once for each content
-        # in the stream. same for 'insert-products'
+        # in the stream.
         self.assertEqual(len([f for f in self._run_commands
                              if f == ['load-products']]), 2)
+        # 'insert-products' is called for every item to re-generate
+        # the simplestreams index after insert_item() and then once
+        # when everything is done.
         self.assertEqual(len([f for f in self._run_commands
-                             if f == ['insert-products']]), 2)
+                              if f == ['insert-products']]), 35)
 
     def _run_command(self, cmd, env=None, capture=False, rcs=None):
         self._run_commands.append(cmd)
