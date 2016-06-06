@@ -225,8 +225,8 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
     def filter_item(self, data, src, target, pedigree):
         return filters.filter_item(self.item_filters, data, src, pedigree)
 
-    def create_glance_properties(self, content_id, image_metadata,
-                                 hypervisor_mapping):
+    def create_glance_properties(self, content_id, source_content_id,
+                                 image_metadata, hypervisor_mapping):
         """
         Construct extra properties to store in Glance for an image.
 
@@ -234,7 +234,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         """
         properties = {
             'content_id': content_id,
-            'source_content_id': image_metadata['content_id'],
+            'source_content_id': source_content_id,
         }
         # An iterator of properties to carry over: if a property needs
         # renaming, uses a tuple (old name, new name).
@@ -281,9 +281,17 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             create_kwargs['disk_format'] = 'qcow2'
         return create_kwargs
 
-    def download_images(self, contentsource, image_name, image_size,
-                        image_stream_data):
-        tmp_path = tmp_del = new_size = new_md5 = None
+    def download_images(self, contentsource, image_stream_data):
+        """
+        Download an image from contentsource.
+
+        `image_stream_data` represents a flattened image metadata structure
+        to use for any logging messages.
+        """
+        tmp_path = new_size = new_md5 = None
+
+        image_name = image_stream_data.get('pubname')
+        image_size = image_stream_data.get('size')
 
         if self.progress_callback:
             def progress_wrapper(written):
@@ -296,7 +304,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
                 pass
 
         try:
-            (tmp_path, tmp_del) = util.get_local_copy(
+            tmp_path, _ = util.get_local_copy(
                 contentsource, progress_callback=progress_wrapper)
 
             if self.modify_hook:
@@ -360,7 +368,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         hypervisor_mapping = self.config.get('hypervisor_mapping', None)
         props = self.create_glance_properties(
-            target['content_id'], flat, hypervisor_mapping)
+            target['content_id'], src['content_id'], flat, hypervisor_mapping)
 
         create_kwargs = self.prepare_glance_arguments(
             self.name_prefix, flat, data)
@@ -371,8 +379,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         try:
             tmp_path, new_size, new_md5 = self.download_images(
-                contentsource, flat.get('pubname'), data.get('size', 0),
-                t_item)
+                contentsource, flat)
 
             if new_size and new_md5:
                 create_kwargs['checksum'] = new_md5
