@@ -260,12 +260,14 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         return properties
 
     def prepare_glance_arguments(self, name_prefix, image_metadata,
-                                 image_data, image_md5_hash, image_size):
+                                 image_data, image_md5_hash, image_size,
+                                 image_properties):
         image_name = image_metadata.get('pubname', image_metadata.get('name'))
         create_kwargs = {
             'name': name_prefix + image_name,
             'container_format': 'bare',
             'is_public': True,
+            'properties': image_properties,
         }
         if 'size' in image_data:
             create_kwargs['size'] = image_data.get('size')
@@ -385,14 +387,12 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         hypervisor_mapping = self.config.get('hypervisor_mapping', None)
 
-        props = self.create_glance_properties(
+        glance_props = self.create_glance_properties(
             target['content_id'], src['content_id'], flat, hypervisor_mapping)
-
         create_kwargs = self.prepare_glance_arguments(
-            self.name_prefix, flat, data, new_md5, new_size)
-        create_kwargs['properties'] = props
-        fullname = self.name_prefix + name
+            self.name_prefix, flat, data, new_md5, new_size, glance_props)
 
+        fullname = self.name_prefix + name
         t_item = self.adapt_source_entry(
             flat, hypervisor_mapping, fullname, new_md5, new_size)
 
