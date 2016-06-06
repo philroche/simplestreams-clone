@@ -308,6 +308,33 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         return tmp_path, new_size, new_md5
 
+    def adapt_source_entry(self, source_entry, hypervisor_mapping, fullname):
+        """
+        Adapts the source simplestreams dict `source_entry` for use in the
+        generated local simplestreams index.
+        """
+        output_entry = source_entry.copy()
+
+        # Drop attributes not needed for the simplestreams index itself.
+        for property_name in ('path', 'product_name', 'version_name',
+                              'item_name'):
+            if property_name in output_entry:
+                del output_entry[property_name]
+
+        if hypervisor_mapping is not None and 'ftype' in output_entry:
+            _hypervisor_type = hypervisor_type(output_entry['ftype'])
+            if _hypervisor_type:
+                _virt_type = virt_type(_hypervisor_type)
+                if _virt_type:
+                    output_entry['virt'] = _virt_type
+
+        output_entry['region'] = self.region
+        output_entry['endpoint'] = self.auth_url
+        output_entry['owner_id'] = self.tenant_id
+        output_entry['name'] = fullname
+
+        return output_entry
+
     def insert_item(self, data, src, target, pedigree, contentsource):
         """
         Upload image into glance and add image metadata to simplestreams index.
@@ -320,36 +347,27 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         `pedigree` is a "path" to get to the `data` for the image we desire,
             a tuple of (product_name, version_name, image_type).
         """
+        # Extract metadata for a product image matching
+        #   (product-name, version-name, image-type)
+        # from the tuple `pedigree` in the source simplestreams index.
         flat = util.products_exdata(src, pedigree, include_top=False)
 
         tmp_path = None
-        tmp_del = None
 
         name = flat.get('pubname', flat.get('name'))
         if not name.endswith(flat['item_name']):
             name += "-%s" % (flat['item_name'])
 
+        hypervisor_mapping = self.config.get('hypervisor_mapping', None)
         props = self.create_glance_properties(
-            target['content_id'], flat,
-            self.config.get('hypervisor_mapping', None))
+            target['content_id'], flat, hypervisor_mapping)
 
         create_kwargs = self.prepare_glance_arguments(
             self.name_prefix, flat, data)
         create_kwargs['properties'] = props
         fullname = self.name_prefix + name
 
-        t_item = flat.copy()
-        for property_name in ('path', 'product_name', 'version_name',
-                              'item_name'):
-            if property_name in t_item:
-                del t_item[property_name]
-
-        if self.config.get('hypervisor_mapping', False) and 'ftype' in flat:
-            _hypervisor_type = hypervisor_type(flat['ftype'])
-            if _hypervisor_type:
-                _virt_type = virt_type(_hypervisor_type)
-                if _virt_type:
-                    t_item['virt'] = _virt_type
+        t_item = self.adapt_source_entry(flat, hypervisor_mapping, fullname)
 
         try:
             tmp_path, new_size, new_md5 = self.download_images(
@@ -371,10 +389,6 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             if tmp_path and os.path.exists(tmp_path):
                 os.unlink(tmp_path)
 
-        t_item['region'] = self.region
-        t_item['endpoint'] = self.auth_url
-        t_item['owner_id'] = self.tenant_id
-        t_item['name'] = fullname
         util.products_set(target, t_item, pedigree)
 
     def remove_item(self, data, src, target, pedigree):
