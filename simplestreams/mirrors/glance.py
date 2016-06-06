@@ -287,6 +287,10 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         `image_stream_data` represents a flattened image metadata structure
         to use for any logging messages.
+
+        Returns a tuple of (local-image-path, image-size, image-md5-hash).
+
+        If download fails, these values will all be None.
         """
         tmp_path = new_size = new_md5 = None
 
