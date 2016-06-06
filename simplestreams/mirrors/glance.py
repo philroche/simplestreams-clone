@@ -260,7 +260,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         return properties
 
     def prepare_glance_arguments(self, name_prefix, image_metadata,
-                                 image_data):
+                                 image_data, image_md5_hash, image_size):
         image_name = image_metadata.get('pubname', image_metadata.get('name'))
         create_kwargs = {
             'name': name_prefix + image_name,
@@ -272,7 +272,11 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         if 'md5' in image_data:
             create_kwargs['checksum'] = image_data.get('md5')
-
+        if image_md5_hash and image_size:
+            create_kwargs.update({
+                'checksum': image_md5_hash,
+                'size': image_size,
+            })
         if 'ftype' in image_metadata:
             create_kwargs['disk_format'] = (
                 disk_format(image_metadata['ftype']) or 'qcow2'
@@ -320,7 +324,8 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         return tmp_path, new_size, new_md5
 
-    def adapt_source_entry(self, source_entry, hypervisor_mapping, fullname):
+    def adapt_source_entry(self, source_entry, hypervisor_mapping, image_name,
+                           image_md5_hash, image_size):
         """
         Adapts the source simplestreams dict `source_entry` for use in the
         generated local simplestreams index.
@@ -343,7 +348,11 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         output_entry['region'] = self.region
         output_entry['endpoint'] = self.auth_url
         output_entry['owner_id'] = self.tenant_id
-        output_entry['name'] = fullname
+
+        output_entry['name'] = image_name
+        if image_md5_hash and image_size:
+            output_entry['md5'] = image_md5_hash
+            output_entry['size'] = image_size
 
         return output_entry
 
@@ -370,27 +379,24 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         if not name.endswith(flat['item_name']):
             name += "-%s" % (flat['item_name'])
 
+        # Download images locally into a temporary file.
+        tmp_path, new_size, new_md5 = self.download_images(
+            contentsource, flat)
+
         hypervisor_mapping = self.config.get('hypervisor_mapping', None)
+
         props = self.create_glance_properties(
             target['content_id'], src['content_id'], flat, hypervisor_mapping)
 
         create_kwargs = self.prepare_glance_arguments(
-            self.name_prefix, flat, data)
+            self.name_prefix, flat, data, new_md5, new_size)
         create_kwargs['properties'] = props
         fullname = self.name_prefix + name
 
-        t_item = self.adapt_source_entry(flat, hypervisor_mapping, fullname)
+        t_item = self.adapt_source_entry(
+            flat, hypervisor_mapping, fullname, new_md5, new_size)
 
         try:
-            tmp_path, new_size, new_md5 = self.download_images(
-                contentsource, flat)
-
-            if new_size and new_md5:
-                create_kwargs['checksum'] = new_md5
-                create_kwargs['size'] = new_size
-                t_item['md5'] = new_md5
-                t_item['size'] = new_size
-
             create_kwargs['data'] = open(tmp_path, 'rb')
             ret = self.gclient.images.create(**create_kwargs)
             t_item['id'] = ret.id
