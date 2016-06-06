@@ -259,12 +259,11 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
                 properties['hypervisor_type'] = _hypervisor_type
         return properties
 
-    def prepare_glance_arguments(self, name_prefix, image_metadata,
+    def prepare_glance_arguments(self, full_image_name, image_metadata,
                                  image_data, image_md5_hash, image_size,
                                  image_properties):
-        image_name = image_metadata.get('pubname', image_metadata.get('name'))
         create_kwargs = {
-            'name': name_prefix + image_name,
+            'name': full_image_name,
             'container_format': 'bare',
             'is_public': True,
             'properties': image_properties,
@@ -377,9 +376,10 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         tmp_path = None
 
-        name = flat.get('pubname', flat.get('name'))
-        if not name.endswith(flat['item_name']):
-            name += "-%s" % (flat['item_name'])
+        full_image_name = "{}{}".format(
+            self.name_prefix, flat.get('pubname', flat.get('name')))
+        if not full_image_name.endswith(flat['item_name']):
+            full_image_name += "-{}".format(flat['item_name'])
 
         # Download images locally into a temporary file.
         tmp_path, new_size, new_md5 = self.download_images(
@@ -390,17 +390,16 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         glance_props = self.create_glance_properties(
             target['content_id'], src['content_id'], flat, hypervisor_mapping)
         create_kwargs = self.prepare_glance_arguments(
-            self.name_prefix, flat, data, new_md5, new_size, glance_props)
+            full_image_name, flat, data, new_md5, new_size, glance_props)
 
-        fullname = self.name_prefix + name
         t_item = self.adapt_source_entry(
-            flat, hypervisor_mapping, fullname, new_md5, new_size)
+            flat, hypervisor_mapping, full_image_name, new_md5, new_size)
 
         try:
             create_kwargs['data'] = open(tmp_path, 'rb')
             ret = self.gclient.images.create(**create_kwargs)
             t_item['id'] = ret.id
-            print("created %s: %s" % (ret.id, fullname))
+            print("created %s: %s" % (ret.id, full_image_name))
 
         finally:
             if tmp_path and os.path.exists(tmp_path):
