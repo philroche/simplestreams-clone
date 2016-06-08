@@ -16,9 +16,7 @@ class TestGlanceMirror(TestCase):
     """Tests for GlanceMirror methods."""
 
     def test_adapt_source_entry(self):
-        """
-        Adapts source entry for use in a local simplestreams index.
-        """
+        # Adapts source entry for use in a local simplestreams index.
         config = {"content_id": "foo123"}
         mirror = GlanceMirror(
             config, region="region1", openstack=FakeOpenstack())
@@ -45,9 +43,7 @@ class TestGlanceMirror(TestCase):
             output_entry)
 
     def test_adapt_source_entry_ignored_properties(self):
-        """
-        adapt_source_entry() drops some properties from the source entry.
-        """
+        # adapt_source_entry() drops some properties from the source entry.
         config = {"content_id": "foo123"}
         mirror = GlanceMirror(
             config, region="region1", openstack=FakeOpenstack())
@@ -64,9 +60,7 @@ class TestGlanceMirror(TestCase):
             self.assertNotIn("path", output_entry)
 
     def test_adapt_source_entry_image_md5_and_size(self):
-        """
-        adapt_source_entry() will use passed in values for md5 and size.
-        """
+        # adapt_source_entry() will use passed in values for md5 and size.
         config = {"content_id": "foo123"}
         mirror = GlanceMirror(
             config, region="region1", openstack=FakeOpenstack())
@@ -81,9 +75,7 @@ class TestGlanceMirror(TestCase):
         self.assertEqual(5, output_entry["size"])
 
     def test_adapt_source_entry_image_md5_and_size_both_required(self):
-        """
-        adapt_source_entry() requires both md5 and size to not ignore them.
-        """
+        # adapt_source_entry() requires both md5 and size to not ignore them.
         config = {"content_id": "foo123"}
         mirror = GlanceMirror(
             config, region="region1", openstack=FakeOpenstack())
@@ -106,10 +98,8 @@ class TestGlanceMirror(TestCase):
         self.assertNotIn("size", output_entry2)
 
     def test_adapt_source_entry_hypervisor_mapping(self):
-        """
-        If hypervisor_mapping is set to True, 'virt' value is derived from
-        the source entry 'ftype'.
-        """
+        # If hypervisor_mapping is set to True, 'virt' value is derived from
+        # the source entry 'ftype'.
         config = {"content_id": "foo123"}
         mirror = GlanceMirror(
             config, region="region1", openstack=FakeOpenstack())
@@ -121,10 +111,8 @@ class TestGlanceMirror(TestCase):
         self.assertEqual("kvm", output_entry["virt"])
 
     def test_adapt_source_entry_hypervisor_mapping_ftype_required(self):
-        """
-        If hypervisor_mapping is set to True, but 'ftype' is missing in the
-        source entry, 'virt' value is not added to the returned entry.
-        """
+        # If hypervisor_mapping is set to True, but 'ftype' is missing in the
+        # source entry, 'virt' value is not added to the returned entry.
         config = {"content_id": "foo123"}
         mirror = GlanceMirror(
             config, region="region1", openstack=FakeOpenstack())
