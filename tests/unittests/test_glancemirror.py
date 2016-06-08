@@ -7,6 +7,7 @@ from unittest import TestCase
 
 
 class FakeOpenstack(object):
+    """Fake 'openstack' module replacement for testing GlanceMirror."""
     def load_keystone_creds(self):
         return {"auth_url": "http://keystone/api/"}
 
@@ -16,11 +17,13 @@ class FakeOpenstack(object):
 
 
 class FakeImage(object):
+    """Fake image objects returned by GlanceClient.images.create()."""
     def __init__(self, identifier):
         self.id = identifier
 
 
 class FakeImages(object):
+    """Fake GlanceClient.images implementation to track create() calls."""
     def __init__(self):
         self.create_calls = []
 
@@ -30,6 +33,7 @@ class FakeImages(object):
 
 
 class FakeGlanceClient(object):
+    """Fake GlanceClient implementation to track images.create() calls."""
     def __init__(self, *args):
         self.images = FakeImages()
 
