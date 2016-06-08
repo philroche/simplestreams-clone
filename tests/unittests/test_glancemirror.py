@@ -23,7 +23,7 @@ class TestGlanceMirror(TestCase):
 
         source_entry = {"source-key": "source-value"}
         output_entry = mirror.adapt_source_entry(
-            source_entry, hypervisor_mapping=None, image_name="foobuntu-X",
+            source_entry, hypervisor_mapping=False, image_name="foobuntu-X",
             image_md5_hash=None, image_size=None)
 
         # Source and output entry are different objects.
@@ -52,7 +52,7 @@ class TestGlanceMirror(TestCase):
                         "version_name": "baz",
                         "item_name": "bah"}
         output_entry = mirror.adapt_source_entry(
-            source_entry, hypervisor_mapping=None, image_name="foobuntu-X",
+            source_entry, hypervisor_mapping=False, image_name="foobuntu-X",
             image_md5_hash=None, image_size=None)
 
         # None of the values in 'source_entry' are preserved.
@@ -68,7 +68,7 @@ class TestGlanceMirror(TestCase):
         # image_size are passed in.
         source_entry = {"md5": "stale-md5"}
         output_entry = mirror.adapt_source_entry(
-            source_entry, hypervisor_mapping=None, image_name="foobuntu-X",
+            source_entry, hypervisor_mapping=False, image_name="foobuntu-X",
             image_md5_hash="new-md5", image_size=5)
 
         self.assertEqual("new-md5", output_entry["md5"])
@@ -85,14 +85,14 @@ class TestGlanceMirror(TestCase):
 
         # image_size is not passed in, so md5 value is not used either.
         output_entry1 = mirror.adapt_source_entry(
-            source_entry, hypervisor_mapping=None, image_name="foobuntu-X",
+            source_entry, hypervisor_mapping=False, image_name="foobuntu-X",
             image_md5_hash="new-md5", image_size=None)
         self.assertEqual("stale-md5", output_entry1["md5"])
         self.assertNotIn("size", output_entry1)
 
         # image_md5_hash is not passed in, so image_size is not used either.
         output_entry2 = mirror.adapt_source_entry(
-            source_entry, hypervisor_mapping=None, image_name="foobuntu-X",
+            source_entry, hypervisor_mapping=False, image_name="foobuntu-X",
             image_md5_hash=None, image_size=5)
         self.assertEqual("stale-md5", output_entry2["md5"])
         self.assertNotIn("size", output_entry2)
@@ -141,7 +141,7 @@ class TestGlanceMirror(TestCase):
             "something-else": "ignored",
         }
         properties = mirror.create_glance_properties(
-            "content-1", "source-1", source_entry, hypervisor_mapping=None)
+            "content-1", "source-1", source_entry, hypervisor_mapping=False)
 
         # Output properties contain content-id and source-content-id based
         # on the passed in parameters, and carry over (with changed keys
@@ -156,3 +156,42 @@ class TestGlanceMirror(TestCase):
              "os_distro": "ubuntu",
              "os_version": "16.04"},
             properties)
+
+    def test_create_glance_properties_arch(self):
+        # When 'arch' is present in the source entry, it is adapted and
+        # returned inside 'architecture' field.
+        config = {"content_id": "foo123"}
+        mirror = GlanceMirror(
+            config, region="region1", openstack=FakeOpenstack())
+
+        source_entry = {
+            "product_name": "foobuntu",
+            "version_name": "X",
+            "item_name": "disk1.img",
+            "os": "ubuntu",
+            "version": "16.04",
+            "arch": "amd64",
+        }
+        properties = mirror.create_glance_properties(
+            "content-1", "source-1", source_entry, hypervisor_mapping=False)
+        self.assertEqual("x86_64", properties["architecture"])
+
+    def test_create_glance_properties_hypervisor_mapping(self):
+        # When hypervisor_mapping is requested and 'ftype' is present in
+        # the image metadata, 'hypervisor_type' is added to returned
+        # properties.
+        config = {"content_id": "foo123"}
+        mirror = GlanceMirror(
+            config, region="region1", openstack=FakeOpenstack())
+
+        source_entry = {
+            "product_name": "foobuntu",
+            "version_name": "X",
+            "item_name": "disk1.img",
+            "os": "ubuntu",
+            "version": "16.04",
+            "ftype": "root.tar.gz",
+        }
+        properties = mirror.create_glance_properties(
+            "content-1", "source-1", source_entry, hypervisor_mapping=True)
+        self.assertEqual("lxc", properties["hypervisor_type"])
