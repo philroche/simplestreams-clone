@@ -106,7 +106,8 @@ def virt_type(hypervisor_type):
 # if provided an object store, it will produce a 'image-ids' mirror
 class GlanceMirror(mirrors.BasicMirrorWriter):
     def __init__(self, config, objectstore=None, region=None,
-                 name_prefix=None, progress_callback=None):
+                 name_prefix=None, progress_callback=None,
+                 openstack=openstack):
         super(GlanceMirror, self).__init__(config=config)
 
         self.item_filters = self.config.get('item_filters', [])
