@@ -15,14 +15,15 @@ class FakeOpenstack(object):
 class TestGlanceMirror(TestCase):
     """Tests for GlanceMirror methods."""
 
+    def setUp(self):
+        self.config = {"content_id": "foo123"}
+        self.mirror = GlanceMirror(
+            self.config, region="region1", openstack=FakeOpenstack())
+
     def test_adapt_source_entry(self):
         # Adapts source entry for use in a local simplestreams index.
-        config = {"content_id": "foo123"}
-        mirror = GlanceMirror(
-            config, region="region1", openstack=FakeOpenstack())
-
         source_entry = {"source-key": "source-value"}
-        output_entry = mirror.adapt_source_entry(
+        output_entry = self.mirror.adapt_source_entry(
             source_entry, hypervisor_mapping=False, image_name="foobuntu-X",
             image_md5_hash=None, image_size=None)
 
@@ -51,7 +52,7 @@ class TestGlanceMirror(TestCase):
                         "product_name": "bar",
                         "version_name": "baz",
                         "item_name": "bah"}
-        output_entry = mirror.adapt_source_entry(
+        output_entry = self.mirror.adapt_source_entry(
             source_entry, hypervisor_mapping=False, image_name="foobuntu-X",
             image_md5_hash=None, image_size=None)
 
@@ -61,13 +62,10 @@ class TestGlanceMirror(TestCase):
 
     def test_adapt_source_entry_image_md5_and_size(self):
         # adapt_source_entry() will use passed in values for md5 and size.
-        config = {"content_id": "foo123"}
-        mirror = GlanceMirror(
-            config, region="region1", openstack=FakeOpenstack())
         # Even old stale values will be overridden when image_md5_hash and
         # image_size are passed in.
         source_entry = {"md5": "stale-md5"}
-        output_entry = mirror.adapt_source_entry(
+        output_entry = self.mirror.adapt_source_entry(
             source_entry, hypervisor_mapping=False, image_name="foobuntu-X",
             image_md5_hash="new-md5", image_size=5)
 
@@ -76,22 +74,18 @@ class TestGlanceMirror(TestCase):
 
     def test_adapt_source_entry_image_md5_and_size_both_required(self):
         # adapt_source_entry() requires both md5 and size to not ignore them.
-        config = {"content_id": "foo123"}
-        mirror = GlanceMirror(
-            config, region="region1", openstack=FakeOpenstack())
-        # Even old stale values will be overridden when image_md5_hash and
-        # image_size are passed in.
+
         source_entry = {"md5": "stale-md5"}
 
         # image_size is not passed in, so md5 value is not used either.
-        output_entry1 = mirror.adapt_source_entry(
+        output_entry1 = self.mirror.adapt_source_entry(
             source_entry, hypervisor_mapping=False, image_name="foobuntu-X",
             image_md5_hash="new-md5", image_size=None)
         self.assertEqual("stale-md5", output_entry1["md5"])
         self.assertNotIn("size", output_entry1)
 
         # image_md5_hash is not passed in, so image_size is not used either.
-        output_entry2 = mirror.adapt_source_entry(
+        output_entry2 = self.mirror.adapt_source_entry(
             source_entry, hypervisor_mapping=False, image_name="foobuntu-X",
             image_md5_hash=None, image_size=5)
         self.assertEqual("stale-md5", output_entry2["md5"])
@@ -100,11 +94,8 @@ class TestGlanceMirror(TestCase):
     def test_adapt_source_entry_hypervisor_mapping(self):
         # If hypervisor_mapping is set to True, 'virt' value is derived from
         # the source entry 'ftype'.
-        config = {"content_id": "foo123"}
-        mirror = GlanceMirror(
-            config, region="region1", openstack=FakeOpenstack())
         source_entry = {"ftype": "disk1.img"}
-        output_entry = mirror.adapt_source_entry(
+        output_entry = self.mirror.adapt_source_entry(
             source_entry, hypervisor_mapping=True, image_name="foobuntu-X",
             image_md5_hash=None, image_size=None)
 
@@ -113,11 +104,8 @@ class TestGlanceMirror(TestCase):
     def test_adapt_source_entry_hypervisor_mapping_ftype_required(self):
         # If hypervisor_mapping is set to True, but 'ftype' is missing in the
         # source entry, 'virt' value is not added to the returned entry.
-        config = {"content_id": "foo123"}
-        mirror = GlanceMirror(
-            config, region="region1", openstack=FakeOpenstack())
         source_entry = {}
-        output_entry = mirror.adapt_source_entry(
+        output_entry = self.mirror.adapt_source_entry(
             source_entry, hypervisor_mapping=True, image_name="foobuntu-X",
             image_md5_hash=None, image_size=None)
 
@@ -126,10 +114,6 @@ class TestGlanceMirror(TestCase):
     def test_create_glance_properties(self):
         # Constructs glance properties to set on image during upload
         # based on source image metadata.
-        config = {"content_id": "foo123"}
-        mirror = GlanceMirror(
-            config, region="region1", openstack=FakeOpenstack())
-
         source_entry = {
             # All of these are carried over and potentially re-named.
             "product_name": "foobuntu",
@@ -140,7 +124,7 @@ class TestGlanceMirror(TestCase):
             # Other entries are ignored.
             "something-else": "ignored",
         }
-        properties = mirror.create_glance_properties(
+        properties = self.mirror.create_glance_properties(
             "content-1", "source-1", source_entry, hypervisor_mapping=False)
 
         # Output properties contain content-id and source-content-id based
@@ -160,10 +144,6 @@ class TestGlanceMirror(TestCase):
     def test_create_glance_properties_arch(self):
         # When 'arch' is present in the source entry, it is adapted and
         # returned inside 'architecture' field.
-        config = {"content_id": "foo123"}
-        mirror = GlanceMirror(
-            config, region="region1", openstack=FakeOpenstack())
-
         source_entry = {
             "product_name": "foobuntu",
             "version_name": "X",
@@ -172,7 +152,7 @@ class TestGlanceMirror(TestCase):
             "version": "16.04",
             "arch": "amd64",
         }
-        properties = mirror.create_glance_properties(
+        properties = self.mirror.create_glance_properties(
             "content-1", "source-1", source_entry, hypervisor_mapping=False)
         self.assertEqual("x86_64", properties["architecture"])
 
@@ -180,10 +160,6 @@ class TestGlanceMirror(TestCase):
         # When hypervisor_mapping is requested and 'ftype' is present in
         # the image metadata, 'hypervisor_type' is added to returned
         # properties.
-        config = {"content_id": "foo123"}
-        mirror = GlanceMirror(
-            config, region="region1", openstack=FakeOpenstack())
-
         source_entry = {
             "product_name": "foobuntu",
             "version_name": "X",
@@ -192,19 +168,15 @@ class TestGlanceMirror(TestCase):
             "version": "16.04",
             "ftype": "root.tar.gz",
         }
-        properties = mirror.create_glance_properties(
+        properties = self.mirror.create_glance_properties(
             "content-1", "source-1", source_entry, hypervisor_mapping=True)
         self.assertEqual("lxc", properties["hypervisor_type"])
 
     def test_prepare_glance_arguments(self):
         # Prepares arguments to pass to GlanceClient.images.create()
         # based on image metadata from the simplestreams source.
-        config = {"content_id": "foo123"}
-        mirror = GlanceMirror(
-            config, region="region1", openstack=FakeOpenstack())
-
         source_entry = {}
-        create_arguments = mirror.prepare_glance_arguments(
+        create_arguments = self.mirror.prepare_glance_arguments(
             "foobuntu-X", source_entry, image_md5_hash=None, image_size=None,
             image_properties=None)
 
@@ -220,12 +192,8 @@ class TestGlanceMirror(TestCase):
 
     def test_prepare_glance_arguments_disk_format(self):
         # Disk format is based on the image 'ftype' (if defined).
-        config = {"content_id": "foo123"}
-        mirror = GlanceMirror(
-            config, region="region1", openstack=FakeOpenstack())
-
         source_entry = {"ftype": "root.tar.gz"}
-        create_arguments = mirror.prepare_glance_arguments(
+        create_arguments = self.mirror.prepare_glance_arguments(
             "foobuntu-X", source_entry, image_md5_hash=None, image_size=None,
             image_properties=None)
 
@@ -233,12 +201,8 @@ class TestGlanceMirror(TestCase):
 
     def test_prepare_glance_arguments_size(self):
         # Size is read from image metadata if defined.
-        config = {"content_id": "foo123"}
-        mirror = GlanceMirror(
-            config, region="region1", openstack=FakeOpenstack())
-
         source_entry = {"size": 5}
-        create_arguments = mirror.prepare_glance_arguments(
+        create_arguments = self.mirror.prepare_glance_arguments(
             "foobuntu-X", source_entry, image_md5_hash=None, image_size=None,
             image_properties=None)
 
@@ -246,12 +210,8 @@ class TestGlanceMirror(TestCase):
 
     def test_prepare_glance_arguments_checksum(self):
         # Checksum is based on the source entry 'md5' value, if defined.
-        config = {"content_id": "foo123"}
-        mirror = GlanceMirror(
-            config, region="region1", openstack=FakeOpenstack())
-
         source_entry = {"md5": "foo123"}
-        create_arguments = mirror.prepare_glance_arguments(
+        create_arguments = self.mirror.prepare_glance_arguments(
             "foobuntu-X", source_entry, image_md5_hash=None, image_size=None,
             image_properties=None)
 
@@ -260,12 +220,8 @@ class TestGlanceMirror(TestCase):
     def test_prepare_glance_arguments_size_and_md5_override(self):
         # Size and md5 hash are overridden from the passed-in values even if
         # defined on the source entry.
-        config = {"content_id": "foo123"}
-        mirror = GlanceMirror(
-            config, region="region1", openstack=FakeOpenstack())
-
         source_entry = {"size": 5, "md5": "foo123"}
-        create_arguments = mirror.prepare_glance_arguments(
+        create_arguments = self.mirror.prepare_glance_arguments(
             "foobuntu-X", source_entry, image_md5_hash="bar456", image_size=10,
             image_properties=None)
 
@@ -275,12 +231,8 @@ class TestGlanceMirror(TestCase):
     def test_prepare_glance_arguments_size_and_md5_no_override_hash(self):
         # If only one of image_md5_hash or image_size is passed directly in,
         # the other value is not overridden either.
-        config = {"content_id": "foo123"}
-        mirror = GlanceMirror(
-            config, region="region1", openstack=FakeOpenstack())
-
         source_entry = {"size": 5, "md5": "foo123"}
-        create_arguments = mirror.prepare_glance_arguments(
+        create_arguments = self.mirror.prepare_glance_arguments(
             "foobuntu-X", source_entry, image_md5_hash="bar456",
             image_size=None, image_properties=None)
 
@@ -290,12 +242,8 @@ class TestGlanceMirror(TestCase):
     def test_prepare_glance_arguments_size_and_md5_no_override_size(self):
         # If only one of image_md5_hash or image_size is passed directly in,
         # the other value is not overridden either.
-        config = {"content_id": "foo123"}
-        mirror = GlanceMirror(
-            config, region="region1", openstack=FakeOpenstack())
-
         source_entry = {"size": 5, "md5": "foo123"}
-        create_arguments = mirror.prepare_glance_arguments(
+        create_arguments = self.mirror.prepare_glance_arguments(
             "foobuntu-X", source_entry, image_md5_hash=None, image_size=10,
             image_properties=None)
 
