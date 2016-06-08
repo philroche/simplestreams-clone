@@ -1,5 +1,7 @@
 from simplestreams.mirrors.glance import GlanceMirror
+from simplestreams.contentsource import MemoryContentSource
 
+import os
 from unittest import TestCase
 
 
@@ -249,3 +251,67 @@ class TestGlanceMirror(TestCase):
 
         self.assertEqual(5, create_arguments["size"])
         self.assertEqual("foo123", create_arguments["checksum"])
+
+    def test_download_image(self):
+        # Downloads image from a contentsource.
+        content = "foo bazes the bar"
+        content_source = MemoryContentSource(
+            url="http://image-store/fooubuntu-X-disk1.img", content=content)
+        image_metadata = {"pubname": "foobuntu-X", "size": 5}
+        path, size, md5_hash = self.mirror.download_image(
+            content_source, image_metadata)
+        self.addCleanup(os.unlink, path)
+        self.assertIsNotNone(path)
+        self.assertIsNone(size)
+        self.assertIsNone(md5_hash)
+
+    def test_download_image_progress_callback(self):
+        # Progress callback is called with image name, size, status and buffer
+        # size after every 10kb of data: 3 times for 25kb of data below.
+        content = "abcdefghij" * int(1024 * 2.5)
+        content_source = MemoryContentSource(
+            url="http://image-store/fooubuntu-X-disk1.img", content=content)
+        image_metadata = {"pubname": "foobuntu-X", "size": len(content)}
+
+        self.progress_calls = []
+
+        def log_progress_calls(message):
+            self.progress_calls.append(message)
+
+        self.addCleanup(
+            setattr, self.mirror, "progress_callback",
+            self.mirror.progress_callback)
+        self.mirror.progress_callback = log_progress_calls
+        path, size, md5_hash = self.mirror.download_image(
+            content_source, image_metadata)
+        self.addCleanup(os.unlink, path)
+
+        self.assertEqual(
+            [{"name": "foobuntu-X", "size": 25600, "status": "Downloading",
+              "written": 10240}] * 3,
+            self.progress_calls)
+
+    def test_download_image_error(self):
+        # When there's an error during download, contentsource is still closed
+        # and the error is propagated below.
+        content = "abcdefghij"
+        content_source = MemoryContentSource(
+            url="http://image-store/fooubuntu-X-disk1.img", content=content)
+        image_metadata = {"pubname": "foobuntu-X", "size": len(content)}
+
+        # MemoryContentSource has an internal file descriptor which indicates
+        # if close() method has been called on it.
+        self.assertFalse(content_source.fd.closed)
+
+        self.addCleanup(
+            setattr, self.mirror, "progress_callback",
+            self.mirror.progress_callback)
+        self.mirror.progress_callback = lambda message: 1/0
+
+        self.assertRaises(
+            ZeroDivisionError,
+            self.mirror.download_image, content_source, image_metadata)
+
+        # We rely on the MemoryContentSource.close() side-effect to ensure
+        # close() method has indeed been called on the passed-in ContentSource.
+        self.assertTrue(content_source.fd.closed)

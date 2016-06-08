@@ -303,7 +303,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         return create_kwargs
 
-    def download_images(self, contentsource, image_stream_data):
+    def download_image(self, contentsource, image_stream_data):
         """
         Download an image from contentsource.
 
@@ -401,7 +401,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             full_image_name += "-{}".format(flat['item_name'])
 
         # Download images locally into a temporary file.
-        tmp_path, new_size, new_md5 = self.download_images(
+        tmp_path, new_size, new_md5 = self.download_image(
             contentsource, flat)
 
         hypervisor_mapping = self.config.get('hypervisor_mapping', False)
