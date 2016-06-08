@@ -104,3 +104,33 @@ class TestGlanceMirror(TestCase):
             image_md5_hash=None, image_size=5)
         self.assertEqual("stale-md5", output_entry2["md5"])
         self.assertNotIn("size", output_entry2)
+
+    def test_adapt_source_entry_hypervisor_mapping(self):
+        """
+        If hypervisor_mapping is set to True, 'virt' value is derived from
+        the source entry 'ftype'.
+        """
+        config = {"content_id": "foo123"}
+        mirror = GlanceMirror(
+            config, region="region1", openstack=FakeOpenstack())
+        source_entry = {"ftype": "disk1.img"}
+        output_entry = mirror.adapt_source_entry(
+            source_entry, hypervisor_mapping=True, image_name="foobuntu-X",
+            image_md5_hash=None, image_size=None)
+
+        self.assertEqual("kvm", output_entry["virt"])
+
+    def test_adapt_source_entry_hypervisor_mapping_ftype_required(self):
+        """
+        If hypervisor_mapping is set to True, but 'ftype' is missing in the
+        source entry, 'virt' value is not added to the returned entry.
+        """
+        config = {"content_id": "foo123"}
+        mirror = GlanceMirror(
+            config, region="region1", openstack=FakeOpenstack())
+        source_entry = {}
+        output_entry = mirror.adapt_source_entry(
+            source_entry, hypervisor_mapping=True, image_name="foobuntu-X",
+            image_md5_hash=None, image_size=None)
+
+        self.assertNotIn("virt", output_entry)

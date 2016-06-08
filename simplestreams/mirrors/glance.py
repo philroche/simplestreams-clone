@@ -254,7 +254,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             properties['architecture'] = canonicalize_arch(
                 image_metadata['arch'])
 
-        if hypervisor_mapping is not None and 'ftype' in image_metadata:
+        if hypervisor_mapping and 'ftype' in image_metadata:
             _hypervisor_type = hypervisor_type(image_metadata['ftype'])
             if _hypervisor_type:
                 properties['hypervisor_type'] = _hypervisor_type
@@ -354,7 +354,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             if property_name in output_entry:
                 del output_entry[property_name]
 
-        if hypervisor_mapping is not None and 'ftype' in output_entry:
+        if hypervisor_mapping and 'ftype' in output_entry:
             _hypervisor_type = hypervisor_type(output_entry['ftype'])
             if _hypervisor_type:
                 _virt_type = virt_type(_hypervisor_type)
@@ -402,7 +402,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         tmp_path, new_size, new_md5 = self.download_images(
             contentsource, flat)
 
-        hypervisor_mapping = self.config.get('hypervisor_mapping', None)
+        hypervisor_mapping = self.config.get('hypervisor_mapping', False)
 
         glance_props = self.create_glance_properties(
             target['content_id'], src['content_id'], flat, hypervisor_mapping)
