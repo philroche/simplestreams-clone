@@ -59,9 +59,48 @@ class TestGlanceMirror(TestCase):
             source_entry, hypervisor_mapping=None, image_name="foobuntu-X",
             image_md5_hash=None, image_size=None)
 
-        # Source and output entry are different objects.
-        self.assertNotEqual(source_entry, output_entry)
-
         # None of the values in 'source_entry' are preserved.
         for key in ("path", "product_name", "version_name", "item"):
             self.assertNotIn("path", output_entry)
+
+    def test_adapt_source_entry_image_md5_and_size(self):
+        """
+        adapt_source_entry() will use passed in values for md5 and size.
+        """
+        config = {"content_id": "foo123"}
+        mirror = GlanceMirror(
+            config, region="region1", openstack=FakeOpenstack())
+        # Even old stale values will be overridden when image_md5_hash and
+        # image_size are passed in.
+        source_entry = {"md5": "stale-md5"}
+        output_entry = mirror.adapt_source_entry(
+            source_entry, hypervisor_mapping=None, image_name="foobuntu-X",
+            image_md5_hash="new-md5", image_size=5)
+
+        self.assertEqual("new-md5", output_entry["md5"])
+        self.assertEqual(5, output_entry["size"])
+
+    def test_adapt_source_entry_image_md5_and_size_both_required(self):
+        """
+        adapt_source_entry() requires both md5 and size to not ignore them.
+        """
+        config = {"content_id": "foo123"}
+        mirror = GlanceMirror(
+            config, region="region1", openstack=FakeOpenstack())
+        # Even old stale values will be overridden when image_md5_hash and
+        # image_size are passed in.
+        source_entry = {"md5": "stale-md5"}
+
+        # image_size is not passed in, so md5 value is not used either.
+        output_entry1 = mirror.adapt_source_entry(
+            source_entry, hypervisor_mapping=None, image_name="foobuntu-X",
+            image_md5_hash="new-md5", image_size=None)
+        self.assertEqual("stale-md5", output_entry1["md5"])
+        self.assertNotIn("size", output_entry1)
+
+        # image_md5_hash is not passed in, so image_size is not used either.
+        output_entry2 = mirror.adapt_source_entry(
+            source_entry, hypervisor_mapping=None, image_name="foobuntu-X",
+            image_md5_hash=None, image_size=5)
+        self.assertEqual("stale-md5", output_entry2["md5"])
+        self.assertNotIn("size", output_entry2)
