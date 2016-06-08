@@ -1,6 +1,4 @@
-# from tests.testutil import get_mirror_reader
 from simplestreams.mirrors.glance import GlanceMirror
-from simplestreams.objectstores import MemoryObjectStore
 
 from unittest import TestCase
 
@@ -22,11 +20,9 @@ class TestGlanceMirror(TestCase):
         adapt_source_entry() creates a new dict based on passed-in dict
         with added properties for use in a local simplestreams index.
         """
-        # src = get_mirror_reader("foocloud")
         config = {"content_id": "foo123"}
-        objectstore = MemoryObjectStore(None)
         mirror = GlanceMirror(
-            config, objectstore, region="region1", openstack=FakeOpenstack())
+            config, region="region1", openstack=FakeOpenstack())
 
         source_entry = {}
         # hypervisor_mapping = None
