@@ -283,9 +283,9 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             'is_public': True,
             'properties': image_properties,
         }
+
         if 'size' in image_metadata:
             create_kwargs['size'] = image_metadata.get('size')
-
         if 'md5' in image_metadata:
             create_kwargs['checksum'] = image_metadata.get('md5')
         if image_md5_hash and image_size:
@@ -293,12 +293,14 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
                 'checksum': image_md5_hash,
                 'size': image_size,
             })
+
         if 'ftype' in image_metadata:
             create_kwargs['disk_format'] = (
                 disk_format(image_metadata['ftype']) or 'qcow2'
             )
         else:
             create_kwargs['disk_format'] = 'qcow2'
+
         return create_kwargs
 
     def download_images(self, contentsource, image_stream_data):

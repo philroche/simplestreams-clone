@@ -195,3 +195,109 @@ class TestGlanceMirror(TestCase):
         properties = mirror.create_glance_properties(
             "content-1", "source-1", source_entry, hypervisor_mapping=True)
         self.assertEqual("lxc", properties["hypervisor_type"])
+
+    def test_prepare_glance_arguments(self):
+        # Prepares arguments to pass to GlanceClient.images.create()
+        # based on image metadata from the simplestreams source.
+        config = {"content_id": "foo123"}
+        mirror = GlanceMirror(
+            config, region="region1", openstack=FakeOpenstack())
+
+        source_entry = {}
+        create_arguments = mirror.prepare_glance_arguments(
+            "foobuntu-X", source_entry, image_md5_hash=None, image_size=None,
+            image_properties=None)
+
+        # Arguments to always pass in contain the image name, container format,
+        # disk format, whether image is public, and any passed-in properties.
+        self.assertEqual(
+            {"name": "foobuntu-X",
+             "container_format": 'bare',
+             "disk_format": "qcow2",
+             "is_public": True,
+             "properties": None},
+            create_arguments)
+
+    def test_prepare_glance_arguments_disk_format(self):
+        # Disk format is based on the image 'ftype' (if defined).
+        config = {"content_id": "foo123"}
+        mirror = GlanceMirror(
+            config, region="region1", openstack=FakeOpenstack())
+
+        source_entry = {"ftype": "root.tar.gz"}
+        create_arguments = mirror.prepare_glance_arguments(
+            "foobuntu-X", source_entry, image_md5_hash=None, image_size=None,
+            image_properties=None)
+
+        self.assertEqual("root-tar", create_arguments["disk_format"])
+
+    def test_prepare_glance_arguments_size(self):
+        # Size is read from image metadata if defined.
+        config = {"content_id": "foo123"}
+        mirror = GlanceMirror(
+            config, region="region1", openstack=FakeOpenstack())
+
+        source_entry = {"size": 5}
+        create_arguments = mirror.prepare_glance_arguments(
+            "foobuntu-X", source_entry, image_md5_hash=None, image_size=None,
+            image_properties=None)
+
+        self.assertEqual(5, create_arguments["size"])
+
+    def test_prepare_glance_arguments_checksum(self):
+        # Checksum is based on the source entry 'md5' value, if defined.
+        config = {"content_id": "foo123"}
+        mirror = GlanceMirror(
+            config, region="region1", openstack=FakeOpenstack())
+
+        source_entry = {"md5": "foo123"}
+        create_arguments = mirror.prepare_glance_arguments(
+            "foobuntu-X", source_entry, image_md5_hash=None, image_size=None,
+            image_properties=None)
+
+        self.assertEqual("foo123", create_arguments["checksum"])
+
+    def test_prepare_glance_arguments_size_and_md5_override(self):
+        # Size and md5 hash are overridden from the passed-in values even if
+        # defined on the source entry.
+        config = {"content_id": "foo123"}
+        mirror = GlanceMirror(
+            config, region="region1", openstack=FakeOpenstack())
+
+        source_entry = {"size": 5, "md5": "foo123"}
+        create_arguments = mirror.prepare_glance_arguments(
+            "foobuntu-X", source_entry, image_md5_hash="bar456", image_size=10,
+            image_properties=None)
+
+        self.assertEqual(10, create_arguments["size"])
+        self.assertEqual("bar456", create_arguments["checksum"])
+
+    def test_prepare_glance_arguments_size_and_md5_no_override_hash(self):
+        # If only one of image_md5_hash or image_size is passed directly in,
+        # the other value is not overridden either.
+        config = {"content_id": "foo123"}
+        mirror = GlanceMirror(
+            config, region="region1", openstack=FakeOpenstack())
+
+        source_entry = {"size": 5, "md5": "foo123"}
+        create_arguments = mirror.prepare_glance_arguments(
+            "foobuntu-X", source_entry, image_md5_hash="bar456",
+            image_size=None, image_properties=None)
+
+        self.assertEqual(5, create_arguments["size"])
+        self.assertEqual("foo123", create_arguments["checksum"])
+
+    def test_prepare_glance_arguments_size_and_md5_no_override_size(self):
+        # If only one of image_md5_hash or image_size is passed directly in,
+        # the other value is not overridden either.
+        config = {"content_id": "foo123"}
+        mirror = GlanceMirror(
+            config, region="region1", openstack=FakeOpenstack())
+
+        source_entry = {"size": 5, "md5": "foo123"}
+        create_arguments = mirror.prepare_glance_arguments(
+            "foobuntu-X", source_entry, image_md5_hash=None, image_size=10,
+            image_properties=None)
+
+        self.assertEqual(5, create_arguments["size"])
+        self.assertEqual("foo123", create_arguments["checksum"])
