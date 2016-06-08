@@ -24,7 +24,7 @@ class TestGlanceMirror(TestCase):
         mirror = GlanceMirror(
             config, region="region1", openstack=FakeOpenstack())
 
-        source_entry = {}
+        source_entry = {"source-key": "source-value"}
         # hypervisor_mapping = None
         output_entry = mirror.adapt_source_entry(
             source_entry, hypervisor_mapping=None, image_name="foobuntu-X",
@@ -37,9 +37,11 @@ class TestGlanceMirror(TestCase):
         # owner_id taken from the GlanceMirror and  OpenStack configuration,
         # region from the value passed into GlanceMirror constructor, and
         # image name from the passed in value.
+        # It also contains the source entries as well.
         self.assertEqual(
             {"endpoint": "http://keystone/api/",
              "name": "foobuntu-X",
              "owner_id": "bar456",
-             "region": "region1"},
+             "region": "region1",
+             "source-key": "source-value"},
             output_entry)
