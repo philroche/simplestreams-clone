@@ -122,3 +122,37 @@ class TestGlanceMirror(TestCase):
             image_md5_hash=None, image_size=None)
 
         self.assertNotIn("virt", output_entry)
+
+    def test_create_glance_properties(self):
+        # Constructs glance properties to set on image during upload
+        # based on source image metadata.
+        config = {"content_id": "foo123"}
+        mirror = GlanceMirror(
+            config, region="region1", openstack=FakeOpenstack())
+
+        source_entry = {
+            # All of these are carried over and potentially re-named.
+            "product_name": "foobuntu",
+            "version_name": "X",
+            "item_name": "disk1.img",
+            "os": "ubuntu",
+            "version": "16.04",
+            # Other entries are ignored.
+            "something-else": "ignored",
+        }
+        properties = mirror.create_glance_properties(
+            "content-1", "source-1", source_entry, hypervisor_mapping=None)
+
+        # Output properties contain content-id and source-content-id based
+        # on the passed in parameters, and carry over (with changed keys
+        # for "os" and "version") product_name, version_name, item_name and
+        # os and version values from the source entry.
+        self.assertEqual(
+            {"content_id": "content-1",
+             "source_content_id": "source-1",
+             "product_name": "foobuntu",
+             "version_name": "X",
+             "item_name": "disk1.img",
+             "os_distro": "ubuntu",
+             "os_version": "16.04"},
+            properties)
