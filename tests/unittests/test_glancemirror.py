@@ -17,15 +17,13 @@ class TestGlanceMirror(TestCase):
 
     def test_adapt_source_entry(self):
         """
-        adapt_source_entry() creates a new dict based on passed-in dict
-        with added properties for use in a local simplestreams index.
+        Adapts source entry for use in a local simplestreams index.
         """
         config = {"content_id": "foo123"}
         mirror = GlanceMirror(
             config, region="region1", openstack=FakeOpenstack())
 
         source_entry = {"source-key": "source-value"}
-        # hypervisor_mapping = None
         output_entry = mirror.adapt_source_entry(
             source_entry, hypervisor_mapping=None, image_name="foobuntu-X",
             image_md5_hash=None, image_size=None)
@@ -45,3 +43,25 @@ class TestGlanceMirror(TestCase):
              "region": "region1",
              "source-key": "source-value"},
             output_entry)
+
+    def test_adapt_source_entry_ignored_properties(self):
+        """
+        adapt_source_entry() drops some properties from the source entry.
+        """
+        config = {"content_id": "foo123"}
+        mirror = GlanceMirror(
+            config, region="region1", openstack=FakeOpenstack())
+        source_entry = {"path": "foo",
+                        "product_name": "bar",
+                        "version_name": "baz",
+                        "item_name": "bah"}
+        output_entry = mirror.adapt_source_entry(
+            source_entry, hypervisor_mapping=None, image_name="foobuntu-X",
+            image_md5_hash=None, image_size=None)
+
+        # Source and output entry are different objects.
+        self.assertNotEqual(source_entry, output_entry)
+
+        # None of the values in 'source_entry' are preserved.
+        for key in ("path", "product_name", "version_name", "item"):
+            self.assertNotIn("path", output_entry)
