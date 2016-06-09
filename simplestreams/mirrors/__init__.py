@@ -339,7 +339,6 @@ class BasicMirrorWriter(MirrorWriter):
                             ipath_cs = reader.source(ipath)
 
                     self.insert_item(item, src, target, pgree, ipath_cs)
-                    self.insert_products(path, target, content)
 
                 if len(added_items):
                     # do not insert versions that had all items filtered

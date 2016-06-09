@@ -55,7 +55,7 @@ class TestCommandHookMirror(TestCase):
         # the simplestreams index after insert_item() and then once
         # when everything is done.
         self.assertEqual(len([f for f in self._run_commands
-                              if f == ['insert-products']]), 35)
+                              if f == ['insert-products']]), 2)
 
     def _run_command(self, cmd, env=None, capture=False, rcs=None):
         self._run_commands.append(cmd)

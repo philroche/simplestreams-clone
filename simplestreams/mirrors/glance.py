@@ -425,6 +425,9 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
                 os.unlink(tmp_path)
 
         util.products_set(target, t_item, pedigree)
+        # We can safely ignore path and content arguments since they are
+        # unused in insert_products below.
+        self.insert_products(None, target, None)
 
     def remove_item(self, data, src, target, pedigree):
         util.products_del(target, pedigree)
