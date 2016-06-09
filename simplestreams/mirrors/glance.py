@@ -106,7 +106,8 @@ def virt_type(hypervisor_type):
 # if provided an object store, it will produce a 'image-ids' mirror
 class GlanceMirror(mirrors.BasicMirrorWriter):
     def __init__(self, config, objectstore=None, region=None,
-                 name_prefix=None, progress_callback=None):
+                 name_prefix=None, progress_callback=None,
+                 openstack=openstack):
         super(GlanceMirror, self).__init__(config=config)
 
         self.item_filters = self.config.get('item_filters', [])
@@ -253,7 +254,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             properties['architecture'] = canonicalize_arch(
                 image_metadata['arch'])
 
-        if hypervisor_mapping is not None and 'ftype' in image_metadata:
+        if hypervisor_mapping and 'ftype' in image_metadata:
             _hypervisor_type = hypervisor_type(image_metadata['ftype'])
             if _hypervisor_type:
                 properties['hypervisor_type'] = _hypervisor_type
@@ -282,9 +283,9 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             'is_public': True,
             'properties': image_properties,
         }
+
         if 'size' in image_metadata:
             create_kwargs['size'] = image_metadata.get('size')
-
         if 'md5' in image_metadata:
             create_kwargs['checksum'] = image_metadata.get('md5')
         if image_md5_hash and image_size:
@@ -292,15 +293,17 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
                 'checksum': image_md5_hash,
                 'size': image_size,
             })
+
         if 'ftype' in image_metadata:
             create_kwargs['disk_format'] = (
                 disk_format(image_metadata['ftype']) or 'qcow2'
             )
         else:
             create_kwargs['disk_format'] = 'qcow2'
+
         return create_kwargs
 
-    def download_images(self, contentsource, image_stream_data):
+    def download_image(self, contentsource, image_stream_data):
         """
         Download an image from contentsource.
 
@@ -353,7 +356,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             if property_name in output_entry:
                 del output_entry[property_name]
 
-        if hypervisor_mapping is not None and 'ftype' in output_entry:
+        if hypervisor_mapping and 'ftype' in output_entry:
             _hypervisor_type = hypervisor_type(output_entry['ftype'])
             if _hypervisor_type:
                 _virt_type = virt_type(_hypervisor_type)
@@ -398,10 +401,10 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             full_image_name += "-{}".format(flat['item_name'])
 
         # Download images locally into a temporary file.
-        tmp_path, new_size, new_md5 = self.download_images(
+        tmp_path, new_size, new_md5 = self.download_image(
             contentsource, flat)
 
-        hypervisor_mapping = self.config.get('hypervisor_mapping', None)
+        hypervisor_mapping = self.config.get('hypervisor_mapping', False)
 
         glance_props = self.create_glance_properties(
             target['content_id'], src['content_id'], flat, hypervisor_mapping)
