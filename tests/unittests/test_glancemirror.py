@@ -45,7 +45,7 @@ class TestGlanceMirror(TestCase):
         self.config = {"content_id": "foo123"}
         self.mirror = GlanceMirror(
             self.config, name_prefix="auto-sync/", region="region1",
-            openstack=FakeOpenstack())
+            client=FakeOpenstack())
 
     def test_adapt_source_entry(self):
         # Adapts source entry for use in a local simplestreams index.

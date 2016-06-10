@@ -108,12 +108,12 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
     """
     GlanceMirror syncs external simplestreams index and images to Glance.
 
-    `openstack` argument is used for testing: allows dependency injection
-    of fake "openstack" module.
+    `client` argument is used for testing to override openstack module:
+    allows dependency injection of fake "openstack" module.
     """
     def __init__(self, config, objectstore=None, region=None,
                  name_prefix=None, progress_callback=None,
-                 openstack=openstack):
+                 client=None):
         super(GlanceMirror, self).__init__(config=config)
 
         self.item_filters = self.config.get('item_filters', [])
@@ -130,7 +130,10 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         self.loaded_content = {}
         self.store = objectstore
 
-        self.keystone_creds = openstack.load_keystone_creds()
+        if client is None:
+            client = openstack
+
+        self.keystone_creds = client.load_keystone_creds()
 
         self.name_prefix = name_prefix or ""
         if region is not None:
@@ -138,8 +141,8 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         self.progress_callback = progress_callback
 
-        conn_info = openstack.get_service_conn_info('image',
-                                                    **self.keystone_creds)
+        conn_info = client.get_service_conn_info(
+            'image', **self.keystone_creds)
         self.gclient = get_glanceclient(**conn_info)
         self.tenant_id = conn_info['tenant_id']
 
