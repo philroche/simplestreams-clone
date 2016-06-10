@@ -25,6 +25,7 @@ from simplestreams.log import LOG
 import copy
 import errno
 import glanceclient
+import json
 import os
 import re
 
@@ -210,6 +211,15 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             except KeyError:
                 item_data = {}
 
+            # If original simplestreams-metadata is stored on the image,
+            # use that as well.
+            if 'simplestreams_metadata' in props:
+                simplestreams_metadata = json.loads(
+                    props.get('simplestreams_metadata'))
+            else:
+                simplestreams_metadata = {}
+            item_data.update(simplestreams_metadata)
+
             item_data.update({'name': image['name'], 'id': image['id']})
             if 'owner_id' not in item_data:
                 item_data['owner_id'] = self.tenant_id
@@ -239,10 +249,10 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         }
         # An iterator of properties to carry over: if a property needs
         # renaming, uses a tuple (old name, new name).
-        carry_over = (
-            'product_name', 'version_name', 'item_name',
-            ('os', 'os_distro'), ('version', 'os_version'),
-        )
+        carry_over_simple = (
+            'product_name', 'version_name', 'item_name')
+        carry_over = carry_over_simple + (
+            ('os', 'os_distro'), ('version', 'os_version'))
         for carry_over_property in carry_over:
             if isinstance(carry_over_property, tuple):
                 name_old, name_new = carry_over_property
@@ -258,6 +268,16 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             _hypervisor_type = hypervisor_type(image_metadata['ftype'])
             if _hypervisor_type:
                 properties['hypervisor_type'] = _hypervisor_type
+
+        # Store flattened metadata for a source image along with the
+        # image in 'simplestreams_metadata' property.
+        simplestreams_metadata = image_metadata.copy()
+        drop_keys = carry_over_simple + ('path',)
+        for remove_key in drop_keys:
+            if remove_key in simplestreams_metadata:
+                del simplestreams_metadata[remove_key]
+        properties['simplestreams_metadata'] = json.dumps(
+            simplestreams_metadata, sort_keys=True)
         return properties
 
     def prepare_glance_arguments(self, full_image_name, image_metadata,

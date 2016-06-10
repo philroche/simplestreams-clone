@@ -225,8 +225,8 @@ class TestGlanceMirror(TestCase):
             "item_name": "disk1.img",
             "os": "ubuntu",
             "version": "16.04",
-            # Other entries are ignored.
-            "something-else": "ignored",
+            # Unknown entries are stored in 'simplestreams_metadata'.
+            "extra": "value",
         }
         properties = self.mirror.create_glance_properties(
             "content-1", "source-1", source_entry, hypervisor_mapping=False)
@@ -235,6 +235,8 @@ class TestGlanceMirror(TestCase):
         # on the passed in parameters, and carry over (with changed keys
         # for "os" and "version") product_name, version_name, item_name and
         # os and version values from the source entry.
+        # All the fields except product_name, version_name and item_name are
+        # also stored inside 'simplestreams_metadata' property as JSON data.
         self.assertEqual(
             {"content_id": "content-1",
              "source_content_id": "source-1",
@@ -242,7 +244,9 @@ class TestGlanceMirror(TestCase):
              "version_name": "X",
              "item_name": "disk1.img",
              "os_distro": "ubuntu",
-             "os_version": "16.04"},
+             "os_version": "16.04",
+             "simplestreams_metadata": (
+                 '{"extra": "value", "os": "ubuntu", "version": "16.04"}')},
             properties)
 
     def test_create_glance_properties_arch(self):
@@ -275,6 +279,26 @@ class TestGlanceMirror(TestCase):
         properties = self.mirror.create_glance_properties(
             "content-1", "source-1", source_entry, hypervisor_mapping=True)
         self.assertEqual("lxc", properties["hypervisor_type"])
+
+    def test_create_glance_properties_simplestreams_no_path(self):
+        # Other than 'product_name', 'version_name' and 'item_name', if 'path'
+        # is defined on the source entry, it is also not saved inside the
+        # 'simplestreams_metadata' property.
+        source_entry = {
+            "product_name": "foobuntu",
+            "version_name": "X",
+            "item_name": "disk1.img",
+            "os": "ubuntu",
+            "version": "16.04",
+            "path": "/path/to/foo",
+        }
+        properties = self.mirror.create_glance_properties(
+            "content-1", "source-1", source_entry, hypervisor_mapping=False)
+
+        # Path is omitted from the simplestreams_metadata property JSON.
+        self.assertEqual(
+            '{"os": "ubuntu", "version": "16.04"}',
+            properties["simplestreams_metadata"])
 
     def test_prepare_glance_arguments(self):
         # Prepares arguments to pass to GlanceClient.images.create()
@@ -548,6 +572,18 @@ class TestGlanceMirror(TestCase):
                 'version_name': u'20160602',
                 'content_id': 'auto.sync',
                 'product_name': u'com.ubuntu.cloud:server:14.04:amd64',
+                'simplestreams_metadata': (
+                    '{"aliases": "14.04,default,lts,t,trusty", '
+                    '"arch": "amd64", "ftype": "disk1.img", '
+                    '"label": "release", "md5": '
+                    '"e5436cd36ae6cc298f081bf0f6b413f1", "os": "ubuntu", '
+                    '"pubname": "ubuntu-trusty-14.04-amd64-server-20160602", '
+                    '"release": "trusty", "release_codename": "Trusty Tahr", '
+                    '"release_title": "14.04 LTS", "sha256": '
+                    '"5b982d7d4dd1a03e88ae5f35f02ed44f'
+                    '579e2711f3e0f27ea2bff20aef8c8d9e", "size": "259850752", '
+                    '"support_eol": "2019-04-17", "supported": "True", '
+                    '"version": "14.04"}'),
                 'source_content_id': u'com.ubuntu.cloud:released:download'},
             'size': '259850752'}
         self.assertEqual(expected_create_kwargs, passed_create_kwargs)
