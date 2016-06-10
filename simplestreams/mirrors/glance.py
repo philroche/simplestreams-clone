@@ -105,6 +105,12 @@ def virt_type(hypervisor_type):
 # glance mirror 'image-downloads' content into glance
 # if provided an object store, it will produce a 'image-ids' mirror
 class GlanceMirror(mirrors.BasicMirrorWriter):
+    """
+    GlanceMirror syncs external simplestreams index and images to Glance.
+
+    `openstack` argument is used for testing: allows dependency injection
+    of fake "openstack" module.
+    """
     def __init__(self, config, objectstore=None, region=None,
                  name_prefix=None, progress_callback=None,
                  openstack=openstack):
