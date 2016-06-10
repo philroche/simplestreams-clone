@@ -267,7 +267,6 @@ class BasicMirrorWriter(MirrorWriter):
 
         content_id = src['content_id']
         target = self.load_products(path, content_id)
-        LOG.info("LOADED: %s" % str(target))
         if not target:
             target = util.stringitems(src)
 
