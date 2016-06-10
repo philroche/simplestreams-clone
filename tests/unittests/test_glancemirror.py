@@ -622,8 +622,6 @@ class TestGlanceMirror(TestCase):
         self.mirror.insert_item(
             image_data, source_index, target, pedigree, content_source)
 
-        expected_target_index = copy.deepcopy(EXPECTED_OUTPUT_INDEX)
-
         stored_index_content = self.mirror.store.data[
             'streams/v1/auto.sync.json']
         stored_index = json.loads(stored_index_content.decode('utf-8'))
@@ -632,4 +630,4 @@ class TestGlanceMirror(TestCase):
         self.assertIn(u"updated", stored_index)
         del stored_index[u"updated"]
 
-        self.assertEqual(expected_target_index, stored_index)
+        self.assertEqual(EXPECTED_OUTPUT_INDEX, stored_index)
