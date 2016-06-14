@@ -105,8 +105,15 @@ def virt_type(hypervisor_type):
 # glance mirror 'image-downloads' content into glance
 # if provided an object store, it will produce a 'image-ids' mirror
 class GlanceMirror(mirrors.BasicMirrorWriter):
+    """
+    GlanceMirror syncs external simplestreams index and images to Glance.
+
+    `client` argument is used for testing to override openstack module:
+    allows dependency injection of fake "openstack" module.
+    """
     def __init__(self, config, objectstore=None, region=None,
-                 name_prefix=None, progress_callback=None):
+                 name_prefix=None, progress_callback=None,
+                 client=None):
         super(GlanceMirror, self).__init__(config=config)
 
         self.item_filters = self.config.get('item_filters', [])
@@ -123,7 +130,10 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         self.loaded_content = {}
         self.store = objectstore
 
-        self.keystone_creds = openstack.load_keystone_creds()
+        if client is None:
+            client = openstack
+
+        self.keystone_creds = client.load_keystone_creds()
 
         self.name_prefix = name_prefix or ""
         if region is not None:
@@ -131,8 +141,8 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         self.progress_callback = progress_callback
 
-        conn_info = openstack.get_service_conn_info('image',
-                                                    **self.keystone_creds)
+        conn_info = client.get_service_conn_info(
+            'image', **self.keystone_creds)
         self.gclient = get_glanceclient(**conn_info)
         self.tenant_id = conn_info['tenant_id']
 
@@ -151,6 +161,12 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         return "streams/v1/%s.json" % content_id
 
     def load_products(self, path=None, content_id=None):
+        """
+        Load metadata for all currently uploaded active images in Glance.
+
+        Uses glance as the definitive store, but loads metadata from existing
+        simplestreams indexes as well.
+        """
         my_cid = self.content_id
 
         # glance is the definitive store.  Any data loaded from the store
@@ -219,105 +235,212 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
     def filter_item(self, data, src, target, pedigree):
         return filters.filter_item(self.item_filters, data, src, pedigree)
 
-    def insert_item(self, data, src, target, pedigree, contentsource):
-        flat = util.products_exdata(src, pedigree, include_top=False)
+    def create_glance_properties(self, content_id, source_content_id,
+                                 image_metadata, hypervisor_mapping):
+        """
+        Construct extra properties to store in Glance for an image.
 
-        tmp_path = None
-        tmp_del = None
+        Based on source image metadata.
+        """
+        properties = {
+            'content_id': content_id,
+            'source_content_id': source_content_id,
+        }
+        # An iterator of properties to carry over: if a property needs
+        # renaming, uses a tuple (old name, new name).
+        carry_over = (
+            'product_name', 'version_name', 'item_name',
+            ('os', 'os_distro'), ('version', 'os_version'),
+        )
+        for carry_over_property in carry_over:
+            if isinstance(carry_over_property, tuple):
+                name_old, name_new = carry_over_property
+            else:
+                name_old = name_new = carry_over_property
+            properties[name_new] = image_metadata[name_old]
 
-        name = flat.get('pubname', flat.get('name'))
-        if not name.endswith(flat['item_name']):
-            name += "-%s" % (flat['item_name'])
+        if 'arch' in image_metadata:
+            properties['architecture'] = canonicalize_arch(
+                image_metadata['arch'])
 
-        t_item = flat.copy()
-        if 'path' in t_item:
-            del t_item['path']
-
-        props = {'content_id': target['content_id'],
-                 'source_content_id': src['content_id']}
-        for n in ('product_name', 'version_name', 'item_name'):
-            props[n] = flat[n]
-            del t_item[n]
-
-        arch = flat.get('arch')
-        if arch:
-            t_item['arch'] = arch
-            props['architecture'] = canonicalize_arch(arch)
-
-        if self.config.get('hypervisor_mapping', False) and 'ftype' in flat:
-            _hypervisor_type = hypervisor_type(flat['ftype'])
+        if hypervisor_mapping and 'ftype' in image_metadata:
+            _hypervisor_type = hypervisor_type(image_metadata['ftype'])
             if _hypervisor_type:
-                props['hypervisor_type'] = _hypervisor_type
-                _virt_type = virt_type(_hypervisor_type)
-                if _virt_type:
-                    t_item['virt'] = _virt_type
+                properties['hypervisor_type'] = _hypervisor_type
+        return properties
 
-        if 'os' in flat:
-            props['os_distro'] = flat['os']
+    def prepare_glance_arguments(self, full_image_name, image_metadata,
+                                 image_md5_hash, image_size, image_properties):
+        """
+        Prepare arguments to pass into Glance image creation method.
 
-        if 'version' in flat:
-            props['os_version'] = flat['version']
+        Uses `image_metadata` for source image to derive image size, md5 hash,
+        disk format (based on 'ftype' field, if defined, otherwise defaults to
+        'qcow2').
 
-        fullname = self.name_prefix + name
+        If `image_md5_hash` and `image_size` are defined, overrides the
+        values from image_metadata with their values.
+
+        Sets extra image properties to dict `image_properties`.
+
+        Returns a dict to use as keyword arguments passed directly to
+        GlanceClient.images.create().
+        """
         create_kwargs = {
-            'name': fullname,
-            'properties': props,
+            'name': full_image_name,
             'container_format': 'bare',
             'is_public': True,
+            'properties': image_properties,
         }
-        if 'size' in data:
-            create_kwargs['size'] = data.get('size')
 
-        if 'md5' in data:
-            create_kwargs['checksum'] = data.get('md5')
+        if 'size' in image_metadata:
+            create_kwargs['size'] = image_metadata.get('size')
+        if 'md5' in image_metadata:
+            create_kwargs['checksum'] = image_metadata.get('md5')
+        if image_md5_hash and image_size:
+            create_kwargs.update({
+                'checksum': image_md5_hash,
+                'size': image_size,
+            })
 
-        if 'ftype' in flat:
+        if 'ftype' in image_metadata:
             create_kwargs['disk_format'] = (
-                disk_format(flat['ftype']) or 'qcow2'
+                disk_format(image_metadata['ftype']) or 'qcow2'
             )
         else:
             create_kwargs['disk_format'] = 'qcow2'
 
+        return create_kwargs
+
+    def download_image(self, contentsource, image_stream_data):
+        """
+        Download an image from contentsource.
+
+        `image_stream_data` represents a flattened image metadata structure
+        to use for any logging messages.
+
+        Returns a tuple of (local-image-path, image-size, image-md5-hash).
+
+        If download fails, these values will all be None.
+        """
+        tmp_path = new_size = new_md5 = None
+
+        image_name = image_stream_data.get('pubname')
+        image_size = image_stream_data.get('size')
+
         if self.progress_callback:
             def progress_wrapper(written):
                 self.progress_callback(dict(status="Downloading",
-                                            name=flat.get('pubname'),
-                                            size=data.get('size', 0),
+                                            name=image_name,
+                                            size=image_size,
                                             written=written))
         else:
             def progress_wrapper(written):
                 pass
 
         try:
-            try:
-                (tmp_path, tmp_del) = util.get_local_copy(
-                    contentsource, progress_callback=progress_wrapper)
+            tmp_path, _ = util.get_local_copy(
+                contentsource, progress_callback=progress_wrapper)
 
-                if self.modify_hook:
-                    (newsize, newmd5) = call_hook(item=t_item, path=tmp_path,
-                                                  cmd=self.modify_hook)
-                    create_kwargs['checksum'] = newmd5
-                    create_kwargs['size'] = newsize
-                    t_item['md5'] = newmd5
-                    t_item['size'] = newsize
+            if self.modify_hook:
+                (new_size, new_md5) = call_hook(
+                    item=image_stream_data, path=tmp_path,
+                    cmd=self.modify_hook)
+        finally:
+            contentsource.close()
 
-            finally:
-                contentsource.close()
+        return tmp_path, new_size, new_md5
 
+    def adapt_source_entry(self, source_entry, hypervisor_mapping, image_name,
+                           image_md5_hash, image_size):
+        """
+        Adapts the source simplestreams dict `source_entry` for use in the
+        generated local simplestreams index.
+        """
+        output_entry = source_entry.copy()
+
+        # Drop attributes not needed for the simplestreams index itself.
+        for property_name in ('path', 'product_name', 'version_name',
+                              'item_name'):
+            if property_name in output_entry:
+                del output_entry[property_name]
+
+        if hypervisor_mapping and 'ftype' in output_entry:
+            _hypervisor_type = hypervisor_type(output_entry['ftype'])
+            if _hypervisor_type:
+                _virt_type = virt_type(_hypervisor_type)
+                if _virt_type:
+                    output_entry['virt'] = _virt_type
+
+        output_entry['region'] = self.region
+        output_entry['endpoint'] = self.auth_url
+        output_entry['owner_id'] = self.tenant_id
+
+        output_entry['name'] = image_name
+        if image_md5_hash and image_size:
+            output_entry['md5'] = image_md5_hash
+            output_entry['size'] = image_size
+
+        return output_entry
+
+    def insert_item(self, data, src, target, pedigree, contentsource):
+        """
+        Upload image into glance and add image metadata to simplestreams index.
+
+        `data` is the metadata for a particular image file from the source:
+            unused since all that data is present in the `src` entry for
+            the corresponding image as well.
+        `src` contains the entire simplestreams index from the image syncing
+            source.
+        `target` is the simplestreams index for currently available images
+            in glance (generated by load_products()) to add this item to.
+        `pedigree` is a "path" to get to the `data` for the image we desire,
+            a tuple of (product_name, version_name, image_type).
+        `contentsource` is a ContentSource to download the actual image data
+            from.
+        """
+        # Extract and flatten metadata for a product image matching
+        #   (product-name, version-name, image-type)
+        # from the tuple `pedigree` in the source simplestreams index.
+        flattened_img_data = util.products_exdata(
+            src, pedigree, include_top=False)
+
+        tmp_path = None
+
+        full_image_name = "{}{}".format(
+            self.name_prefix,
+            flattened_img_data.get('pubname', flattened_img_data.get('name')))
+        if not full_image_name.endswith(flattened_img_data['item_name']):
+            full_image_name += "-{}".format(flattened_img_data['item_name'])
+
+        # Download images locally into a temporary file.
+        tmp_path, new_size, new_md5 = self.download_image(
+            contentsource, flattened_img_data)
+
+        hypervisor_mapping = self.config.get('hypervisor_mapping', False)
+
+        glance_props = self.create_glance_properties(
+            target['content_id'], src['content_id'], flattened_img_data,
+            hypervisor_mapping)
+        create_kwargs = self.prepare_glance_arguments(
+            full_image_name, flattened_img_data, new_md5, new_size,
+            glance_props)
+
+        target_sstream_item = self.adapt_source_entry(
+            flattened_img_data, hypervisor_mapping, full_image_name, new_md5,
+            new_size)
+
+        try:
             create_kwargs['data'] = open(tmp_path, 'rb')
-            ret = self.gclient.images.create(**create_kwargs)
-            t_item['id'] = ret.id
-            print("created %s: %s" % (ret.id, fullname))
+            glance_image = self.gclient.images.create(**create_kwargs)
+            target_sstream_item['id'] = glance_image.id
+            print("created %s: %s" % (glance_image.id, full_image_name))
 
         finally:
-            if tmp_del and os.path.exists(tmp_path):
+            if tmp_path and os.path.exists(tmp_path):
                 os.unlink(tmp_path)
 
-        t_item['region'] = self.region
-        t_item['endpoint'] = self.auth_url
-        t_item['owner_id'] = self.tenant_id
-        t_item['name'] = fullname
-        util.products_set(target, t_item, pedigree)
+        util.products_set(target, target_sstream_item, pedigree)
 
     def remove_item(self, data, src, target, pedigree):
         util.products_del(target, pedigree)
