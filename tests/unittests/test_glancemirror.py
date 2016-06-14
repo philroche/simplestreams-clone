@@ -1,9 +1,89 @@
 from simplestreams.contentsource import MemoryContentSource
 from simplestreams.mirrors.glance import GlanceMirror
+from simplestreams.objectstores import MemoryObjectStore
 import simplestreams.util
 
+import copy
+import json
 import os
 from unittest import TestCase
+
+
+# This is a real snippet from the simplestreams index entry for
+# Ubuntu 14.04 amd64 image from cloud-images.ubuntu.com as of
+# 2016-06-05.
+TEST_SOURCE_INDEX_ENTRY = {
+    u'content_id': u'com.ubuntu.cloud:released:download',
+    u'datatype': u'image-downloads',
+    u'format': u'products:1.0',
+    u'license': (u'http://www.canonical.com/'
+                 u'intellectual-property-policy'),
+    u'products': {u'com.ubuntu.cloud:server:14.04:amd64': {
+        u'aliases': u'14.04,default,lts,t,trusty',
+        u'arch': u'amd64',
+        u'os': u'ubuntu',
+        u'release': u'trusty',
+        u'release_codename': u'Trusty Tahr',
+        u'release_title': u'14.04 LTS',
+        u'support_eol': u'2019-04-17',
+        u'supported': True,
+        u'version': u'14.04',
+        u'versions': {u'20160602': {
+            u'items': {u'disk1.img': {
+                u'ftype': u'disk1.img',
+                u'md5': u'e5436cd36ae6cc298f081bf0f6b413f1',
+                u'path': (
+                    u'server/releases/trusty/release-20160602/'
+                    u'ubuntu-14.04-server-cloudimg-amd64-disk1.img'),
+                u'sha256': (u'5b982d7d4dd1a03e88ae5f35f02ed44f'
+                            u'579e2711f3e0f27ea2bff20aef8c8d9e'),
+                u'size': 259850752}},
+            u'label': u'release',
+            u'pubname': u'ubuntu-trusty-14.04-amd64-server-20160602',
+        }}}
+    }
+}
+
+# "Pedigree" is basically a "path" to get to the image data in simplestreams
+# index, going through "products", their "versions", and nested "items".
+TEST_IMAGE_PEDIGREE = (
+    u'com.ubuntu.cloud:server:14.04:amd64', u'20160602', u'disk1.img')
+
+# Almost real resulting data as produced by simplestreams before
+# insert_item refactoring to allow for finer-grained testing.
+EXPECTED_OUTPUT_INDEX = {
+    u'content_id': u'auto.sync',
+    u'datatype': u'image-ids',
+    u'format': u'products:1.0',
+    u'products': {
+        u"com.ubuntu.cloud:server:14.04:amd64": {
+            u"aliases": u"14.04,default,lts,t,trusty",
+            u"arch": u"amd64",
+            u"label": u"release",
+            u"os": u"ubuntu",
+            u"owner_id": u"bar456",
+            u"pubname": u"ubuntu-trusty-14.04-amd64-server-20160602",
+            u"release": u"trusty",
+            u"release_codename": u"Trusty Tahr",
+            u"release_title": u"14.04 LTS",
+            u"support_eol": u"2019-04-17",
+            u"supported": u"True",
+            u"version": u"14.04",
+            u"versions": {u"20160602": {u"items": {u"disk1.img": {
+                u"endpoint": u"http://keystone/api/",
+                u"ftype": u"disk1.img",
+                u"id": u"image-1",
+                u"md5": u"e5436cd36ae6cc298f081bf0f6b413f1",
+                u"name": (u"auto-sync/ubuntu-trusty-14.04-amd64-"
+                          u"server-20160602-disk1.img"),
+                u"region": u"region1",
+                u"sha256": (u"5b982d7d4dd1a03e88ae5f35f02ed44f"
+                            u"579e2711f3e0f27ea2bff20aef8c8d9e"),
+                u"size": u"259850752"
+            }}}}
+        }
+    }
+}
 
 
 class FakeOpenstack(object):
@@ -145,8 +225,8 @@ class TestGlanceMirror(TestCase):
             "item_name": "disk1.img",
             "os": "ubuntu",
             "version": "16.04",
-            # Other entries are ignored.
-            "something-else": "ignored",
+            # Unknown entries are stored in 'simplestreams_metadata'.
+            "extra": "value",
         }
         properties = self.mirror.create_glance_properties(
             "content-1", "source-1", source_entry, hypervisor_mapping=False)
@@ -155,6 +235,8 @@ class TestGlanceMirror(TestCase):
         # on the passed in parameters, and carry over (with changed keys
         # for "os" and "version") product_name, version_name, item_name and
         # os and version values from the source entry.
+        # All the fields except product_name, version_name and item_name are
+        # also stored inside 'simplestreams_metadata' property as JSON data.
         self.assertEqual(
             {"content_id": "content-1",
              "source_content_id": "source-1",
@@ -162,7 +244,9 @@ class TestGlanceMirror(TestCase):
              "version_name": "X",
              "item_name": "disk1.img",
              "os_distro": "ubuntu",
-             "os_version": "16.04"},
+             "os_version": "16.04",
+             "simplestreams_metadata": (
+                 '{"extra": "value", "os": "ubuntu", "version": "16.04"}')},
             properties)
 
     def test_create_glance_properties_arch(self):
@@ -195,6 +279,26 @@ class TestGlanceMirror(TestCase):
         properties = self.mirror.create_glance_properties(
             "content-1", "source-1", source_entry, hypervisor_mapping=True)
         self.assertEqual("lxc", properties["hypervisor_type"])
+
+    def test_create_glance_properties_simplestreams_no_path(self):
+        # Other than 'product_name', 'version_name' and 'item_name', if 'path'
+        # is defined on the source entry, it is also not saved inside the
+        # 'simplestreams_metadata' property.
+        source_entry = {
+            "product_name": "foobuntu",
+            "version_name": "X",
+            "item_name": "disk1.img",
+            "os": "ubuntu",
+            "version": "16.04",
+            "path": "/path/to/foo",
+        }
+        properties = self.mirror.create_glance_properties(
+            "content-1", "source-1", source_entry, hypervisor_mapping=False)
+
+        # Path is omitted from the simplestreams_metadata property JSON.
+        self.assertEqual(
+            '{"os": "ubuntu", "version": "16.04"}',
+            properties["simplestreams_metadata"])
 
     def test_prepare_glance_arguments(self):
         # Prepares arguments to pass to GlanceClient.images.create()
@@ -342,44 +446,85 @@ class TestGlanceMirror(TestCase):
         # Downloads an image from a contentsource, uploads it into Glance,
         # adapting and munging as needed (it updates the keystone endpoint,
         # image and owner ids).
-        # This test is basically an integration test to make sure all the
-        # methods used by insert_item() are tied together in one good
-        # fully functioning whole.
 
-        # This is a real snippet from the simplestreams index entry for
-        # Ubuntu 14.04 amd64 image from cloud-images.ubuntu.com as of
-        # 2016-06-05.
+        # We use a minimal source simplestreams index, fake ContentSource and
+        # GlanceClient, and only test for side-effects of each of the
+        # subparts of the insert_item method.
         source_index = {
             u'content_id': u'com.ubuntu.cloud:released:download',
-            u'datatype': u'image-downloads',
-            u'format': u'products:1.0',
-            u'license': (u'http://www.canonical.com/'
-                         u'intellectual-property-policy'),
             u'products': {u'com.ubuntu.cloud:server:14.04:amd64': {
-                u'aliases': u'14.04,default,lts,t,trusty',
                 u'arch': u'amd64',
                 u'os': u'ubuntu',
                 u'release': u'trusty',
-                u'release_codename': u'Trusty Tahr',
-                u'release_title': u'14.04 LTS',
-                u'support_eol': u'2019-04-17',
-                u'supported': True,
                 u'version': u'14.04',
                 u'versions': {u'20160602': {
                     u'items': {u'disk1.img': {
                         u'ftype': u'disk1.img',
                         u'md5': u'e5436cd36ae6cc298f081bf0f6b413f1',
-                        u'path': (
-                            u'server/releases/trusty/release-20160602/'
-                            u'ubuntu-14.04-server-cloudimg-amd64-disk1.img'),
-                        u'sha256': (u'5b982d7d4dd1a03e88ae5f35f02ed44f'
-                                    u'579e2711f3e0f27ea2bff20aef8c8d9e'),
                         u'size': 259850752}},
-                    u'label': u'release',
                     u'pubname': u'ubuntu-trusty-14.04-amd64-server-20160602',
                 }}}
             }
         }
+
+        pedigree = (
+            u'com.ubuntu.cloud:server:14.04:amd64', u'20160602', u'disk1.img')
+        product = source_index[u'products'][pedigree[0]]
+        image_data = product[u'versions'][pedigree[1]][u'items'][pedigree[2]]
+
+        content_source = MemoryContentSource(
+            url="http://image-store/fooubuntu-X-disk1.img",
+            content="image-data")
+
+        # Use a fake GlanceClient to track calls and arguments passed to
+        # GlanceClient.images.create().
+        self.addCleanup(setattr, self.mirror, "gclient", self.mirror.gclient)
+        self.mirror.gclient = FakeGlanceClient()
+
+        target = {
+            'content_id': 'auto.sync',
+            'datatype': 'image-ids',
+            'format': 'products:1.0',
+        }
+
+        self.mirror.insert_item(
+            image_data, source_index, target, pedigree, content_source)
+
+        passed_create_kwargs = self.mirror.gclient.images.create_calls[0]
+
+        # There is a 'data' argument pointing to an open file descriptor
+        # for the locally downloaded image.
+        image_content = passed_create_kwargs.pop("data").read()
+        self.assertEqual(u"image-data", image_content.decode('utf-8'))
+
+        # Value of "arch" from source entry is transformed into "architecture"
+        # image property in Glance: this ensures create_glance_properties()
+        # is called and result is properly passed.
+        self.assertEqual(
+            "x86_64", passed_create_kwargs["properties"]["architecture"])
+
+        # MD5 hash from source entry is put into 'checksum' field, and 'name'
+        # is based on full image name: this ensures prepare_glance_arguments()
+        # is called.
+        self.assertEqual(
+            u'e5436cd36ae6cc298f081bf0f6b413f1',
+            passed_create_kwargs["checksum"])
+        self.assertEqual(
+            u'auto-sync/ubuntu-trusty-14.04-amd64-server-20160602-disk1.img',
+            passed_create_kwargs["name"])
+
+        # Our local endpoint is set in the resulting entry, which ensures
+        # a call to adapt_source_entry() was indeed made.
+        target_product = target["products"][pedigree[0]]
+        target_image = target_product["versions"][pedigree[1]]["items"].get(
+            pedigree[2])
+        self.assertEqual(u"http://keystone/api/", target_image["endpoint"])
+
+    def test_insert_item_full(self):
+        # This test uses the full sample entries from the source simplestreams
+        # index from cloud-images.u.c and resulting local simplestreams index
+        # files.
+        source_index = copy.deepcopy(TEST_SOURCE_INDEX_ENTRY)
 
         # "Pedigree" is basically a "path" to get to the image data in
         # simplestreams index, going through "products", their "versions",
@@ -409,9 +554,7 @@ class TestGlanceMirror(TestCase):
 
         passed_create_kwargs = self.mirror.gclient.images.create_calls[0]
 
-        # There is a 'data' argument pointing to an open file descriptor
-        # for the locally downloaded image.
-        self.assertIn("data", passed_create_kwargs)
+        # Drop the 'data' item pointing to an open temporary file.
         passed_create_kwargs.pop("data")
 
         expected_create_kwargs = {
@@ -429,46 +572,21 @@ class TestGlanceMirror(TestCase):
                 'version_name': u'20160602',
                 'content_id': 'auto.sync',
                 'product_name': u'com.ubuntu.cloud:server:14.04:amd64',
+                'simplestreams_metadata': (
+                    '{"aliases": "14.04,default,lts,t,trusty", '
+                    '"arch": "amd64", "ftype": "disk1.img", '
+                    '"label": "release", "md5": '
+                    '"e5436cd36ae6cc298f081bf0f6b413f1", "os": "ubuntu", '
+                    '"pubname": "ubuntu-trusty-14.04-amd64-server-20160602", '
+                    '"release": "trusty", "release_codename": "Trusty Tahr", '
+                    '"release_title": "14.04 LTS", "sha256": '
+                    '"5b982d7d4dd1a03e88ae5f35f02ed44f'
+                    '579e2711f3e0f27ea2bff20aef8c8d9e", "size": "259850752", '
+                    '"support_eol": "2019-04-17", "supported": "True", '
+                    '"version": "14.04"}'),
                 'source_content_id': u'com.ubuntu.cloud:released:download'},
             'size': '259850752'}
-        self.assertEqual(
-            expected_create_kwargs, passed_create_kwargs)
-
-        # Almost real resulting data as produced by simplestreams before
-        # insert_item refactoring to allow for finer-grained testing.
-        expected_target_index = {
-            'content_id': 'auto.sync',
-            'datatype': 'image-ids',
-            'format': 'products:1.0',
-            'products': {
-                "com.ubuntu.cloud:server:14.04:amd64": {
-                    "aliases": "14.04,default,lts,t,trusty",
-                    "arch": "amd64",
-                    "label": "release",
-                    "os": "ubuntu",
-                    "owner_id": "bar456",
-                    "pubname": "ubuntu-trusty-14.04-amd64-server-20160602",
-                    "release": "trusty",
-                    "release_codename": "Trusty Tahr",
-                    "release_title": "14.04 LTS",
-                    "support_eol": "2019-04-17",
-                    "supported": "True",
-                    "version": "14.04",
-                    "versions": {"20160602": {"items": {"disk1.img": {
-                        "endpoint": "http://keystone/api/",
-                        "ftype": "disk1.img",
-                        "id": "image-1",
-                        "md5": "e5436cd36ae6cc298f081bf0f6b413f1",
-                        "name": ("auto-sync/ubuntu-trusty-14.04-amd64-"
-                                 "server-20160602-disk1.img"),
-                        "region": "region1",
-                        "sha256": ("5b982d7d4dd1a03e88ae5f35f02ed44f"
-                                   "579e2711f3e0f27ea2bff20aef8c8d9e"),
-                        "size": "259850752"
-                    }}}}
-                }
-            }
-        }
+        self.assertEqual(expected_create_kwargs, passed_create_kwargs)
 
         # Apply the condensing as done in GlanceMirror.insert_products()
         # to ensure we compare with the desired resulting simplestreams data.
@@ -476,4 +594,40 @@ class TestGlanceMirror(TestCase):
                   'region']
         simplestreams.util.products_condense(target, sticky)
 
-        self.assertEqual(expected_target_index, target)
+        self.assertEqual(EXPECTED_OUTPUT_INDEX, target)
+
+    def test_insert_item_stores_the_index(self):
+        # Ensure insert_item calls insert_products() to generate the
+        # resulting simplestreams index file and insert it into store.
+
+        source_index = copy.deepcopy(TEST_SOURCE_INDEX_ENTRY)
+        pedigree = TEST_IMAGE_PEDIGREE
+        product = source_index[u'products'][pedigree[0]]
+        image_data = product[u'versions'][pedigree[1]][u'items'][pedigree[2]]
+
+        content_source = MemoryContentSource(
+            url="http://image-store/fooubuntu-X-disk1.img",
+            content="image-data")
+        self.mirror.store = MemoryObjectStore()
+
+        self.addCleanup(setattr, self.mirror, "gclient", self.mirror.gclient)
+        self.mirror.gclient = FakeGlanceClient()
+
+        target = {
+            'content_id': 'auto.sync',
+            'datatype': 'image-ids',
+            'format': 'products:1.0',
+        }
+
+        self.mirror.insert_item(
+            image_data, source_index, target, pedigree, content_source)
+
+        stored_index_content = self.mirror.store.data[
+            'streams/v1/auto.sync.json']
+        stored_index = json.loads(stored_index_content.decode('utf-8'))
+
+        # Full index contains the 'updated' key with the date of last update.
+        self.assertIn(u"updated", stored_index)
+        del stored_index[u"updated"]
+
+        self.assertEqual(EXPECTED_OUTPUT_INDEX, stored_index)
