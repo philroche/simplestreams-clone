@@ -101,7 +101,8 @@ def is_expected(suffix, fields):
             return False
         if codename_cmp(rel, "<", "precise"):
             return False
-        if codename_cmp(rel, ">=", "yakkety"):
+        # -root.tar.xz is replaced by squashfs for yakkety
+        if codename_cmp(rel, ">=", "yakkety") and suffix == '-root.tar.xz':
             return False
 
     if suffix == '.squashfs' or suffix == '.squashfs.manifest':

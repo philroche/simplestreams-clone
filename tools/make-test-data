@@ -288,23 +288,34 @@ def create_fake_file(prefix, item):
         del fdata['content']
         FAKE_DATA[item['ftype']].update(fdata)
 
-    # create a combined_sha256 for lxd.tar.xz from the -root.tar.gz also
+    # create a combined sha256 for lxd.tar.xz (metadata) and the root fs
+    # - combined_sha256 and combined_rootxz_sha256 for the -root.tar.gz
+    # - combined_squashfs_sha256 for the squashfs
     ftype = item['ftype']
-    if ftype == "lxd.tar.xz" and 'combined_sha256' not in FAKE_DATA[ftype]:
-        rootpath = item['path'].replace("-lxd.tar.xz", "-root.tar.xz")
-        # make sure the root.tar.xz exists
-        if not os.path.exists(os.path.join(prefix, rootpath)):
-            rootitem = item.copy()
-            rootitem['ftype'] = "root.tar.xz"
-            rootitem['path'] = rootpath
-            create_fake_file(prefix, rootitem)
+    for name, extension in (('rootxz', '-root.tar.xz'),
+                            ('squashfs', '.squashfs')):
+        if (ftype == "lxd.tar.xz" and
+                'combined_{}_sha256'.format(name) not in FAKE_DATA[ftype]):
+            rootpath = item['path'].replace("-lxd.tar.xz", extension)
+            if not os.path.exists(os.path.join(prefix, rootpath)):
+                rootitem = item.copy()
+                rootitem['ftype'] = extension.lstrip('-.')
+                rootitem['path'] = rootpath
+                create_fake_file(prefix, rootitem)
 
-        # and sha256 hash the combined file, .xz first
-        chash = hashlib.new('sha256')
-        for member in [fpath, os.path.join(prefix, rootpath)]:
-            with open(member, "rb") as fp:
-                chash.update(fp.read())
-        data.update({'combined_sha256': chash.hexdigest()})
+            # and sha256 hash the combined file
+            chash = hashlib.new('sha256')
+            for member in [fpath, os.path.join(prefix, rootpath)]:
+                with open(member, "rb") as fp:
+                    chash.update(fp.read())
+            data.update(
+                {'combined_{}_sha256'.format(name): chash.hexdigest()})
+
+    # Add legacy combined_sha256 if combined_rootxz_sha256 exists
+    if (ftype == "lxd.tar.xz" and 'combined_sha256' not in FAKE_DATA[ftype]
+            and 'combined_rootxz_sha256' in FAKE_DATA[ftype]):
+        data.update({'combined_sha256':
+                     FAKE_DATA[ftype]['combined_rootxz_sha256']})
 
     item.update(data)
 
@@ -545,13 +556,22 @@ def create_image_data(query_tree, out_d, streamdir):
         path = item['path']
         item.update(get_cloud_images_file_info(path))
         if path.endswith('-lxd.tar.xz'):
-            # find calculated combined checksum
             dirname = os.path.dirname(path)
             lxd = os.path.basename(path)
-            root = lxd.replace('-lxd', '-root')
-            combined = os.path.join(dirname, ','.join([lxd, root]))
-            item.update({'combined_sha256':
-                         get_cache_data(combined, 'sha256')})
+
+            # find calculated combined checksums
+            for name, extension in (('rootxz', '-root.tar.xz'),
+                                    ('squashfs', '.squashfs')):
+                root = lxd.replace('-lxd.tar.xz', extension)
+                combined = os.path.join(dirname, ','.join([lxd, root]))
+                value = get_cache_data(combined, 'sha256')
+                if value:
+                    item.update({'combined_{}_sha256'.format(name): value})
+
+            # Add legacy combined_sha256 if combined_rootxz_sha256 exists
+            if 'combined_rootxz_sha256' in item:
+                value = item['combined_rootxz_sha256']
+                item.update({'combined_sha256': value})
 
     cid_fmt = "com.ubuntu.cloud:%s:download"
     for stream in tree:
