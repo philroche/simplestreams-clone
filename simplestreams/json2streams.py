@@ -31,7 +31,9 @@ class JujuFileNamer(FileNamer):
 def dict_to_item(item_dict):
     """Convert a dict into an Item, mutating input."""
     item_dict.pop('item_url', None)
-    item_dict['size'] = int(item_dict['size'])
+    size = item_dict.get('size')
+    if size is not None:
+        item_dict['size'] = int(size)
     content_id = item_dict.pop('content_id')
     product_name = item_dict.pop('product_name')
     version_name = item_dict.pop('version_name')
