@@ -1,0 +1,24 @@
+#!/bin/bash
+
+TOP_DIR=$(cd "$(dirname "${0}")"/.. && pwd)
+TENV=${TOP_DIR}/tools/tenv
+PUBKEY=${TOP_DIR}/examples/keys/example.pub
+SECKEY=${TOP_DIR}/examples/keys/example.sec
+FILES=( ${TOP_DIR}/examples/*/streams/v1/*.json )
+
+echo -e "\nSetting up GPG keys..."
+rm -Rf gnupg
+umask 077 && mkdir -p gnupg
+$TENV gpg --import "$SECKEY" >/dev/null 2>&1
+${TOP_DIR}/tools/gpg-trust-pubkey "$PUBKEY"
+echo "this is used by $TENV as the gpg directory" > gnupg/README
+
+echo -e "\nGenerating signed files..."
+for f in "${FILES[@]}"
+do 
+	[ "$f.gpg" -nt "$f" -a "${f%.json}.sjson" -nt "$f" ] ||
+       	{ 
+            echo "tenv js2signed $f" 1>&2;
+            $TENV js2signed "$f";
+        }
+done
