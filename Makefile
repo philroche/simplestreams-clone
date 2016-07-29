@@ -1,11 +1,5 @@
 TENV := ./tools/tenv
 
-PUBKEY := examples/keys/example.pub
-PUBKEYS := $(PUBKEY)
-SECKEY := examples/keys/example.sec
-
-example_sstream_files := $(wildcard examples/*/streams/v1/*.json)
-
 EXDATA_SIGN ?= 1
 ifeq ($(EXDATA_SIGN),1)
     EXDATA_SIGN_ARG := --sign
@@ -47,28 +41,10 @@ exdata/fake: exdata-query gnupg
 exdata-query:
 	rsync -avz --delete --exclude "FILE_DATA_CACHE" --exclude ".bzr/*" cloud-images.ubuntu.com::uec-images/query/ exdata-query
 
-$(PUBKEY) $(SECKEY):
-	@mkdir -p $$(dirname "$(PUBKEY)") $$(dirname "$(SECKEY)")
-	$(TENV) gen-example-key $(PUBKEY) $(SECKEY)
+gnupg:
+	./tools/gnupg
 
-gnupg: gnupg/README
-
-gnupg/README: $(PUBKEYS) $(SECKEY)
-	rm -Rf gnupg
-	@umask 077 && mkdir -p gnupg
-	$(TENV) gpg --import $(SECKEY) >/dev/null 2>&1
-	for pubkey in $(PUBKEYS); do \
-	  $(TENV) gpg-trust-pubkey $$pubkey; done
-	@echo "this is used by $(TENV) as the gpg directory" > gnupg/README
-
-# this is less than ideal, but Make and ':' in targets do not work together
-# so instead of proper rules, we have this phoney rule that makes the
-# targets.  This would probably cause issue with -j.
 examples-sign: gnupg
-	@for f in $(example_sstream_files); do \
-		[ "$$f.gpg" -nt "$$f" -a "$${f%.json}.sjson" -nt "$$f" ] || \
-		{ echo "$(TENV) js2signed $$f" 1>&2; $(TENV) js2signed $$f; } || exit; \
-	done
-
+	./tools/example-sign
 
 .PHONY: check exdata/fake exdata/data exdata-query examples-sign test test2 test3 lint lint2 lint3
