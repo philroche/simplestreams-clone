@@ -29,6 +29,8 @@ exdata/fake: exdata-query gnupg
 exdata-query:
 	rsync -avz --delete --exclude "FILE_DATA_CACHE" --exclude ".bzr/*" cloud-images.ubuntu.com::uec-images/query/ exdata-query
 
+gnupg: gnupg/README
+
 gnupg/README:
 	./tools/create-gpgdir
 
