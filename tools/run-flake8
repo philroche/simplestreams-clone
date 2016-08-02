@@ -9,8 +9,8 @@ else
    files=( "$@" );
 fi
 
-cmd=( pep8 "${files[@]}" )
+cmd=( flake8 "${files[@]}" )
 
-echo -e "\nRunning pep8:"
+echo -e "\nRunning flake8:"
 echo "${cmd[@]}"
 "${cmd[@]}"

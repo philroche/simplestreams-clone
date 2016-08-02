@@ -8,27 +8,15 @@ endif
 build:
 	@echo nothing to do for $@
 
-test: test2 test3
+test: test2 test3 flake8
 
 test3: examples-sign
 	$(TENV) nosetests3 -v tests/
 test2: examples-sign
 	$(TENV) nosetests -v tests/
 
-lint: pyflakes
-
-pyflakes: pyflakes2 pyflakes3
-
-pyflakes2:
-	$(TENV) env ./tools/run-pyflakes
-
-pyflakes3:
-	$(TENV) env ./tools/run-pyflakes3
-
-pep8:
-	./tools/run-pep8
-
-check: lint pep8 test
+flake8:
+	./tools/run-flake8
 
 exdata: exdata/fake exdata/data
 
@@ -47,4 +35,4 @@ gnupg/README:
 examples-sign: gnupg/README
 	$(TENV) ./tools/sign-examples
 
-.PHONY: check exdata/fake exdata/data exdata-query examples-sign test test2 test3 lint lint2 lint3
+.PHONY: exdata/fake exdata/data exdata-query examples-sign test test2 test3
