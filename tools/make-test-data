@@ -312,8 +312,9 @@ def create_fake_file(prefix, item):
                 {'combined_{}_sha256'.format(name): chash.hexdigest()})
 
     # Add legacy combined_sha256 if combined_rootxz_sha256 exists
-    if (ftype == "lxd.tar.xz" and 'combined_sha256' not in FAKE_DATA[ftype]
-            and 'combined_rootxz_sha256' in FAKE_DATA[ftype]):
+    if (ftype == "lxd.tar.xz" and
+            'combined_sha256' not in FAKE_DATA[ftype] and
+            'combined_rootxz_sha256' in FAKE_DATA[ftype]):
         data.update({'combined_sha256':
                      FAKE_DATA[ftype]['combined_rootxz_sha256']})
 
