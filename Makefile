@@ -41,10 +41,10 @@ exdata/fake: exdata-query gnupg
 exdata-query:
 	rsync -avz --delete --exclude "FILE_DATA_CACHE" --exclude ".bzr/*" cloud-images.ubuntu.com::uec-images/query/ exdata-query
 
-gnupg:
-	./tools/gnupg
+gnupg/README:
+	./tools/create-gpgdir
 
-examples-sign: gnupg
-	./tools/example-sign
+examples-sign: gnupg/README
+	./tools/sign-examples
 
 .PHONY: check exdata/fake exdata/data exdata-query examples-sign test test2 test3 lint lint2 lint3
