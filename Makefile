@@ -45,6 +45,6 @@ gnupg/README:
 	./tools/create-gpgdir
 
 examples-sign: gnupg/README
-	./tools/sign-examples
+	$(TENV) ./tools/sign-examples
 
 .PHONY: check exdata/fake exdata/data exdata-query examples-sign test test2 test3 lint lint2 lint3

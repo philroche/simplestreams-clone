@@ -6,4 +6,4 @@ FILES=( ${TOP_DIR}/examples/*/streams/v1/*.json )
 force=""
 [ "$1" = "--force" ] && force="$1"
 
-"${TOP_DIR}/tools/tenv" js2signed $force "${FILES[@]}"
+"${TOP_DIR}/tools/js2signed" $force "${FILES[@]}"
