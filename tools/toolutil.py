@@ -255,7 +255,7 @@ def signjson_file(fname, status_cb=None, force=True):
     if not force:
         octime = os.path.getctime(fname)
         output = [util.signed_fname(fname, inline=b) for b in (True, False)]
-        update = [f for f in output 
+        update = [f for f in output
                   if not (os.path.isfile(f) and octime < os.path.getctime(f))]
         if len(update) == 0:
             return
