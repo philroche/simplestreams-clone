@@ -1,21 +1,9 @@
 #!/bin/bash
 
 TOP_DIR=$(cd "$(dirname "${0}")"/.. && pwd)
-TENV=${TOP_DIR}/tools/tenv
 FILES=( ${TOP_DIR}/examples/*/streams/v1/*.json )
 
-if [ ! -f "${TOP_DIR}/gnupg/README" ]
-then
-    echo "Cannot sign: gpg key not setup. Run gnupg."
-    exit 2
-fi
+force=""
+[ "$1" = "--force" ] && force="$1"
 
-echo -e "\nGenerating signed files..."
-for f in "${FILES[@]}"
-do 
-    if [ "$f.gpg" -ot "$f" -o "${f%.json}.sjson" -ot "$f" ]
-    then 
-        echo "tenv js2signed $f" 1>&2;
-        $TENV js2signed "$f";
-    fi
-done
+"${TOP_DIR}/tools/tenv" js2signed $force "${FILES[@]}"
