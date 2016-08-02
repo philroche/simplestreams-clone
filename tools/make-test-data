@@ -39,6 +39,8 @@ except ImportError as e:
     url_error = urllib2
 
 import toolutil
+from sign_helper import signjson_file
+
 
 # could support reading from other mirrors
 # for example:
@@ -694,8 +696,7 @@ def main():
             sys.stderr.write("signing %s\n" % name)
         for root, dirs, files in os.walk(args.out_d):
             for f in [f for f in files if f.endswith(".json")]:
-                toolutil.signjson_file(os.path.join(root, f),
-                                       status_cb=printstatus)
+                signjson_file(os.path.join(root, f), status_cb=printstatus)
 
     return
 

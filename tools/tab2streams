@@ -23,7 +23,7 @@ import sys
 from simplestreams import generate_simplestreams
 from simplestreams import util
 
-import toolutil
+from sign_helper import signjson_file
 
 
 def tab2items(content):
@@ -84,7 +84,7 @@ def main():
     if args.sign:
         for outf in out_filenames:
             sys.stderr.write("signing %s\n" % filef)
-            toolutil.signjson_file(filef)
+            signjson_file(filef)
 
     return
 
