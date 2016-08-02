@@ -20,13 +20,6 @@ setup(
     packages=['simplestreams', 'simplestreams.mirrors',
               'simplestreams.objectstores'],
     scripts=glob('bin/*'),
-    install_requirements=
-    coverage
-    distroinfo
-    mock
-    nose
-    python-glanceclient
-    python-keystoneclient 
     data_files=[
         ('lib/simplestreams', glob('tools/hook-*')),
         ('share/doc/simplestreams',
