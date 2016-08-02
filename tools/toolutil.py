@@ -246,12 +246,20 @@ def load_query_ec2(path, builds=None, rels=None, max_dailies=NUM_DAILIES):
     return results
 
 
-def signjson_file(fname, status_cb=None):
+def signjson_file(fname, status_cb=None, force=True):
     # input fname should be .json
     # creates .json.gpg and .sjson
     content = ""
     with open(fname, "r") as fp:
         content = fp.read()
+    if not force:
+        octime = os.path.getctime(fname)
+        output = [util.signed_fname(fname, inline=b) for b in (True, False)]
+        update = [f for f in output 
+                  if not (os.path.isfile(f) and octime < os.path.getctime(f))]
+        if len(update) == 0:
+            return
+
     (changed, scontent) = util.make_signed_content_paths(content)
 
     if status_cb:
