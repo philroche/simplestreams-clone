@@ -5,6 +5,7 @@ Standards-Version: 3.9.6
 Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
 Build-Depends: debhelper (>= 7),
                dh-python,
+               make,
                python-all,
                python-glanceclient,
                python-keystoneclient,
