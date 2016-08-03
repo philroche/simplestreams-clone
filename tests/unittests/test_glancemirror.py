@@ -1,12 +1,17 @@
 from simplestreams.contentsource import MemoryContentSource
-from simplestreams.mirrors.glance import GlanceMirror
-from simplestreams.objectstores import MemoryObjectStore
+try:
+    from simplestreams.mirrors.glance import GlanceMirror
+    from simplestreams.objectstores import MemoryObjectStore
+    HAVE_OPENSTACK_LIBS = True
+except ImportError:
+    HAVE_OPENSTACK_LIBS = False
+
 import simplestreams.util
 
 import copy
 import json
 import os
-from unittest import TestCase
+from unittest import TestCase, skipIf
 
 
 # This is a real snippet from the simplestreams index entry for
@@ -118,6 +123,7 @@ class FakeGlanceClient(object):
         self.images = FakeImages()
 
 
+@skipIf(not HAVE_OPENSTACK_LIBS, "no python3 openstack available")
 class TestGlanceMirror(TestCase):
     """Tests for GlanceMirror methods."""
 
