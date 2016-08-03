@@ -3,14 +3,17 @@
 # old versions of flake8 (trusty) cannot be called as python3 -m flake8
 # newer versions can.  Its preferable to run as python -m because
 # that allows us to run explicitly python or python3.
-if [ "$1" = "cmd" ] ||
-    { [ "$1" = "any" ] && command -v flake8 >/dev/null; }; then
+mode=""
+case "$1" in
+    any|cmd) mode="$1"; shift;;
+esac
+
+if [ "$mode" = "cmd" ]
+    { [ "$mode" = "any" ] && command -v flake8 >/dev/null; }; then
     cmd=( flake8 )
-    shift
 else
     case "$1" in
         python|python2|python3) python="$1"; shift;;
-        any) shift;;
         *) python=python3;;
     esac
     cmd=( "$python" -m "flake8" )
