@@ -8,7 +8,9 @@ endif
 build:
 	@echo nothing to do for $@
 
-test: test2 test3 flake8
+check: flake8 test
+
+test: test2 test3
 
 test3: examples-sign
 	$(TENV) nosetests3 -v tests/
@@ -37,4 +39,4 @@ gnupg/README:
 examples-sign: gnupg/README
 	$(TENV) ./tools/sign-examples
 
-.PHONY: exdata/fake exdata/data exdata-query examples-sign test test2 test3
+.PHONY: check exdata/fake exdata/data exdata-query examples-sign flake8 test test2 test3

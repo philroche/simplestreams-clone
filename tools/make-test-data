@@ -243,7 +243,8 @@ def get_url_len(url):
     if os.path.exists(url):
         return os.stat(url).st_size
 
-    # http://stackoverflow.com/questions/4421170/python-head-request-with-urllib2
+    # http://stackoverflow.com/questions/4421170/
+    #  python-head-request-with-urllib2
     request = url_request(url)
     request.get_method = lambda: 'HEAD'
     response = url_open(request)

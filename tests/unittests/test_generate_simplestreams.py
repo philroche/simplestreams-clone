@@ -241,11 +241,9 @@ class TestWriteStreams(TestCase):
 
     def test_no_input_compaction(self):
         trees = {
-                'bar': {'products': {'prodbar': {'versions': {'1': {'items': {
+            'bar': {'products': {'prodbar': {'versions': {'1': {'items': {
                     'item-1': {'arch': 'amd64'},
-                    'item-2': {'arch': 'amd64'},
-                }}}}}},
-            }
+                    'item-2': {'arch': 'amd64'}}}}}}}}
         trees_copy = deepcopy(trees)
         with temp_dir() as out_dir, patch('sys.stderr', StringIO()):
             write_streams(out_dir, trees_copy, self.updated, FakeNamer)
@@ -253,11 +251,9 @@ class TestWriteStreams(TestCase):
 
     def test_no_output_compaction(self):
         trees = {
-                'bar': {'products': {'prodbar': {'versions': {'1': {'items': {
+            'bar': {'products': {'prodbar': {'versions': {'1': {'items': {
                     'item-1': {'arch': 'amd64'},
-                    'item-2': {'arch': 'amd64'},
-                }}}}}},
-            }
+                    'item-2': {'arch': 'amd64'}}}}}}}}
         with temp_dir() as out_dir, patch('sys.stderr', StringIO()):
             write_streams(out_dir, trees, self.updated, FakeNamer,
                           condense=False)
