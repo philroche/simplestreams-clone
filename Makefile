@@ -16,7 +16,8 @@ test2: examples-sign
 	$(TENV) nosetests -v tests/
 
 flake8:
-	./tools/run-flake8
+	# any means run via 'flake8' or 'python3 -m flake8'
+	./tools/run-flake8 any
 
 exdata: exdata/fake exdata/data
 
