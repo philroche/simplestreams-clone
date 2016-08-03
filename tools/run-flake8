@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# old versions of flake8 (trusty) cannot be called as python3 -m flake8
+# newer versions can.  Its preferable to run as python -m because
+# that allows us to run explicitly python or python3.
+if [ "$1" = "cmd" ]; then
+    cmd=( flake8 )
+    shift
+else
+    python="python3"
+    if [ "$1" = "python" -o "$1" = "python3" ]; then
+        python=$1
+        shift
+    fi
+    cmd=( "$python" -m flake8 )
+fi
+
+if [ $# -eq 0 ]; then
+   files=( $(find * -name "*.py" -type f)
+           $(for f in bin/*; do [ "${f%.*}" = "$f" ] && echo "$f"; done) 
+           tools/make-test-data
+         )
+else
+   files=( "$@" );
+fi
+
+cmd=( "${cmd[@]}" "${files[@]}" )
+
+echo -e "\nRunning flake8:"
+echo "${cmd[@]}"
+"${cmd[@]}"

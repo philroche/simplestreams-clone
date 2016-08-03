@@ -1,11 +1,5 @@
 TENV := ./tools/tenv
 
-PUBKEY := examples/keys/example.pub
-PUBKEYS := $(PUBKEY)
-SECKEY := examples/keys/example.sec
-
-example_sstream_files := $(wildcard examples/*/streams/v1/*.json)
-
 EXDATA_SIGN ?= 1
 ifeq ($(EXDATA_SIGN),1)
     EXDATA_SIGN_ARG := --sign
@@ -14,27 +8,15 @@ endif
 build:
 	@echo nothing to do for $@
 
-test: test2 test3
+test: test2 test3 flake8
 
 test3: examples-sign
 	$(TENV) nosetests3 -v tests/
 test2: examples-sign
 	$(TENV) nosetests -v tests/
 
-lint: pyflakes
-
-pyflakes: pyflakes2 pyflakes3
-
-pyflakes2:
-	$(TENV) env ./tools/run-pyflakes
-
-pyflakes3:
-	$(TENV) env ./tools/run-pyflakes3
-
-pep8:
-	./tools/run-pep8
-
-check: lint pep8 test
+flake8:
+	./tools/run-flake8
 
 exdata: exdata/fake exdata/data
 
@@ -47,28 +29,12 @@ exdata/fake: exdata-query gnupg
 exdata-query:
 	rsync -avz --delete --exclude "FILE_DATA_CACHE" --exclude ".bzr/*" cloud-images.ubuntu.com::uec-images/query/ exdata-query
 
-$(PUBKEY) $(SECKEY):
-	@mkdir -p $$(dirname "$(PUBKEY)") $$(dirname "$(SECKEY)")
-	$(TENV) gen-example-key $(PUBKEY) $(SECKEY)
-
 gnupg: gnupg/README
 
-gnupg/README: $(PUBKEYS) $(SECKEY)
-	rm -Rf gnupg
-	@umask 077 && mkdir -p gnupg
-	$(TENV) gpg --import $(SECKEY) >/dev/null 2>&1
-	for pubkey in $(PUBKEYS); do \
-	  $(TENV) gpg-trust-pubkey $$pubkey; done
-	@echo "this is used by $(TENV) as the gpg directory" > gnupg/README
+gnupg/README:
+	./tools/create-gpgdir
 
-# this is less than ideal, but Make and ':' in targets do not work together
-# so instead of proper rules, we have this phoney rule that makes the
-# targets.  This would probably cause issue with -j.
-examples-sign: gnupg
-	@for f in $(example_sstream_files); do \
-		[ "$$f.gpg" -nt "$$f" -a "$${f%.json}.sjson" -nt "$$f" ] || \
-		{ echo "$(TENV) js2signed $$f" 1>&2; $(TENV) js2signed $$f; } || exit; \
-	done
+examples-sign: gnupg/README
+	$(TENV) ./tools/sign-examples
 
-
-.PHONY: check exdata/fake exdata/data exdata-query examples-sign test test2 test3 lint lint2 lint3
+.PHONY: exdata/fake exdata/data exdata-query examples-sign flake8 test test2 test3

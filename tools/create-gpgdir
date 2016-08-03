@@ -1,0 +1,55 @@
+#!/bin/bash
+
+set -e
+TOP_DIR=$(cd "$(dirname "${0}")"/.. && pwd)
+GPG_DIR=${GPG_DIR:-${TOP_DIR}/gnupg}
+PUBKEY=${PUBKEY:-${TOP_DIR}/examples/keys/example.pub}
+SECKEY=${SECKEY:-${TOP_DIR}/examples/keys/example.sec}
+
+if [ "$1" = "-h" -o "$1" = "--help" ]; then
+    cat <<EOF
+Usage: ${0##*/}
+   create gnupghome dir $GPG_DIR.
+   Populate with public keys.
+EOF
+fi
+
+if [ -f "$GPG_DIR"/README ]; then
+    exit
+fi
+
+export GNUPGHOME="$GPG_DIR"
+if [ ! -d "$GPG_DIR" ]; then
+    ( umask 077 ; mkdir -p "$GPG_DIR" )
+fi
+
+if [ $# -eq 0 ]; then
+   set -- "$PUBKEY"
+fi
+
+{
+echo "creating GNUPGHOME dir in $GPG_DIR."
+echo "  pubkey '$PUBKEY'"
+echo "  secret '$SECKEY'"
+echo "  pubkeys: $*"
+} 1>&2
+
+if [ ! -f "$PUBKEY" -o ! -f "$SECKEY" ]; then
+    mkdir -p "$(dirname "$PUBKEY")"
+    out=$("${TOP_DIR}"/tools/gen-example-key "$PUBKEY" "$SECKEY") ||
+        { echo "Failed to generate keys: $out"; exit 2; }
+    echo "created pubkey $pubkey and secret key $seckey" 1>&2
+fi
+
+out=$(gpg --import "$SECKEY" 2>&1) ||
+    { echo "Failed to import seckey: $out"; exit 2; }
+echo "imported secret key $SECKEY" 1>&2
+
+for k in "$@"; do
+    out=$("${TOP_DIR}"/tools/gpg-trust-pubkey "$k") ||
+        { echo "Failed to import pubkey '$k': $out"; exit 2; }
+    echo "imported pubkey $k" 1>&2
+done
+
+echo "this is used by \$TENV as the gpg directory" > "$GPG_DIR"/README
+

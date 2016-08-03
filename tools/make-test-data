@@ -39,6 +39,8 @@ except ImportError as e:
     url_error = urllib2
 
 import toolutil
+import sign_helper
+
 
 # could support reading from other mirrors
 # for example:
@@ -241,7 +243,8 @@ def get_url_len(url):
     if os.path.exists(url):
         return os.stat(url).st_size
 
-    # http://stackoverflow.com/questions/4421170/python-head-request-with-urllib2
+    # http://stackoverflow.com/questions/4421170/
+    #  python-head-request-with-urllib2
     request = url_request(url)
     request.get_method = lambda: 'HEAD'
     response = url_open(request)
@@ -312,8 +315,9 @@ def create_fake_file(prefix, item):
                 {'combined_{}_sha256'.format(name): chash.hexdigest()})
 
     # Add legacy combined_sha256 if combined_rootxz_sha256 exists
-    if (ftype == "lxd.tar.xz" and 'combined_sha256' not in FAKE_DATA[ftype]
-            and 'combined_rootxz_sha256' in FAKE_DATA[ftype]):
+    if (ftype == "lxd.tar.xz" and
+            'combined_sha256' not in FAKE_DATA[ftype] and
+            'combined_rootxz_sha256' in FAKE_DATA[ftype]):
         data.update({'combined_sha256':
                      FAKE_DATA[ftype]['combined_rootxz_sha256']})
 
@@ -693,8 +697,8 @@ def main():
             sys.stderr.write("signing %s\n" % name)
         for root, dirs, files in os.walk(args.out_d):
             for f in [f for f in files if f.endswith(".json")]:
-                toolutil.signjson_file(os.path.join(root, f),
-                                       status_cb=printstatus)
+                sign_helper.signjson_file(os.path.join(root, f),
+                                          status_cb=printstatus)
 
     return
 

@@ -1,0 +1,9 @@
+#!/bin/bash
+
+TOP_DIR=$(cd "$(dirname "${0}")"/.. && pwd)
+FILES=( ${TOP_DIR}/examples/*/streams/v1/*.json )
+
+force=""
+[ "$1" = "--force" ] && force="$1"
+
+"${TOP_DIR}/tools/js2signed" $force "${FILES[@]}"
