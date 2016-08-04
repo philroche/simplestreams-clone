@@ -8,7 +8,7 @@ case "$1" in
     any|cmd) mode="$1"; shift;;
 esac
 
-if [ "$mode" = "cmd" ]
+if [ "$mode" = "cmd" ] ||
     { [ "$mode" = "any" ] && command -v flake8 >/dev/null; }; then
     cmd=( flake8 )
 else
