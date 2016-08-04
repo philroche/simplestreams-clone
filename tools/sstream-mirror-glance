@@ -33,8 +33,10 @@ from simplestreams.mirrors import glance
 
 DEFAULT_FILTERS = ['ftype~(disk1.img|disk.img)', 'arch~(x86_64|amd64|i386)']
 
+
 def error(msg):
     sys.stderr.write(msg)
+
 
 class StdoutProgressAggregator(util.ProgressAggregator):
     def __init__(self, remaining_items):
@@ -43,12 +45,11 @@ class StdoutProgressAggregator(util.ProgressAggregator):
     def emit(self, progress):
         size = float(progress['size'])
         written = float(progress['written'])
-        print("%.2f %s (%d of %d images)"
-              " - %.2f" % (written / size,
-                           progress['name'], 
-                           self.total_image_count - len(self.remaining_items) + 1,
-                           self.total_image_count,
-                           float(self.total_written) / self.total_size))
+        print("%.2f %s (%d of %d images) - %.2f" %
+              (written / size, progress['name'],
+               self.total_image_count - len(self.remaining_items) + 1,
+               self.total_image_count,
+               float(self.total_written) / self.total_size))
 
 
 def main():
@@ -104,11 +105,12 @@ def main():
                         "Expressions are key[!]=literal_string "
                         "or key[!]~regexp.")
 
-    parser.add_argument('--hypervisor-mapping', action='store_true', default=False,
+    parser.add_argument('--hypervisor-mapping', action='store_true',
+                        default=False,
                         help="Set hypervisor_type attribute on stored images "
-                        "and the virt attribute in the associated stream data. "
-                        "This is useful in OpenStack Clouds which use multiple "
-                        "hypervisor types with in a single region.")
+                        "and the virt attribute in the associated stream "
+                        "data. This is useful in OpenStack Clouds which use "
+                        "multiple hypervisor types with in a single region.")
 
     args = parser.parse_args()
 
@@ -124,6 +126,7 @@ def main():
 
     (mirror_url, args.path) = util.path_from_mirror_url(args.source_mirror,
                                                         args.path)
+
     def policy(content, path):  # pylint: disable=W0613
         if args.path.endswith('sjson'):
             return util.read_signed(content, keyring=args.keyring)
@@ -156,7 +159,8 @@ def main():
         mirror_config['content_id'] = args.content_id % {'region': region}
 
         if args.progress:
-            drmirror = glance.ItemInfoDryRunMirror(config=mirror_config, objectstore=tstore)
+            drmirror = glance.ItemInfoDryRunMirror(config=mirror_config,
+                                                   objectstore=tstore)
             drmirror.sync(smirror, args.path)
             p = StdoutProgressAggregator(drmirror.items)
             progress_callback = p.progress_callback

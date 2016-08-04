@@ -17,8 +17,6 @@
 #   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
-import json
-import os
 import sys
 from simplestreams import generate_simplestreams
 from simplestreams import util
@@ -73,8 +71,6 @@ def main():
         with open(args.input, "r") as fp:
             tabinput = fp.read()
 
-    streamdir = "streams/v1"
-
     items = tab2items(tabinput)
     updated = util.timestamp()
     data = {'updated': updated, 'datatype': 'image-downloads'}
@@ -83,8 +79,8 @@ def main():
                                                          updated)
     if args.sign:
         for outf in out_filenames:
-            sys.stderr.write("signing %s\n" % filef)
-            signjson_file(filef)
+            sys.stderr.write("signing %s\n" % outf)
+            signjson_file(outf)
 
     return
 

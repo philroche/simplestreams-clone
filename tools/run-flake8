@@ -20,10 +20,14 @@ else
 fi
 
 if [ $# -eq 0 ]; then
-   files=( $(find * -name "*.py" -type f)
-           $(for f in bin/*; do [ "${f%.*}" = "$f" ] && echo "$f"; done) 
-           tools/make-test-data
-         )
+   exes=( )
+   # these dirs have python files that do not end in .py
+   for f in tools/* bin/*; do
+      [ -f "$f" -a "${f%.py}" = "$f" ] || continue
+      read line <"$f" && [ "${line#*python}" != "$line" ] &&
+         exes[${#exes[@]}]="$f"
+   done
+   files=( "${exes[@]}" setup.py simplestreams/ tools/ tests/ )
 else
    files=( "$@" );
 fi
