@@ -22,7 +22,7 @@ import re
 
 class ItemFilter(object):
     def __init__(self, content, noneval=""):
-        rparsefmt = r"(\w+)[ ]*([!]{0,1}[=~])[ ]*(.*)[ ]*$"
+        rparsefmt = r"([\w|\-]+)[ ]*([!]{0,1}[=~])[ ]*(.*)[ ]*$"
         parsed = re.match(rparsefmt, content)
 
         if not parsed:
