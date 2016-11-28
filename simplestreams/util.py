@@ -49,6 +49,7 @@ _HAS_GPGV = None
 class SignatureMissingException(Exception):
     pass
 
+
 try:
     # python2
     _STRING_TYPES = (str, basestring, unicode)
