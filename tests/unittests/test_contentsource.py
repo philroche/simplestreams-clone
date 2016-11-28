@@ -34,7 +34,7 @@ class RandomPortServer(object):
             self.port = int(port_str)
             self.addr = addr
             self.process = p
-            #print("Running server on %s" % port_str)
+            # print("Running server on %s" % port_str)
             return
         else:
             p.kill()
