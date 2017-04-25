@@ -62,24 +62,28 @@ def canonicalize_arch(arch):
     return newarch
 
 
-LXC_FTYPES = [
-    'root.tar.gz',
-    'root.tar.xz',
-]
+LXC_FTYPES = {
+    'root.tar.gz': 'root-tar',
+    'root.tar.xz': 'root-tar',
+    'squashfs': 'squashfs',
+}
 
-QEMU_FTYPES = [
-    'disk.img',
-    'disk1.img',
-]
+QEMU_FTYPES = {
+    'disk.img': 'qcow2',
+    'disk1.img': 'qcow2',
+}
 
 
 def disk_format(ftype):
-    '''Canonicalize disk formats for use in OpenStack'''
+    '''Canonicalize disk formats for use in OpenStack.
+    Input ftype is a 'ftype' from a simplestream feed.
+    Return value is the appropriate 'disk_format' for glance.'''
+    print("new_ftype: %s" % ftype)
     newftype = ftype.lower()
     if newftype in LXC_FTYPES:
-        return 'root-tar'
+        return LXC_FTYPES[newftype]
     if newftype in QEMU_FTYPES:
-        return 'qcow2'
+        return QEMU_FTYPES[newftype]
     return None
 
 
@@ -155,6 +159,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         self.content_id = config.get("content_id")
         self.modify_hook = config.get("modify_hook")
 
+        self.inserts = {}
         if not self.content_id:
             raise TypeError("content_id is required")
 
@@ -403,7 +408,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         return output_entry
 
-    def insert_item(self, data, src, target, pedigree, contentsource):
+    def _insert_item(self, data, src, target, pedigree, contentsource):
         """
         Upload image into glance and add image metadata to simplestreams index.
 
@@ -464,6 +469,55 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         # We can safely ignore path and content arguments since they are
         # unused in insert_products below.
         self.insert_products(None, target, None)
+
+    def insert_item(self, data, src, target, pedigree, contentsource):
+        """Queue item to be inserted in subsequent call to insert_version
+
+        This adds the item to self.inserts which is then handled in
+        insert_version.  That allows the code to have context on
+        all the items for a given version, and "choose" one.  Ie,
+        if both root.tar.xz and squashfs are available, preference
+        can be given to the root.tar.gz.
+        """
+
+        product_name, version_name, item_name = pedigree
+        if product_name not in self.inserts:
+            self.inserts[product_name] = {}
+        if version_name not in self.inserts[product_name]:
+            self.inserts[product_name][version_name] = {}
+
+        if 'ftype' in data:
+            ftype = data['ftype']
+        else:
+            flat = util.products_exdata(src, pedigree, include_top=False)
+            ftype = flat.get('ftype')
+        self.inserts[product_name][version_name][item_name] = (
+            ftype, (data, src, target, pedigree, contentsource))
+
+    def insert_version(self, data, src, target, pedigree):
+        """Upload all images for this version into glance
+        and add image metadata to simplestreams index.
+
+        All the work actually happens in _insert_item.
+        """
+
+        product_name, version_name = pedigree
+        inserts = self.inserts.get(product_name, {}).get(version_name, [])
+
+        rtar_names = [f for f in inserts
+                      if inserts[f][0] in ('root.tar.gz', 'root.tar.xz')]
+
+        for _iname, (ftype, iargs) in inserts.items():
+            if ftype == "squashfs" and rtar_names:
+                LOG.info("[%s] Skipping ftype 'squashfs' image in preference"
+                         "for root tarball type in %s",
+                         '/'.join(pedigree), rtar_names)
+                continue
+            self._insert_item(*iargs)
+
+        # we do not specifically do anything for insert_version, but
+        # call parent.
+        super(GlanceMirror, self).insert_version(data, src, target, pedigree)
 
     def remove_item(self, data, src, target, pedigree):
         util.products_del(target, pedigree)
