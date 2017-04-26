@@ -170,7 +170,7 @@ try:
     info = get_ubuntu_info()
     REL2VER = {}
     for r in info:
-        if r['codename'] < "hardy":
+        if r['_int_version'] < 804:
             continue
         REL2VER[r['codename']] = r.copy()
 
