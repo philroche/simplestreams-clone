@@ -15,14 +15,31 @@
 #   You should have received a copy of the GNU Affero General Public License
 #   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
 
-from keystoneclient.v2_0 import client as ksclient
+import collections
 import os
+
+from keystoneclient.v2_0 import client as ksclient
 
 OS_ENV_VARS = (
     'OS_AUTH_TOKEN', 'OS_AUTH_URL', 'OS_CACERT', 'OS_IMAGE_API_VERSION',
     'OS_IMAGE_URL', 'OS_PASSWORD', 'OS_REGION_NAME', 'OS_STORAGE_URL',
-    'OS_TENANT_ID', 'OS_TENANT_NAME', 'OS_USERNAME', 'OS_INSECURE'
+    'OS_TENANT_ID', 'OS_TENANT_NAME', 'OS_USERNAME', 'OS_INSECURE',
+    'OS_USER_DOMAIN_NAME', 'OS_USER_DOMAIN_NAME', 'OS_PROJECT_DOMAIN_NAME',
+    'OS_USER_DOMAIN_ID', 'OS_PROJECT_DOMAIN_ID', 'OS_PROJECT_NAME',
+    'OS_PROJECT_ID'
 )
+
+
+PT_V2 = ('username', 'password', 'tenant_id', 'tenant_name', 'auth_url',
+         'cacert', 'insecure', )
+PT_V3 = ('username', 'password', 'project_id', 'project_name', 'auth_url',
+         'cacert', 'insecure', 'user_domain_name', 'project_domain_name',
+         'user_domain_id', 'project_domain_id', )
+
+
+Settings = collections.namedtuple('Settings', 'mod arg_set')
+KS_VERSION_RESOLVER = {2: Settings(mod=ksclient, arg_set=PT_V2),
+                       3: Settings(mod=ksclient, arg_set=PT_V3), }
 
 
 def load_keystone_creds(**kwargs):
@@ -88,11 +105,27 @@ def get_regions(client=None, services=None, kscreds=None):
     return list(regions)
 
 
+def get_ks_api_version(auth_url):
+    """Get the keystone api version based on the end of the auth url.
+
+    @param auth_url: String
+    @returns: 2 or 3 (int)
+    """
+    if auth_url.endswith('/v3'):
+        return 3
+    elif auth_url.endswith('/v2.0'):
+        return 2
+    # Return None if we can't determine the keystone version
+    return None
+
+
 def get_ksclient(**kwargs):
-    pt = ('username', 'password', 'tenant_id', 'tenant_name', 'auth_url',
-          'cacert', 'insecure')
-    kskw = {k: kwargs.get(k) for k in pt if k in kwargs}
-    return ksclient.Client(**kskw)
+    # api version will be force to 3 or 2
+    api_version = get_ks_api_version(kwargs.get('auth_url', '')) or 2
+    arg_set = KS_VERSION_RESOLVER[api_version].arg_set
+    # Filter/select the args for the api version from the kwargs dictionary
+    kskw = {k: v for k, v in kwargs if k in arg_set}
+    return KS_VERSION_RESOLVER[api_version].mod.Client(**kskw)
 
 
 def get_service_conn_info(service='image', client=None, **kwargs):
