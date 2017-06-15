@@ -18,13 +18,19 @@
 import collections
 import os
 
-from keystoneclient.v2_0 import client as ksclient
+from keystoneclient.v2_0 import client as ksclient_v2
+from keystoneclient.v3 import client as ksclient_v3
+from keystoneauth1 import session
+from keystoneauth1.identity import (
+    v2,
+    v3,
+)
 
 OS_ENV_VARS = (
     'OS_AUTH_TOKEN', 'OS_AUTH_URL', 'OS_CACERT', 'OS_IMAGE_API_VERSION',
     'OS_IMAGE_URL', 'OS_PASSWORD', 'OS_REGION_NAME', 'OS_STORAGE_URL',
     'OS_TENANT_ID', 'OS_TENANT_NAME', 'OS_USERNAME', 'OS_INSECURE',
-    'OS_USER_DOMAIN_NAME', 'OS_USER_DOMAIN_NAME', 'OS_PROJECT_DOMAIN_NAME',
+    'OS_USER_DOMAIN_NAME', 'OS_PROJECT_DOMAIN_NAME',
     'OS_USER_DOMAIN_ID', 'OS_PROJECT_DOMAIN_ID', 'OS_PROJECT_NAME',
     'OS_PROJECT_ID'
 )
@@ -37,9 +43,13 @@ PT_V3 = ('username', 'password', 'project_id', 'project_name', 'auth_url',
          'user_domain_id', 'project_domain_id', )
 
 
-Settings = collections.namedtuple('Settings', 'mod arg_set')
-KS_VERSION_RESOLVER = {2: Settings(mod=ksclient, arg_set=PT_V2),
-                       3: Settings(mod=ksclient, arg_set=PT_V3), }
+Settings = collections.namedtuple('Settings', 'mod ident arg_set')
+KS_VERSION_RESOLVER = {2: Settings(mod=ksclient_v2,
+                                   ident=v2,
+                                   arg_set=PT_V2),
+                       3: Settings(mod=ksclient_v3,
+                                   ident=v3,
+                                   arg_set=PT_V3), }
 
 
 def load_keystone_creds(**kwargs):
@@ -74,8 +84,17 @@ def load_keystone_creds(**kwargs):
     if not (ret.get('auth_token') or ret.get('password')):
         missing.append("(auth_token or password)")
 
-    if not (ret.get('tenant_id') or ret.get('tenant_name')):
+    api_version = get_ks_api_version(ret.get('auth_url', '')) or 2
+    if (api_version == 2 and
+            not (ret.get('tenant_id') or ret.get('tenant_name'))):
         raise ValueError("(tenant_id or tenant_name)")
+
+    if (api_version == 3 and
+            not (ret.get('user_domain_name') and
+                 ret.get('project_domain_name') and
+                 ret.get('project_name'))):
+        raise ValueError("(user_domain_name, project_domain_name "
+                         "or project_name)")
 
     if missing:
         raise ValueError("Need values for: %s" % missing)
@@ -124,8 +143,12 @@ def get_ksclient(**kwargs):
     api_version = get_ks_api_version(kwargs.get('auth_url', '')) or 2
     arg_set = KS_VERSION_RESOLVER[api_version].arg_set
     # Filter/select the args for the api version from the kwargs dictionary
-    kskw = {k: v for k, v in kwargs if k in arg_set}
-    return KS_VERSION_RESOLVER[api_version].mod.Client(**kskw)
+    kskw = {k: v for k, v in kwargs.items() if k in arg_set}
+    auth = KS_VERSION_RESOLVER[api_version].ident.Password(**kskw)
+    sess = session.Session(auth=auth)
+    client = KS_VERSION_RESOLVER[api_version].mod.Client(session=sess)
+    client.auth_ref = auth.get_access(sess)
+    return client
 
 
 def get_service_conn_info(service='image', client=None, **kwargs):
@@ -136,19 +159,16 @@ def get_service_conn_info(service='image', client=None, **kwargs):
     endpoint = _get_endpoint(client, service, **kwargs)
     return {'token': client.auth_token, 'insecure': kwargs.get('insecure'),
             'cacert': kwargs.get('cacert'), 'endpoint': endpoint,
-            'tenant_id': client.tenant_id}
+            'tenant_id': client.tenant_id, 'session': client.session}
 
 
 def _get_endpoint(client, service, **kwargs):
     """Get an endpoint using the provided keystone client."""
     endpoint_kwargs = {
         'service_type': service,
-        'endpoint_type': kwargs.get('endpoint_type') or 'publicURL',
+        'interface': kwargs.get('endpoint_type') or 'publicURL',
+        'region_name': kwargs.get('region_name'),
     }
-
-    if kwargs.get('region_name'):
-        endpoint_kwargs['attr'] = 'region'
-        endpoint_kwargs['filter_value'] = kwargs.get('region_name')
 
     endpoint = client.service_catalog.url_for(**endpoint_kwargs)
     return endpoint
