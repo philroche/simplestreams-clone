@@ -20,11 +20,15 @@ import os
 
 from keystoneclient.v2_0 import client as ksclient_v2
 from keystoneclient.v3 import client as ksclient_v3
-from keystoneauth1 import session
-from keystoneauth1.identity import (
-    v2,
-    v3,
-)
+try:
+    from keystoneauth1 import session
+    from keystoneauth1.identity import (v2, v3)
+    _LEGACY_CLIENTS = False
+except ImportError:
+    # 14.04 level packages do not have this.
+    session, v2, v3 = (None, None, None)
+    _LEGACY_CLIENTS = True
+
 
 OS_ENV_VARS = (
     'OS_AUTH_TOKEN', 'OS_AUTH_URL', 'OS_CACERT', 'OS_IMAGE_API_VERSION',
@@ -124,12 +128,21 @@ def get_regions(client=None, services=None, kscreds=None):
     return list(regions)
 
 
-def get_ks_api_version(auth_url):
+def get_ks_api_version(auth_url=None, env=None):
     """Get the keystone api version based on the end of the auth url.
 
     @param auth_url: String
     @returns: 2 or 3 (int)
     """
+    if env is None:
+       env = os.environ
+
+    if env.get('OS_IDENTITY_API_VERSION'):
+        return int(env['OS_IDENTITY_API_VERSION'])
+
+    if auth_url is None:
+       auth_url = ""
+
     if auth_url.endswith('/v3'):
         return 3
     elif auth_url.endswith('/v2.0'):
@@ -138,8 +151,17 @@ def get_ks_api_version(auth_url):
     return None
 
 
+def _legacy_ksclient(**kwargs):
+    """14.04 does not have session available."""
+    kskw = {k: kwargs.get(k) for k in PT_V2 if k in kwargs}
+    return ksclient_v2.Client(**kskw)
+
+
 def get_ksclient(**kwargs):
     # api version will be force to 3 or 2
+    if _LEGACY_CLIENTS:
+        return _legacy_ksclient(**kwargs)
+
     api_version = get_ks_api_version(kwargs.get('auth_url', '')) or 2
     arg_set = KS_VERSION_RESOLVER[api_version].arg_set
     # Filter/select the args for the api version from the kwargs dictionary
@@ -156,10 +178,15 @@ def get_service_conn_info(service='image', client=None, **kwargs):
     if not client:
         client = get_ksclient(**kwargs)
 
+    print("kwargs: %s" % kwargs)
     endpoint = _get_endpoint(client, service, **kwargs)
-    return {'token': client.auth_token, 'insecure': kwargs.get('insecure'),
+    info = {'token': client.auth_token, 'insecure': kwargs.get('insecure'),
             'cacert': kwargs.get('cacert'), 'endpoint': endpoint,
-            'tenant_id': client.tenant_id, 'session': client.session}
+            'tenant_id': client.tenant_id}
+    if not _LEGACY_CLIENTS:
+        info['session'] = client.session
+
+    return info
 
 
 def _get_endpoint(client, service, **kwargs):
@@ -169,6 +196,8 @@ def _get_endpoint(client, service, **kwargs):
         'interface': kwargs.get('endpoint_type') or 'publicURL',
         'region_name': kwargs.get('region_name'),
     }
+    if _LEGACY_CLIENTS:
+        del endpoint_kwargs['interface']
 
     endpoint = client.service_catalog.url_for(**endpoint_kwargs)
     return endpoint
