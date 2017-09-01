@@ -178,7 +178,6 @@ def get_service_conn_info(service='image', client=None, **kwargs):
     if not client:
         client = get_ksclient(**kwargs)
 
-    print("kwargs: %s" % kwargs)
     endpoint = _get_endpoint(client, service, **kwargs)
     info = {'token': client.auth_token, 'insecure': kwargs.get('insecure'),
             'cacert': kwargs.get('cacert'), 'endpoint': endpoint,
