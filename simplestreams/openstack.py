@@ -135,13 +135,13 @@ def get_ks_api_version(auth_url=None, env=None):
     @returns: 2 or 3 (int)
     """
     if env is None:
-       env = os.environ
+        env = os.environ
 
     if env.get('OS_IDENTITY_API_VERSION'):
         return int(env['OS_IDENTITY_API_VERSION'])
 
     if auth_url is None:
-       auth_url = ""
+        auth_url = ""
 
     if auth_url.endswith('/v3'):
         return 3
