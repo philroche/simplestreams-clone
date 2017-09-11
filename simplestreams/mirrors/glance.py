@@ -272,8 +272,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
                 name_old, name_new = carry_over_property
             else:
                 name_old = name_new = carry_over_property
-            if name_new in image_metadata:
-                properties[name_new] = image_metadata[name_old]
+            properties[name_new] = image_metadata[name_old]
 
         if 'arch' in image_metadata:
             properties['architecture'] = canonicalize_arch(
