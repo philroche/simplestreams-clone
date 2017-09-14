@@ -15,14 +15,45 @@
 #   You should have received a copy of the GNU Affero General Public License
 #   along with Simplestreams.  If not, see <http://www.gnu.org/licenses/>.
 
-from keystoneclient.v2_0 import client as ksclient
+import collections
 import os
+
+from keystoneclient.v2_0 import client as ksclient_v2
+from keystoneclient.v3 import client as ksclient_v3
+try:
+    from keystoneauth1 import session
+    from keystoneauth1.identity import (v2, v3)
+    _LEGACY_CLIENTS = False
+except ImportError:
+    # 14.04 level packages do not have this.
+    session, v2, v3 = (None, None, None)
+    _LEGACY_CLIENTS = True
+
 
 OS_ENV_VARS = (
     'OS_AUTH_TOKEN', 'OS_AUTH_URL', 'OS_CACERT', 'OS_IMAGE_API_VERSION',
     'OS_IMAGE_URL', 'OS_PASSWORD', 'OS_REGION_NAME', 'OS_STORAGE_URL',
-    'OS_TENANT_ID', 'OS_TENANT_NAME', 'OS_USERNAME', 'OS_INSECURE'
+    'OS_TENANT_ID', 'OS_TENANT_NAME', 'OS_USERNAME', 'OS_INSECURE',
+    'OS_USER_DOMAIN_NAME', 'OS_PROJECT_DOMAIN_NAME',
+    'OS_USER_DOMAIN_ID', 'OS_PROJECT_DOMAIN_ID', 'OS_PROJECT_NAME',
+    'OS_PROJECT_ID'
 )
+
+
+PT_V2 = ('username', 'password', 'tenant_id', 'tenant_name', 'auth_url',
+         'cacert', 'insecure', )
+PT_V3 = ('username', 'password', 'project_id', 'project_name', 'auth_url',
+         'cacert', 'insecure', 'user_domain_name', 'project_domain_name',
+         'user_domain_id', 'project_domain_id', )
+
+
+Settings = collections.namedtuple('Settings', 'mod ident arg_set')
+KS_VERSION_RESOLVER = {2: Settings(mod=ksclient_v2,
+                                   ident=v2,
+                                   arg_set=PT_V2),
+                       3: Settings(mod=ksclient_v3,
+                                   ident=v3,
+                                   arg_set=PT_V3), }
 
 
 def load_keystone_creds(**kwargs):
@@ -57,8 +88,17 @@ def load_keystone_creds(**kwargs):
     if not (ret.get('auth_token') or ret.get('password')):
         missing.append("(auth_token or password)")
 
-    if not (ret.get('tenant_id') or ret.get('tenant_name')):
+    api_version = get_ks_api_version(ret.get('auth_url', '')) or 2
+    if (api_version == 2 and
+            not (ret.get('tenant_id') or ret.get('tenant_name'))):
         raise ValueError("(tenant_id or tenant_name)")
+
+    if (api_version == 3 and
+            not (ret.get('user_domain_name') and
+                 ret.get('project_domain_name') and
+                 ret.get('project_name'))):
+        raise ValueError("(user_domain_name, project_domain_name "
+                         "or project_name)")
 
     if missing:
         raise ValueError("Need values for: %s" % missing)
@@ -88,11 +128,49 @@ def get_regions(client=None, services=None, kscreds=None):
     return list(regions)
 
 
+def get_ks_api_version(auth_url=None, env=None):
+    """Get the keystone api version based on the end of the auth url.
+
+    @param auth_url: String
+    @returns: 2 or 3 (int)
+    """
+    if env is None:
+        env = os.environ
+
+    if env.get('OS_IDENTITY_API_VERSION'):
+        return int(env['OS_IDENTITY_API_VERSION'])
+
+    if auth_url is None:
+        auth_url = ""
+
+    if auth_url.endswith('/v3'):
+        return 3
+    elif auth_url.endswith('/v2.0'):
+        return 2
+    # Return None if we can't determine the keystone version
+    return None
+
+
+def _legacy_ksclient(**kwargs):
+    """14.04 does not have session available."""
+    kskw = {k: kwargs.get(k) for k in PT_V2 if k in kwargs}
+    return ksclient_v2.Client(**kskw)
+
+
 def get_ksclient(**kwargs):
-    pt = ('username', 'password', 'tenant_id', 'tenant_name', 'auth_url',
-          'cacert', 'insecure')
-    kskw = {k: kwargs.get(k) for k in pt if k in kwargs}
-    return ksclient.Client(**kskw)
+    # api version will be force to 3 or 2
+    if _LEGACY_CLIENTS:
+        return _legacy_ksclient(**kwargs)
+
+    api_version = get_ks_api_version(kwargs.get('auth_url', '')) or 2
+    arg_set = KS_VERSION_RESOLVER[api_version].arg_set
+    # Filter/select the args for the api version from the kwargs dictionary
+    kskw = {k: v for k, v in kwargs.items() if k in arg_set}
+    auth = KS_VERSION_RESOLVER[api_version].ident.Password(**kskw)
+    sess = session.Session(auth=auth)
+    client = KS_VERSION_RESOLVER[api_version].mod.Client(session=sess)
+    client.auth_ref = auth.get_access(sess)
+    return client
 
 
 def get_service_conn_info(service='image', client=None, **kwargs):
@@ -101,21 +179,24 @@ def get_service_conn_info(service='image', client=None, **kwargs):
         client = get_ksclient(**kwargs)
 
     endpoint = _get_endpoint(client, service, **kwargs)
-    return {'token': client.auth_token, 'insecure': kwargs.get('insecure'),
+    info = {'token': client.auth_token, 'insecure': kwargs.get('insecure'),
             'cacert': kwargs.get('cacert'), 'endpoint': endpoint,
             'tenant_id': client.tenant_id}
+    if not _LEGACY_CLIENTS:
+        info['session'] = client.session
+
+    return info
 
 
 def _get_endpoint(client, service, **kwargs):
     """Get an endpoint using the provided keystone client."""
     endpoint_kwargs = {
         'service_type': service,
-        'endpoint_type': kwargs.get('endpoint_type') or 'publicURL',
+        'interface': kwargs.get('endpoint_type') or 'publicURL',
+        'region_name': kwargs.get('region_name'),
     }
-
-    if kwargs.get('region_name'):
-        endpoint_kwargs['attr'] = 'region'
-        endpoint_kwargs['filter_value'] = kwargs.get('region_name')
+    if _LEGACY_CLIENTS:
+        del endpoint_kwargs['interface']
 
     endpoint = client.service_catalog.url_for(**endpoint_kwargs)
     return endpoint

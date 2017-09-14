@@ -33,7 +33,11 @@ def get_swiftclient(**kwargs):
 
     connargs = {v: kwargs.get(k) for k, v in nmap.items() if k in kwargs}
     connargs.update({k: kwargs.get(k) for k in pt if k in kwargs})
-    return Connection(**connargs)
+    if kwargs.get('session'):
+        sess = kwargs.get('session')
+        return Connection(session=sess)
+    else:
+        return Connection(**connargs)
 
 
 class SwiftContentSource(cs.IteratorContentSource):
