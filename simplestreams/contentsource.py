@@ -43,9 +43,9 @@ try:
     _REQ = pkg_resources.get_distribution('requests')
     _REQ_VER = LooseVersion(_REQ.version)
     if _REQ_VER < LooseVersion('1.1'):
-        raise Exception("Couldn't use requests")
+        raise ImportError("Requests version < 1.1, not suitable for usage.")
     URL_READER_CLASSNAME = "RequestsUrlReader"
-except:
+except ImportError:
     URL_READER_CLASSNAME = "Urllib2UrlReader"
     requests = None
 
