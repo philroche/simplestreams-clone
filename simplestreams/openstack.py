@@ -179,9 +179,12 @@ def get_service_conn_info(service='image', client=None, **kwargs):
         client = get_ksclient(**kwargs)
 
     endpoint = _get_endpoint(client, service, **kwargs)
+    # Session client does not have tenant_id set at client.tenant_id
+    # If client.tenant_id not set use method to get it
+    tenant_id = client.tenant_id or client.auth.client.get_project_id()
     info = {'token': client.auth_token, 'insecure': kwargs.get('insecure'),
             'cacert': kwargs.get('cacert'), 'endpoint': endpoint,
-            'tenant_id': client.tenant_id}
+            'tenant_id': tenant_id}
     if not _LEGACY_CLIENTS:
         info['session'] = client.session
 
