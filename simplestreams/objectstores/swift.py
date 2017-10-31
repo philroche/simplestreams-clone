@@ -33,6 +33,15 @@ def get_swiftclient(**kwargs):
 
     connargs = {v: kwargs.get(k) for k, v in nmap.items() if k in kwargs}
     connargs.update({k: kwargs.get(k) for k in pt if k in kwargs})
+    if kwargs.get('session'):
+        sess = kwargs.get('session')
+        try:
+            # If session is available try it
+            return Connection(session=sess)
+        except TypeError:
+            # The edge case where session is availble but swiftclient is
+            # < 3.3.0. Use the old style method for Connection.
+            pass
     return Connection(**connargs)
 
 

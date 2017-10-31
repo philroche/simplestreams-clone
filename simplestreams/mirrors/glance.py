@@ -36,7 +36,11 @@ def get_glanceclient(version='1', **kwargs):
     kwargs['endpoint'] = _strip_version(kwargs['endpoint'])
     pt = ('endpoint', 'token', 'insecure', 'cacert')
     kskw = {k: kwargs.get(k) for k in pt if k in kwargs}
-    return glanceclient.Client(version, **kskw)
+    if kwargs.get('session'):
+        sess = kwargs.get('session')
+        return glanceclient.Client(version, session=sess)
+    else:
+        return glanceclient.Client(version, **kskw)
 
 
 def empty_iid_products(content_id):
@@ -272,7 +276,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
                 name_old, name_new = carry_over_property
             else:
                 name_old = name_new = carry_over_property
-            properties[name_new] = image_metadata[name_old]
+            properties[name_new] = image_metadata.get(name_old)
 
         if 'arch' in image_metadata:
             properties['architecture'] = canonicalize_arch(
