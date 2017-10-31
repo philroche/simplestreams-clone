@@ -35,9 +35,14 @@ def get_swiftclient(**kwargs):
     connargs.update({k: kwargs.get(k) for k in pt if k in kwargs})
     if kwargs.get('session'):
         sess = kwargs.get('session')
-        return Connection(session=sess)
-    else:
-        return Connection(**connargs)
+        try:
+            # If session is available try it
+            return Connection(session=sess)
+        except TypeError:
+            # The edge case where session is availble but swiftclient is
+            # < 3.3.0. Use the old style method for Connection.
+            pass
+    return Connection(**connargs)
 
 
 class SwiftContentSource(cs.IteratorContentSource):
