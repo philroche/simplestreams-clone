@@ -333,6 +333,15 @@ class TestGlanceMirror(TestCase):
 
         self.assertEqual("root-tar", create_arguments["disk_format"])
 
+    def test_prepare_glance_arguments_disk_format_squashfs(self):
+        # squashfs images are acceptable for nova-lxd
+        source_entry = {"ftype": "squashfs"}
+        create_arguments = self.mirror.prepare_glance_arguments(
+            "foobuntu-X", source_entry, image_md5_hash=None, image_size=None,
+            image_properties=None)
+
+        self.assertEqual("squashfs", create_arguments["disk_format"])
+
     def test_prepare_glance_arguments_size(self):
         # Size is read from image metadata if defined.
         source_entry = {"size": 5}
@@ -476,7 +485,8 @@ class TestGlanceMirror(TestCase):
         pedigree = (
             u'com.ubuntu.cloud:server:14.04:amd64', u'20160602', u'disk1.img')
         product = source_index[u'products'][pedigree[0]]
-        image_data = product[u'versions'][pedigree[1]][u'items'][pedigree[2]]
+        ver_data = product[u'versions'][pedigree[1]]
+        image_data = ver_data[u'items'][pedigree[2]]
 
         content_source = MemoryContentSource(
             url="http://image-store/fooubuntu-X-disk1.img",
@@ -495,6 +505,8 @@ class TestGlanceMirror(TestCase):
 
         self.mirror.insert_item(
             image_data, source_index, target, pedigree, content_source)
+        self.mirror.insert_version(
+            ver_data, source_index, target, pedigree[0:2])
 
         passed_create_kwargs = self.mirror.gclient.images.create_calls[0]
 
@@ -538,7 +550,8 @@ class TestGlanceMirror(TestCase):
         pedigree = (
             u'com.ubuntu.cloud:server:14.04:amd64', u'20160602', u'disk1.img')
         product = source_index[u'products'][pedigree[0]]
-        image_data = product[u'versions'][pedigree[1]][u'items'][pedigree[2]]
+        ver_data = product[u'versions'][pedigree[1]]
+        image_data = ver_data[u'items'][pedigree[2]]
 
         content_source = MemoryContentSource(
             url="http://image-store/fooubuntu-X-disk1.img",
@@ -557,6 +570,8 @@ class TestGlanceMirror(TestCase):
 
         self.mirror.insert_item(
             image_data, source_index, target, pedigree, content_source)
+        self.mirror.insert_version(
+            image_data, source_index, target, pedigree[0:2])
 
         passed_create_kwargs = self.mirror.gclient.images.create_calls[0]
 
@@ -609,7 +624,8 @@ class TestGlanceMirror(TestCase):
         source_index = copy.deepcopy(TEST_SOURCE_INDEX_ENTRY)
         pedigree = TEST_IMAGE_PEDIGREE
         product = source_index[u'products'][pedigree[0]]
-        image_data = product[u'versions'][pedigree[1]][u'items'][pedigree[2]]
+        ver_data = product[u'versions'][pedigree[1]]
+        image_data = ver_data[u'items'][pedigree[2]]
 
         content_source = MemoryContentSource(
             url="http://image-store/fooubuntu-X-disk1.img",
@@ -627,6 +643,8 @@ class TestGlanceMirror(TestCase):
 
         self.mirror.insert_item(
             image_data, source_index, target, pedigree, content_source)
+        self.mirror.insert_version(
+            ver_data, source_index, target, pedigree[0:2])
 
         stored_index_content = self.mirror.store.data[
             'streams/v1/auto.sync.json']
