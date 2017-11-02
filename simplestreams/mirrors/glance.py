@@ -82,7 +82,6 @@ def disk_format(ftype):
     '''Canonicalize disk formats for use in OpenStack.
     Input ftype is a 'ftype' from a simplestream feed.
     Return value is the appropriate 'disk_format' for glance.'''
-    print("new_ftype: %s" % ftype)
     newftype = ftype.lower()
     if newftype in LXC_FTYPES:
         return LXC_FTYPES[newftype]
