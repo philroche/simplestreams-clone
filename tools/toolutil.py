@@ -91,8 +91,9 @@ def is_expected(suffix, fields):
         # OVAs weren't produced properly for early first yakkety images
         if codename_cmp(rel, "=", "yakkety") and serial < "20160516.1":
             return False
-        # Bionic OVAs are not produced for i386 from 20180213
-        if arch == 'i386' and codename_cmp(rel, "=", "bionic") and \
+        # For Bionic, and any release after Bionic, OVAs are not produced for
+        # i386 after serial 20180213
+        if arch == 'i386' and codename_cmp(rel, ">=", "bionic") and \
                 serial > "20180213":
             return False
         if arch not in ('i386', 'amd64'):
