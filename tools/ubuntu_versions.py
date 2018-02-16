@@ -105,9 +105,18 @@ def get_ubuntu_info(date=None):
     ret = []
 
     # hack_all, because we're using '_rows', which is not supported
-    # however it is the only real way to get at EOL, and is convenient
-    # series there is codename to us
-    hack_all = {i['series']: i for i in udi._rows}
+    # however it is the only real way to get at EOL, which we need.
+    # 'series' there is our 'codename'
+    if hasattr(udi, '_rows'):
+        hack_all = {i['series']: i for i in udi._rows}
+    else:
+        # in bionic versions of distro-info, _rows was replaced with
+        # _releases which is a DistroRelease object rather than a dictionary.
+        fields = ('version', 'codename', 'series', 'created', 'release',
+                  'eol', 'eol_server')
+        hack_all = {drel.series: {k: getattr(drel, k) for k in fields}
+                    for drel in udi._releases}
+
     for i, codename in enumerate(codenames):
         title = "%s LTS" % versions[i] if lts[i] else versions[i]
         eol = hack_all[codename]['eol'].strftime("%Y-%m-%d")
