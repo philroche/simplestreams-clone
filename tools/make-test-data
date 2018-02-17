@@ -108,7 +108,7 @@ def store_cache_entry(path, data):
 def save_cache():
     if FILE_DATA:
         hashcache = FILE_DATA['filename']
-        with open(hashcache, "w") as hfp:
+        with open(hashcache, "wb") as hfp:
             hfp.write(util.dump_data(FILE_DATA))
 
 
@@ -597,9 +597,9 @@ def create_image_data(query_tree, out_d, streamdir):
 
         outfile = os.path.join(out_d, stream, streamdir, cid + ".json")
         util.mkdir_p(os.path.dirname(outfile))
-        with open(outfile, "w") as fp:
+        with open(outfile, "wb") as fp:
             sys.stderr.write("writing %s\n" % outfile)
-            fp.write(util.dump_data(tree[stream]) + "\n")
+            fp.write(util.dump_data(tree[stream]) + b"\n")
 
     # save hashes data
     save_cache()
@@ -689,9 +689,9 @@ def main():
 
         outfile = os.path.join(args.out_d, streamname, streamdir, 'index.json')
         util.mkdir_p(os.path.dirname(outfile))
-        with open(outfile, "w") as fp:
+        with open(outfile, "wb") as fp:
             sys.stderr.write("writing %s\n" % outfile)
-            fp.write(util.dump_data(index) + "\n")
+            fp.write(util.dump_data(index) + b"\n")
 
     if args.sign:
         def printstatus(name):
