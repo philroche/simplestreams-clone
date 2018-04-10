@@ -181,7 +181,8 @@ def get_service_conn_info(service='image', client=None, **kwargs):
     endpoint = _get_endpoint(client, service, **kwargs)
     # Session client does not have tenant_id set at client.tenant_id
     # If client.tenant_id not set use method to get it
-    tenant_id = client.tenant_id or client.auth.client.get_project_id()
+    tenant_id = (client.tenant_id or client.get_project_id(client.session) or
+                 client.auth.client.get_project_id())
     info = {'token': client.auth_token, 'insecure': kwargs.get('insecure'),
             'cacert': kwargs.get('cacert'), 'endpoint': endpoint,
             'tenant_id': tenant_id}
