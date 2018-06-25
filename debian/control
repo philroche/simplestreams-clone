@@ -32,8 +32,6 @@ Depends: python3-simplestreams,
          python3-yaml,
          ${misc:Depends},
          ${python3:Depends}
-Replaces: python-simplestreams (<= 0.1.0~bzr230)
-Conflicts: python-simplestreams (<= 0.1.0~bzr230)
 Description: Library and tools for using Simple Streams data
  This package provides a client for interacting with simple
  streams data as is produced to describe Ubuntu's cloud images.
