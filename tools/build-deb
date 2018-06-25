@@ -21,7 +21,7 @@ Usage: ${0##*/}
     * ${0##*/} -us -uc
 
    Its not significantly different than what you'd get by modifying
-   the debian/changelog to have the current revno, and then running
+   the debian/changelog to have the current HEAD, and then running
      debuild --no-tgz-check
 EOF
 exit
@@ -34,27 +34,28 @@ top_d=$(cd "$(dirname "${0}")"/.. && pwd)
 
 # grab the first line in the changelog
 # hopefully this pulls the version info there
-# resulting in something like: 0.1.0~bzrREVNO-1~trunk1
+# resulting in something like: UPSTREAM_VER-0ubuntu1
 clogver_o=$(sed -n '1s,.*(\([^)]*\)).*,\1,p' debian/changelog.trunk)
 
-revno=$(bzr revno) || fail "failed to get revno"
-clogver_upstream=${clogver_o%%-*}
-clogver_debian=${clogver_o#*-}
+# git describe will output something either like '0.1.0' (a tag)
+# or TAG-N-gHASH where N is number of commits since TAG
+uver=$(git describe --abbrev=8) ||
+   fail "failed to get upstream version with 'git describe'"
+clogver_debian=${clogver_o##*-}
 
-uver=$(echo "${clogver_upstream}" | sed "s,REVNO,$revno,")
 clogver_new="${uver}-${clogver_debian}"
 
 TEMP_D=$(mktemp -d "${TMPDIR:-/tmp}/${bname}.XXXXXX")
 
 trap cleanup EXIT
 
-echo "building upstream version $uver, debian ver=${clogver_debian}"
+echo "building upstream version ${uver}, debian ver=${clogver_debian}"
 
 dir="${sourcename}-$uver"
 tarball="${sourcename}_$uver.orig.tar.gz"
 
 myd=$(dirname "$0")
-"$myd/export-tarball" "${revno}" "${TEMP_D}/$tarball"
+"$myd/export-tarball" "--output=${TEMP_D}/$tarball" HEAD
 echo "created ${tarball}"
 
 cd "${TEMP_D}"

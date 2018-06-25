@@ -1,61 +1,71 @@
 #!/bin/sh
-
 set -e
+
+TEMP_D=""
 sourcename="simplestreams"
 
+cleanup() {
+    [ -z "$TEMP_D" ] || rm -Rf "${TEMP_D}"
+}
+trap cleanup EXIT
+
 Usage() {
-   cat <<EOF
-Usage: [revno [output.tar.gz]]
+    cat <<EOF
+Usage: ${0##*/} [commitish]
+    create a tarball of commitish(default HEAD)
 
-  Create a tarball of revno (or tag) in output.tar.gz
-  revno defaults to \`bzr revno\`.
-  output filename defaults to:
-   ${sourcename}-X.Y~bzrREVNO.tar.gz
-  or, if a tag is given:
-   ${sourcename}-TAG.tar.gz
-
-  if UNCOMMITTED is set to non '0' in environment
-  then uncommitted changes will be kept in the tarball.
+    options:
+      -h | --help		print usage
+      -o | --output FILE	write to file
+           --orig-tarball	Write file ${sourcename}_<version>.orig.tar.gz
+           --long		Use git describe --long for versioning
 EOF
 }
 
-TEMP_D=""
-fail() { echo "$@" 1>&2; exit 1; }
-cleanup() {
-   [ -z "$TEMP_D" ] || rm -Rf "$TEMP_D"
-}
+short_opts="ho:v"
+long_opts="help,output:,orig-tarball,long"
+getopt_out=$(getopt --name "${0##*/}" \
+    --options "${short_opts}" --long "${long_opts}" -- "$@") &&
+    eval set -- "${getopt_out}" || { Usage 1>&2; exit 1; }
 
-export_uncommitted=""
-if [ "${UNCOMMITTED:-0}" != "0" ]; then
-   export_uncommitted="--uncommitted"
+long_opt=""
+orig_opt=""
+while [ $# -ne 0 ]; do
+    cur=$1; next=$2
+    case "$cur" in
+        -h|--help) Usage; exit 0;;
+        -o|--output) output=$next; shift;;
+           --long) long_opt="--long";;
+           --orig-tarball) orig_opt=".orig";;
+        --) shift; break;;
+    esac
+    shift;
+done
+
+rev=${1:-HEAD}
+version=$(git describe --abbrev=8 "--match=[0-9]*" ${long_opt} $rev)
+
+archive_base="${sourcename}-$version"
+if [ -z "$output" ]; then
+    if [ ! -z "$orig_opt" ]; then
+        archive_base="${sourcename}_$version"
+    fi
+    output="$archive_base$orig_opt.tar.gz"
 fi
 
-[ "$1" = "-h" -o "$1" = "--help" ] && { Usage; exit 0; }
+# when building an archiving from HEAD, ensure that there aren't any
+# uncomitted changes in the working directory (because these would not
+# end up in the archive).
+if [ "$rev" = HEAD ] && ! git diff-index --quiet HEAD --; then
+    cat 1>&2 <<EOF
+WARNING: There are uncommitted changes in your working directory.
+         These changes will not be included in the archive.
+EOF
+fi
 
 TEMP_D=$(mktemp -d)
-trap cleanup EXIT
-
-case "${1:-HEAD}" in
-   tag:*)  version="${1#tag:}";;
-   HEAD)   revno="$(bzr revno)"; revargs="-r $revno";;
-   [0-9]*) revno="$1"          ; revargs="-r $1";;
-esac
-output="$2"
-
-if [ -z "$version" ]; then
-   bzr cat $revargs debian/changelog.trunk > "$TEMP_D/clog" ||
-      fail "failed to extract debian/change.log.trunk at $revargs"
-
-   clogver_o=$(sed -n '1s,.*(\([^)]*\)).*,\1,p' $TEMP_D/clog)
-   clogver_upstream=${clogver_o%%-*}
-   mmm=${clogver_o%%~*}
-   version="$mmm~bzr$revno"
-fi
-
-if [ -z "$output" ]; then
-   output="$sourcename-$version.tar.gz"
-fi
-
-bzr export ${export_uncommitted} \
-   --format=tgz --root="$sourcename-${version}" $revargs $output
-echo "wrote $output"
+tar=${output##*/}
+tar="$TEMP_D/${tar%.gz}"
+git archive --format=tar --prefix="$archive_base/" "$rev" > "$tar"
+gzip -9 -c "$tar" > "$output"
+echo "$output"
