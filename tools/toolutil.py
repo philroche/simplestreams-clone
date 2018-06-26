@@ -99,6 +99,19 @@ def is_expected(suffix, fields):
         if arch not in ('i386', 'amd64'):
             return False
 
+    if suffix == "-root.manifest":
+        if codename_cmp(rel, '>=', 'cosmic'):
+            # -root.manifest was introduced to cosmic in 20180612
+            if serial >= '20180612':
+                return True
+        return False
+
+    if suffix == "-root.tar.xz":
+        if codename_cmp(rel, '>=', 'cosmic'):
+            # -root.tar.xz was reintroduced to cosmic in 20180612
+            if serial >= '20180612':
+                return True
+
     if suffix == "-root.tar.xz" or suffix == "-lxd.tar.xz":
         # -root.tar.xz and -lxd.tar.xz become available after 20150714.3
         if serial < "20150714.4":
@@ -133,8 +146,8 @@ def load_query_download(path, builds=None, rels=None):
         rels = RELEASES
 
     suffixes = (".tar.gz", "-root.tar.gz", "-disk1.img", "-uefi1.img",
-                ".manifest", ".ova", "-root.tar.xz", "-lxd.tar.xz",
-                ".squashfs", ".squashfs.manifest", ".img",)
+                ".manifest", ".ova", "-root.tar.xz", "-root.manifest",
+                "-lxd.tar.xz", ".squashfs", ".squashfs.manifest", ".img",)
     streams = [f[0:-len(".latest.txt")]
                for f in os.listdir(path) if f.endswith("latest.txt")]
 

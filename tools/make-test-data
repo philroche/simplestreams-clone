@@ -54,6 +54,7 @@ BASE_URLS = (
 FAKE_DATA = {
     'root.tar.gz': {'size': 10240},
     'root.tar.xz': {'size': 10241},
+    'root.manifest': {'size': 10242},
     'lxd.tar.xz': {'size': 10245},
     'tar.gz': {'size': 11264},
     'disk1.img': {'size': 12288},
