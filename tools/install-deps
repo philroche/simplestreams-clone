@@ -1,10 +1,11 @@
 #!/bin/sh
 set -f
+
 error() { echo "$@" 1>&2; }
 fail() { [ $# -eq 0 ] || error "$@"; exit 1; }
 apt_get() {
     local ret=""
-    if [ "$1" != "update" ] && ! $_APT_UPDATED; then
+    if [ "$1" != "update" ] && ! ${_APT_UPDATED:-false}; then
         error "updating apt"
         apt_get update >/dev/null || {
             ret=$?;
