@@ -99,6 +99,12 @@ elif [ "$1" = "tox" ]; then
     # these come as needed to build python-netaddr which is
     # a pip dependency of some of the openstack packages.
     deps="$deps python-dev python3-dev build-essential" 
+    deps="$deps python-dev python3-dev build-essential"
+    arch=$(dpkg --print-architecture)
+    case "$arch" in
+        i386|amd64) :;;
+       *) deps="${deps} libffi-dev libssl-dev";;
+    esac
 else
     error "expect first argument to be 'tox' or 'build'"
     exit 1
