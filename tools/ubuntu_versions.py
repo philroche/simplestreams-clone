@@ -23,7 +23,7 @@ from simplestreams.log import LOG
 
 # Needs to be changed whenever do-release-upgrade is flipped to the next
 # LTS (typically around the time of .1)
-CURRENT_LTS = "xenial"
+CURRENT_LTS = "bionic"
 
 # This data is only used if python-distro-info is not available and
 # the user has set environment variable SS_REQUIRE_DISTRO_INFO=0
