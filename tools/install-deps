@@ -16,8 +16,12 @@ apt_get() {
     fi
     local emd=""
     command -v "eatmydata" >/dev/null 2>&1 && emd="eatmydata"
-    sudo DEBIAN_FRONTEND=noninteractive $emd apt-get --quiet \
-        --assume-yes "$@" </dev/null
+    sudo \
+        ${http_proxy:+"http_proxy=${http_proxy}"} \
+        ${https_proxy:+"https_proxy=${https_proxy}"} \
+        ${no_proxy:+"no_proxy=${no_proxy}"} \
+        DEBIAN_FRONTEND=noninteractive \
+        $emd apt-get --quiet --assume-yes "$@" </dev/null
 }
 
 filter_installed_packages() {
