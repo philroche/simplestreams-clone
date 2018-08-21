@@ -104,12 +104,20 @@ def is_expected(suffix, fields):
             # -root.manifest was introduced to cosmic in 20180612
             if serial >= '20180612':
                 return True
+        elif codename_cmp(rel, '==', 'bionic'):
+            # -root.manifest was introduced to bionic in 20180820
+            if serial >= '20180820':
+                return True
         return False
 
     if suffix == "-root.tar.xz":
         if codename_cmp(rel, '>=', 'cosmic'):
             # -root.tar.xz was reintroduced to cosmic in 20180612
             if serial >= '20180612':
+                return True
+        elif codename_cmp(rel, '==', 'bionic'):
+            # -root.tar.xz was reintroduced to bionic in 20180820
+            if serial >= '20180820':
                 return True
 
     if suffix == "-root.tar.xz" or suffix == "-lxd.tar.xz":
