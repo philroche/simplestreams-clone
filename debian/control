@@ -1,11 +1,10 @@
 Source: simplestreams
 Section: python
-Priority: extra
-Standards-Version: 3.9.6
+Priority: optional
+Standards-Version: 4.2.1
 Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
 Build-Depends: debhelper (>= 7),
                dh-python,
-               make,
                python-all,
                python-glanceclient,
                python-keystoneclient,
@@ -26,12 +25,10 @@ Build-Depends: debhelper (>= 7),
                python3-swiftclient,
                python3-yaml
 Homepage: http://launchpad.net/simplestreams
-X-Python-Version: >= 2.7
-X-Python3-Version: >= 3.2
 
 Package: simplestreams
 Architecture: all
-Priority: extra
+Priority: optional
 Depends: python3-simplestreams,
          python3-yaml,
          ${misc:Depends},
@@ -42,7 +39,7 @@ Description: Library and tools for using Simple Streams data
 
 Package: python3-simplestreams
 Architecture: all
-Priority: extra
+Priority: optional
 Depends: gnupg, python3-boto, ${misc:Depends}, ${python3:Depends}
 Suggests: python3-requests (>= 1.1)
 Description: Library and tools for using Simple Streams data
@@ -51,7 +48,7 @@ Description: Library and tools for using Simple Streams data
 
 Package: python-simplestreams
 Architecture: all
-Priority: extra
+Priority: optional
 Depends: gnupg, python-boto, ${misc:Depends}, ${python:Depends}
 Suggests: python-requests (>= 1.1)
 Description: Library and tools for using Simple Streams data
@@ -60,7 +57,7 @@ Description: Library and tools for using Simple Streams data
 
 Package: python-simplestreams-openstack
 Architecture: all
-Priority: extra
+Priority: optional
 Depends: python-glanceclient,
          python-keystoneclient,
          python-simplestreams,
@@ -73,7 +70,7 @@ Description: Library and tools for using Simple Streams data
 
 Package: python3-simplestreams-openstack
 Architecture: all
-Priority: extra
+Priority: optional
 Depends: python3-glanceclient,
          python3-keystoneclient,
          python3-simplestreams (= ${binary:Version}),
