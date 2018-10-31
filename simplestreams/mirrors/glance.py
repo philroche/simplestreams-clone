@@ -515,8 +515,8 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         :param size: int Expected size in bytes of the image
         :returns: None
         """
-        if not isinstance(size, int):
-            raise ValueError("size '%s' not an integer")
+        if not isinstance(size, util.INTEGER_TYPES):
+            raise TypeError("size '%s' is not an integer" % str(size))
         found = self.gclient.images.get(image_id)
         if found.size == size and found.checksum == checksum:
             return

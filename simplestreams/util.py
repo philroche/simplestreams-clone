@@ -57,6 +57,13 @@ except NameError:
     # python3
     _STRING_TYPES = (str,)
 
+try:
+    # python2
+    INTEGER_TYPES = (int, long)
+except NameError:
+    # python3
+    INTEGER_TYPES = (int,)
+
 
 def stringitems(data):
     f = {}
