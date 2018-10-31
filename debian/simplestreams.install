@@ -1,2 +1,5 @@
-usr/bin/*
+usr/bin/json2streams
+usr/bin/sstream-mirror
+usr/bin/sstream-query
+usr/bin/sstream-sync
 usr/lib/simplestreams/hook-debug usr/share/doc/simplestreams/

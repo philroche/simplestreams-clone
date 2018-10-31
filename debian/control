@@ -13,13 +13,17 @@ Build-Depends: debhelper (>= 7),
                python-nose,
                python-requests (>= 1.1),
                python-setuptools,
+               python-swiftclient,
                python-yaml,
                python3,
                python3-flake8,
+               python3-glanceclient,
+               python3-keystoneclient,
                python3-mock,
                python3-nose,
                python3-requests (>= 1.1),
                python3-setuptools,
+               python3-swiftclient,
                python3-yaml
 Homepage: http://launchpad.net/simplestreams
 X-Python-Version: >= 2.7
@@ -39,7 +43,7 @@ Description: Library and tools for using Simple Streams data
 Package: python3-simplestreams
 Architecture: all
 Priority: extra
-Depends: gnupg, ${misc:Depends}, ${python3:Depends}
+Depends: gnupg, python3-boto, ${misc:Depends}, ${python3:Depends}
 Suggests: python3-requests (>= 1.1)
 Description: Library and tools for using Simple Streams data
  This package provides a client for interacting with simple
@@ -62,6 +66,20 @@ Depends: python-glanceclient,
          python-simplestreams,
          python-swiftclient,
          ${misc:Depends}
+Description: Library and tools for using Simple Streams data
+ This package depends on libraries necessary to use the openstack dependent
+ functionality in simplestreams.  That includes interacting with glance,
+ swift and keystone.
+
+Package: python3-simplestreams-openstack
+Architecture: all
+Priority: extra
+Depends: python3-glanceclient,
+         python3-keystoneclient,
+         python3-simplestreams (= ${binary:Version}),
+         python3-swiftclient,
+         ${misc:Depends},
+         ${python3:Depends}
 Description: Library and tools for using Simple Streams data
  This package depends on libraries necessary to use the openstack dependent
  functionality in simplestreams.  That includes interacting with glance,

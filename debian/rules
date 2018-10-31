@@ -12,8 +12,3 @@ override_dh_auto_install:
 		$$python setup.py build --executable=/usr/bin/python3 && \
 		$$python setup.py install --root=$(CURDIR)/debian/tmp --install-layout=deb; \
 	done
-	# there:are no packages for python3-{boto, swiftclient,
-	# glanceclient, keystonclient}, so do not package the bits
-	# that would depend on them.
-	for bad in openstack mirrors/glance objectstores/swift objectstores/s3; do \
-		rm $(CURDIR)/debian/tmp/usr/lib/python3/*/simplestreams/$$bad.py; done
