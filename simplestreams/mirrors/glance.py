@@ -151,7 +151,9 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         conn_info = client.get_service_conn_info(
             'image', **self.keystone_creds)
-        self.gclient = get_glanceclient(**conn_info)
+        self.glance_api_version = conn_info['glance_version']
+        self.gclient = get_glanceclient(version=self.glance_api_version,
+                                        **conn_info)
         self.tenant_id = conn_info['tenant_id']
 
         self.region = self.keystone_creds.get('region_name', 'nullregion')
@@ -195,12 +197,15 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
 
         images = self.gclient.images.list()
         for image in images:
-            image = image.to_dict()
+            if self.glance_api_version == "1":
+                image = image.to_dict()
+                props = image['properties']
+            else:
+                props = copy.deepcopy(image)
 
             if image['owner'] != self.tenant_id:
                 continue
 
-            props = image['properties']
             if props.get('content_id') != my_cid:
                 continue
 
@@ -321,15 +326,22 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             'properties': image_properties,
         }
 
-        if 'size' in image_metadata:
-            create_kwargs['size'] = image_metadata.get('size')
-        if 'md5' in image_metadata:
-            create_kwargs['checksum'] = image_metadata.get('md5')
-        if image_md5_hash and image_size:
-            create_kwargs.update({
-                'checksum': image_md5_hash,
-                'size': image_size,
-            })
+        # In v2 is_public=True is visibility='public'
+        if self.glance_api_version == "2":
+            del create_kwargs['is_public']
+            create_kwargs['visibility'] = 'public'
+
+        # v2 automatically calculates size and checksum
+        if self.glance_api_version == "1":
+            if 'size' in image_metadata:
+                create_kwargs['size'] = int(image_metadata.get('size'))
+            if 'md5' in image_metadata:
+                create_kwargs['checksum'] = image_metadata.get('md5')
+            if image_md5_hash and image_size:
+                create_kwargs.update({
+                    'checksum': image_md5_hash,
+                    'size': image_size,
+                })
 
         if 'ftype' in image_metadata:
             create_kwargs['disk_format'] = (
@@ -347,21 +359,18 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         `image_stream_data` represents a flattened image metadata structure
         to use for any logging messages.
 
-        Returns a tuple of (local-image-path, image-size, image-md5-hash).
-
-        If download fails, these values will all be None.
+        Returns a tuple of
+           (str(local-image-path), int(image-size), str(image-md5-hash)).
         """
-        tmp_path = new_size = new_md5 = None
-
         image_name = image_stream_data.get('pubname')
         image_size = image_stream_data.get('size')
 
         if self.progress_callback:
             def progress_wrapper(written):
-                self.progress_callback(dict(status="Downloading",
-                                            name=image_name,
-                                            size=image_size,
-                                            written=written))
+                self.progress_callback(
+                    dict(status="Downloading", name=image_name,
+                         size=None if image_size is None else int(image_size),
+                         written=written))
         else:
             def progress_wrapper(written):
                 pass
@@ -374,6 +383,9 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
                 (new_size, new_md5) = call_hook(
                     item=image_stream_data, path=tmp_path,
                     cmd=self.modify_hook)
+            else:
+                new_size = os.path.getsize(tmp_path)
+                new_md5 = image_stream_data.get('md5')
         finally:
             contentsource.close()
 
@@ -407,7 +419,7 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         output_entry['name'] = image_name
         if image_md5_hash and image_size:
             output_entry['md5'] = image_md5_hash
-            output_entry['size'] = image_size
+            output_entry['size'] = str(image_size)
 
         return output_entry
 
@@ -459,9 +471,28 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
             new_size)
 
         try:
-            create_kwargs['data'] = open(tmp_path, 'rb')
+            if self.glance_api_version == "1":
+                # Set data as string if v1
+                create_kwargs['data'] = open(tmp_path, 'rb')
+            else:
+                # Keep properties for v2 update call
+                _properties = create_kwargs['properties']
+                del create_kwargs['properties']
+
             glance_image = self.gclient.images.create(**create_kwargs)
             target_sstream_item['id'] = glance_image.id
+
+            if self.glance_api_version == "2":
+                # Upload for v2
+                self.gclient.images.upload(glance_image.id,
+                                           open(tmp_path, 'rb'))
+                # Update properties for v2
+                self.gclient.images.update(glance_image.id, **_properties)
+
+            # Validate the image checksum and size. This will throw an
+            # IOError if they do not match.
+            self.validate_image(glance_image.id, new_md5, new_size)
+
             print("created %s: %s" % (glance_image.id, full_image_name))
 
         finally:
@@ -472,6 +503,31 @@ class GlanceMirror(mirrors.BasicMirrorWriter):
         # We can safely ignore path and content arguments since they are
         # unused in insert_products below.
         self.insert_products(None, target, None)
+
+    def validate_image(self, image_id, checksum, size, delete=True):
+        """Validate an image's checksum and size after upload.
+
+        Check for expected checksum and size.
+        Throw an IOError if they do not match.
+
+        :param image_id: str Glance Image ID
+        :param checksum: str Expected MD5 sum of the image
+        :param size: int Expected size in bytes of the image
+        :returns: None
+        """
+        if not isinstance(size, int):
+            raise ValueError("size '%s' not an integer")
+        found = self.gclient.images.get(image_id)
+        if found.size == size and found.checksum == checksum:
+            return
+        msg = (
+            ("Invalid glance image: %s. " % image_id) +
+            ("Expected size=%s md5=%s. Found size=%s md5=%s." %
+             (size, checksum, found.size, found.checksum)))
+        if delete:
+            LOG.warning("Deleting image %s: %s", image_id, msg)
+            self.gclient.images.delete(image_id)
+        raise IOError(msg)
 
     def insert_item(self, data, src, target, pedigree, contentsource):
         """Queue item to be inserted in subsequent call to insert_version

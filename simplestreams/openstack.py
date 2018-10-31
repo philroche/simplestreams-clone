@@ -188,6 +188,9 @@ def get_service_conn_info(service='image', client=None, **kwargs):
             'tenant_id': tenant_id}
     if not _LEGACY_CLIENTS:
         info['session'] = client.session
+        info['glance_version'] = '2'
+    else:
+        info['glance_version'] = '1'
 
     return info
 
