@@ -16,12 +16,14 @@ apt_get() {
     fi
     local emd=""
     command -v "eatmydata" >/dev/null 2>&1 && emd="eatmydata"
-    sudo \
+    set -- sudo \
         ${http_proxy:+"http_proxy=${http_proxy}"} \
         ${https_proxy:+"https_proxy=${https_proxy}"} \
         ${no_proxy:+"no_proxy=${no_proxy}"} \
         DEBIAN_FRONTEND=noninteractive \
-        $emd apt-get --quiet --assume-yes "$@" </dev/null
+        $emd apt-get --quiet --assume-yes --no-install-recommends "$@"
+    error "Running: $*"
+    "$@" </dev/null
 }
 
 filter_installed_packages() {
@@ -63,7 +65,8 @@ get_depends() {
             case "$line" in
                 Build-Depends:*)
                     bdprocess=1;
-                    line=${line#*:};;
+                    # let the echo trim leading space.
+                    line=$(echo ${line#*:});;
                 *) continue;;
             esac
         fi
@@ -98,7 +101,7 @@ if [ "$1" = "build" ]; then
         fail "could not find debian/control"
 
     get_depends "$control" || fail "failed to read $control"
-    deps=${_RET}
+    deps="${_RET} devscripts fakeroot build-essential"
 elif [ "$1" = "tox" ]; then
     shift
     deps="gnupg tox"
