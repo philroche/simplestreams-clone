@@ -16,6 +16,6 @@ fi
 
 export GNUPGHOME="$topdir/gnupg"
 export PYTHONPATH="$topdir${PYTHONPATH:+:${PYTHONPATH}}"
-export PATH=$topdir/tools:$topdir/bin:$PATH
+export PATH=$topdir/bin:$topdir/tools:$PATH
 export TENV_SETUP=1
 exec "$@"
