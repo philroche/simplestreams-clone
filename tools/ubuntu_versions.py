@@ -122,7 +122,7 @@ def get_ubuntu_info(date=None):
         eol = hack_all[codename]['eol'].strftime("%Y-%m-%d")
         aliases = [codename, versions[i], codename[0]]
         if codename == CURRENT_LTS:
-            aliases.extend(["default", "lts"])
+            aliases.extend(["default", "lts", "ubuntu"])
         elif codename == devel:
             aliases.append("devel")
 
