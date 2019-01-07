@@ -8,7 +8,7 @@ endif
 build:
 	@echo nothing to do for $@
 
-test: test2 test3 flake8
+test: test2 test3
 
 test3: examples-sign
 	$(TENV) nosetests3 -v tests/
