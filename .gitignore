@@ -6,3 +6,6 @@ exdata
 exdata-query
 *.sjson
 *.gpg
+MANIFEST
+.coverage
+.tox

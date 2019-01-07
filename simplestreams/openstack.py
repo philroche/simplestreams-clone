@@ -40,20 +40,34 @@ OS_ENV_VARS = (
 )
 
 
+# only used for legacy client connection
 PT_V2 = ('username', 'password', 'tenant_id', 'tenant_name', 'auth_url',
          'cacert', 'insecure', )
-PT_V3 = ('username', 'password', 'project_id', 'project_name', 'auth_url',
-         'cacert', 'insecure', 'user_domain_name', 'project_domain_name',
-         'user_domain_id', 'project_domain_id', )
+
+# annoyingly the 'insecure' option in the old client constructor is now called
+# the 'verify' option in the session.Session() constructor
+PASSWORD_V2 = ('auth_url', 'username', 'password', 'user_id', 'trust_id',
+               'tenant_id', 'tenant_name', 'reauthenticate')
+PASSWORD_V3 = ('auth_url', 'password', 'username',
+               'user_id', 'user_domain_id', 'user_domain_name',
+               'trust_id', 'system_scope',
+               'domain_id', 'domain_name',
+               'project_id', 'project_name',
+               'project_domain_id', 'project_domain_name',
+               'reauthenticate')
+SESSION_ARGS = ('cert', 'timeout', 'verify', 'original_ip', 'redirect',
+                'addition_headers', 'app_name', 'app_version',
+                'additional_user_agent',
+                'discovery_cache', 'split_loggers', 'collect_timing')
 
 
 Settings = collections.namedtuple('Settings', 'mod ident arg_set')
 KS_VERSION_RESOLVER = {2: Settings(mod=ksclient_v2,
                                    ident=v2,
-                                   arg_set=PT_V2),
+                                   arg_set=PASSWORD_V2),
                        3: Settings(mod=ksclient_v3,
                                    ident=v3,
-                                   arg_set=PT_V3), }
+                                   arg_set=PASSWORD_V3)}
 
 
 def load_keystone_creds(**kwargs):
@@ -68,7 +82,7 @@ def load_keystone_creds(**kwargs):
         # take off 'os_'
         short = lc[3:]
         if short in kwargs:
-            ret[lc] = kwargs.get(lc)
+            ret[short] = kwargs.get(short)
         elif name in os.environ:
             # take off 'os_'
             ret[short] = os.environ[name]
@@ -76,13 +90,18 @@ def load_keystone_creds(**kwargs):
     if 'insecure' in ret:
         if isinstance(ret['insecure'], str):
             ret['insecure'] = (ret['insecure'].lower() not in
-                               ("", "0", "no", "off"))
+                               ("", "0", "no", "off", 'false'))
         else:
             ret['insecure'] = bool(ret['insecure'])
 
+    # verify is the key that is used by requests, and thus the Session object.
+    # i.e. verify is either False or a certificate path or file.
+    if not ret.get('insecure', False) and 'cacert' in ret:
+        ret['verify'] = ret['cacert']
+
     missing = []
     for req in ('username', 'auth_url'):
-        if not ret.get(req):
+        if not ret.get(req, None):
             missing.append(req)
 
     if not (ret.get('auth_token') or ret.get('password')):
@@ -91,14 +110,11 @@ def load_keystone_creds(**kwargs):
     api_version = get_ks_api_version(ret.get('auth_url', '')) or 2
     if (api_version == 2 and
             not (ret.get('tenant_id') or ret.get('tenant_name'))):
-        raise ValueError("(tenant_id or tenant_name)")
-
-    if (api_version == 3 and
-            not (ret.get('user_domain_name') and
-                 ret.get('project_domain_name') and
-                 ret.get('project_name'))):
-        raise ValueError("(user_domain_name, project_domain_name "
-                         "or project_name)")
+        missing.append("(tenant_id or tenant_name)")
+    if api_version == 3:
+        for k in ('user_domain_name', 'project_domain_name', 'project_name'):
+            if not ret.get(k, None):
+                missing.append(k)
 
     if missing:
         raise ValueError("Need values for: %s" % missing)
@@ -167,7 +183,9 @@ def get_ksclient(**kwargs):
     # Filter/select the args for the api version from the kwargs dictionary
     kskw = {k: v for k, v in kwargs.items() if k in arg_set}
     auth = KS_VERSION_RESOLVER[api_version].ident.Password(**kskw)
-    sess = session.Session(auth=auth)
+    authkw = {k: v for k, v in kwargs.items() if k in SESSION_ARGS}
+    authkw['auth'] = auth
+    sess = session.Session(**authkw)
     client = KS_VERSION_RESOLVER[api_version].mod.Client(session=sess)
     client.auth_ref = auth.get_access(sess)
     return client
