@@ -58,6 +58,7 @@ FAKE_DATA = {
     'lxd.tar.xz': {'size': 10245},
     'tar.gz': {'size': 11264},
     'disk1.img': {'size': 12288},
+    'disk-kvm.img': {'size': 12289},
     'uefi1.img': {'size': 12421},
     'manifest': {'size': 10241},
     'ova': {'size': 12399},

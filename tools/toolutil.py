@@ -55,6 +55,13 @@ def is_expected(suffix, fields):
             # precise got -root.tar.gz after alpha2
             return False
 
+    if suffix == "-disk-kvm.img":
+        # kvm images were introduced into eoan
+        if codename_cmp(rel, "<", "eoan") or serial < "20190622":
+            return False
+        if arch not in ["amd64"]:
+            return False
+
     if suffix == "-disk1.img":
         # disk1.img as a suffix was replaced by .img in yakkety
         if codename_cmp(rel, "<", "oneiric"):
@@ -155,7 +162,8 @@ def load_query_download(path, builds=None, rels=None):
 
     suffixes = (".tar.gz", "-root.tar.gz", "-disk1.img", "-uefi1.img",
                 ".manifest", ".ova", "-root.tar.xz", "-root.manifest",
-                "-lxd.tar.xz", ".squashfs", ".squashfs.manifest", ".img",)
+                "-lxd.tar.xz", ".squashfs", ".squashfs.manifest", ".img",
+                "-disk-kvm.img",)
     streams = [f[0:-len(".latest.txt")]
                for f in os.listdir(path) if f.endswith("latest.txt")]
 
