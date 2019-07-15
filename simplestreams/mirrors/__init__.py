@@ -280,6 +280,23 @@ class BasicMirrorWriter(MirrorWriter):
 
         filtered_products = []
         prodname = None
+
+        # Apply filters to items before filtering versions
+        for prodname, product in list(stree.items()):
+
+            for vername, version in list(product.get('versions', {}).items()):
+                for itemname, item in list(version.get('items', {}).items()):
+                    pgree = (prodname, vername, itemname)
+                    if not self.filter_item(item, src, target, pgree):
+                        LOG.debug("Filtered out item: %s/%s", itemname, item)
+                        del stree[prodname]['versions'][vername]['items'][
+                            itemname]
+                        if not stree[prodname]['versions'][vername].get(
+                                'items', {}):
+                            del stree[prodname]['versions'][vername]
+                        if not stree[prodname].get('versions', {}):
+                            del stree[prodname]
+
         for prodname, product in stree.items():
             if not self.filter_product(product, src, target, (prodname,)):
                 filtered_products.append(prodname)
@@ -320,9 +337,6 @@ class BasicMirrorWriter(MirrorWriter):
                 added_items = []
                 for itemname, item in version.get('items', {}).items():
                     pgree = (prodname, vername, itemname)
-                    if not self.filter_item(item, src, target, pgree):
-                        LOG.debug("Filtered out item: %s/%s", itemname, item)
-                        continue
 
                     added_items.append(itemname)
 
