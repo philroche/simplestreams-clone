@@ -1,4 +1,4 @@
-name: sstream-query
+name: sstream-query-cpc
 version: '0.0.2'
 summary: Helpful utility to check the query Ubuntu cloud images simplestreams feeds.
 description: |
@@ -8,7 +8,7 @@ grade: stable
 confinement: strict
 
 apps:
-  sstream-query:
+  sstream-query-cpc:
     command: wrapper
     plugs:
       - network
