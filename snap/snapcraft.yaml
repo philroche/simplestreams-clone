@@ -1,0 +1,35 @@
+name: sstream-query
+version: '0.0.2'
+summary: Helpful utility to check the query Ubuntu cloud images simplestreams feeds.
+description: |
+  Helpful utility to check the query Ubuntu cloud images simplestreams feeds.
+
+grade: stable
+confinement: strict
+
+apps:
+  sstream-query:
+    command: wrapper
+    plugs:
+      - network
+
+parts:
+  simplestreams-wrapper:
+    plugin: dump
+    source: snap/local
+    override-build: |
+      chmod +x wrapper
+      snapcraftctl build
+    stage:
+      - usr/bin/wrapper
+    organize:
+      wrapper: usr/bin/wrapper
+
+  simplestreams:
+    plugin: python
+    python-version: python3
+    source: .
+    stage-packages:
+      - ubuntu-cloudimage-keyring
+      - bsdmainutils
+      - gpgv
